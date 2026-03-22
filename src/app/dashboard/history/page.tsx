@@ -1,6 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { 
+  Search, 
+  FileEdit, 
+  Trophy, 
+  Clock, 
+  ClipboardList, 
+  BarChart, 
+  HelpCircle, 
+  Target, 
+  ChevronRight 
+} from 'lucide-react';
 
 const demoHistory = [
     {
@@ -75,11 +86,11 @@ const demoHistory = [
     },
 ];
 
-const modeIcons: Record<string, string> = {
-    diagnostic: '🔍',
-    practice: '📝',
-    mastery: '🏆',
-    spaced: '⏰',
+const modeIcons: Record<string, any> = {
+    diagnostic: Search,
+    practice: FileEdit,
+    mastery: Trophy,
+    spaced: Clock,
 };
 
 const modeColors: Record<string, string> = {
@@ -114,14 +125,14 @@ export default function HistoryPage() {
                 marginBottom: '32px',
             }}>
                 {[
-                    { label: 'Total Tests', value: totalTests, icon: '📋', color: 'var(--accent-primary)' },
-                    { label: 'Avg Score', value: `${avgScore}%`, icon: '📊', color: 'var(--accent-tertiary)' },
-                    { label: 'Questions Answered', value: totalQuestions, icon: '❓', color: 'var(--accent-warning)' },
-                    { label: 'Overall Accuracy', value: `${Math.round((totalCorrect / totalQuestions) * 100)}%`, icon: '🎯', color: 'var(--accent-success)' },
+                    { label: 'Total Tests', value: totalTests, icon: <ClipboardList size={24} />, color: 'var(--accent-primary)' },
+                    { label: 'Avg Score', value: `${avgScore}%`, icon: <BarChart size={24} />, color: 'var(--accent-tertiary)' },
+                    { label: 'Questions Answered', value: totalQuestions, icon: <HelpCircle size={24} />, color: 'var(--accent-warning)' },
+                    { label: 'Overall Accuracy', value: `${Math.round((totalCorrect / totalQuestions) * 100)}%`, icon: <Target size={24} />, color: 'var(--accent-success)' },
                 ].map((stat, idx) => (
-                    <div key={idx} className="stat-card" style={{ textAlign: 'center' }}>
-                        <span style={{ fontSize: '1.5rem' }}>{stat.icon}</span>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: stat.color, marginTop: '8px' }}>
+                    <div key={idx} className="stat-card" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ color: stat.color, marginBottom: '8px' }}>{stat.icon}</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: stat.color }}>
                             {stat.value}
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>{stat.label}</div>
@@ -156,9 +167,12 @@ export default function HistoryPage() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '1.3rem',
+                                color: modeColors[item.mode],
                             }}>
-                                {modeIcons[item.mode]}
+                                {(() => {
+                                    const IconComponent = modeIcons[item.mode];
+                                    return IconComponent ? <IconComponent size={20} /> : null;
+                                })()}
                             </div>
                             <div>
                                 <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '4px' }}>
@@ -208,7 +222,7 @@ export default function HistoryPage() {
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Time</div>
                                 <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{item.duration}</div>
                             </div>
-                            <span style={{ color: 'var(--text-muted)' }}>→</span>
+                            <ChevronRight size={20} color="var(--text-muted)" />
                         </div>
                     </div>
                 ))}

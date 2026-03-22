@@ -1,44 +1,57 @@
+
 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
+import {
+  FileText,
+  Brain,
+  Target,
+  BarChart,
+  Clock,
+  Trophy,
+  Microscope,
+  Rocket,
+  Sparkles,
+  Infinity
+} from 'lucide-react';
 
 export default function HomePage() {
   const [isHovered, setIsHovered] = useState<number | null>(null);
 
   const features = [
     {
-      icon: '📄',
+      icon: <FileText size={32} />,
       title: 'Smart Document Upload',
       description: 'Upload PDF or DOCX files and our AI extracts concepts, relationships, and builds a knowledge graph automatically.',
       gradient: 'linear-gradient(135deg, #6c5ce7, #a855f7)',
     },
     {
-      icon: '🧠',
+      icon: <Brain size={32} />,
       title: 'Knowledge Graph',
       description: 'Visualize how concepts connect. See prerequisites, definitions, examples, and common misconceptions at a glance.',
       gradient: 'linear-gradient(135deg, #06b6d4, #6c5ce7)',
     },
     {
-      icon: '🎯',
+      icon: <Target size={32} />,
       title: 'Adaptive Assessment',
       description: '5 question types × 3 difficulty levels. Questions adapt to your mastery level in real-time.',
       gradient: 'linear-gradient(135deg, #22c55e, #06b6d4)',
     },
     {
-      icon: '📊',
+      icon: <BarChart size={32} />,
       title: 'Mastery Tracking',
       description: 'Mathematical precision: accuracy, cognitive depth, speed, confidence calibration — all tracked and visualized.',
       gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)',
     },
     {
-      icon: '⏰',
+      icon: <Clock size={32} />,
       title: 'Spaced Reinforcement',
       description: 'Forgetting model ensures you review concepts at the optimal time. Never let your mastery decay.',
       gradient: 'linear-gradient(135deg, #a855f7, #ec4899)',
     },
     {
-      icon: '🏆',
+      icon: <Trophy size={32} />,
       title: 'Student Ability Index',
       description: 'A holistic score combining mastery, trends, accuracy, and calibration. Track your growth over time.',
       gradient: 'linear-gradient(135deg, #f59e0b, #22c55e)',
@@ -73,7 +86,7 @@ export default function HomePage() {
             justifyContent: 'center',
             fontSize: '20px',
           }}>
-            🔬
+            <Microscope size={24} color="white" />
           </div>
           <span style={{
             fontSize: '1.3rem',
@@ -119,7 +132,7 @@ export default function HomePage() {
 
         <div className="animate-fade-in" style={{ position: 'relative', zIndex: 1 }}>
           <div className="badge badge-info" style={{ marginBottom: '24px' }}>
-            ✨ AI-Powered Learning Platform
+            <Sparkles size={16} /> AI-Powered Learning Platform
           </div>
 
           <h1 style={{
@@ -151,7 +164,7 @@ export default function HomePage() {
               fontSize: '1.1rem',
               textDecoration: 'none',
             }}>
-              🚀 Start Learning
+              <Rocket size={20} /> Start Learning
             </Link>
             <a href="#features" className="btn-secondary" style={{
               padding: '16px 36px',
@@ -178,7 +191,7 @@ export default function HomePage() {
             { value: '5', label: 'Question Types' },
             { value: '3', label: 'Difficulty Levels' },
             { value: '4', label: 'Assessment Modes' },
-            { value: '∞', label: 'Adaptive Paths' },
+            { value: <Infinity size={24} />, label: 'Adaptive Paths' },
           ].map((stat, idx) => (
             <div key={idx} style={{ textAlign: 'center' }}>
               <div className="gradient-text" style={{ fontSize: '2rem', fontWeight: 800 }}>

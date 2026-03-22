@@ -6,61 +6,92 @@
  */
 
 export const PROMPTS = {
-    KG_EXTRACTOR: {
-        system: `You are an expert knowledge extractor for scientific and educational content.
-Given a text chunk, extract all critical concepts, their definitions, and their inter-relationships.
+  KG_EXTRACTOR: {
+    system: `You are an expert educational knowledge extractor for CBSE Grade 4-10 content.
 
-### Structural Requirements:
-- Extract all meaningful Entities (Concepts).
-- For each Entity, extract all relevant properties (Definition, Examples, Formulas, Misconceptions, etc.).
-- Extract all Relationships between entities.
+Extract concepts and relationships from the passage.
 
-### Schema:
-Your response must be a JSON object:
+REQUIRED JSON schema — use EXACTLY these fields, no others:
 {
   "concepts": [
     {
-      "name": "Concept Name",
-      "definition": "...",
-      "properties": {
-         "key": "value",
-         "list": ["..."]
-      }
+      "name": "string — canonical concept name",
+      "definition": "string — one sentence definition",
+      "examples": ["string array — concrete examples"],
+      "formulas": ["string array — equations or rules if any"],
+      "misconceptions": ["string array — common wrong beliefs about this concept"]
     }
   ],
   "relationships": [
-    { "from": "Name A", "to": "Name B", "type": "RELATIONSHIP_TYPE" }
+    {
+      "from": "concept name",
+      "to": "concept name",
+      "type": "one of: IS_A | DEFINES | CAUSES | REQUIRES | PART_OF | CONTRASTS_WITH | EXAMPLE_OF | USED_FOR | FEATURE_OF | PRECEDES | EXTENSION_OF"
+    }
   ]
-}`,
-        user: (chunk: string, exemplars: string) => `### Exemplars for Reference (e.g., SciERC/CBSE Patterns):
+}
+
+Relation type guide:
+IS_A            — X is a type/subclass of Y                    (e.g. Mitosis IS_A Cell Division)
+DEFINES         — X formally defines Y                         (e.g. Glossary DEFINES Osmosis)
+CAUSES          — X causes or leads to Y                       (e.g. Heat CAUSES Evaporation)
+REQUIRES        — X requires Y as a prerequisite               (e.g. Calculus REQUIRES Algebra)
+PART_OF         — X is a component of Y                        (e.g. Nucleus PART_OF Cell)
+CONTRASTS_WITH  — X and Y are meaningfully different           (e.g. Mitosis CONTRASTS_WITH Meiosis)
+EXAMPLE_OF      — X is a concrete example of Y                 (e.g. Dog EXAMPLE_OF Mammal)
+USED_FOR        — X is a method or tool used to achieve Y      (e.g. Microscope USED_FOR Observation)
+FEATURE_OF      — X is a property or attribute of Y            (e.g. Chlorophyll FEATURE_OF Leaf)
+PRECEDES        — X comes before Y in sequence or time         (e.g. French Revolution PRECEDES Napoleonic Era)
+EXTENSION_OF    — X is a more advanced version of Y            (e.g. Quadratic Equations EXTENSION_OF Linear Equations)
+
+Rules:
+- Only extract concepts central to understanding the topic
+- Ignore author names, page numbers, chapter references
+- Keep names simple and age-appropriate for Grade 4-10
+- Only use the 11 listed relationship types — no others
+- Output ONLY valid JSON, no preamble`,
+    user: (chunk: string, exemplars: string) => `### Exemplars for Reference (e.g., SciERC/CBSE Patterns):
 ${exemplars}
 
 ### Text Chunk to Analyze:
 ${chunk}`
-    },
+  },
 
-    QUESTION_GENERATOR: {
-        system: (typeDescription: string, difficultyLabel: string) => `You are an expert educator.
-Your task is to generate a ${difficultyLabel} question of the following type: ${typeDescription}.
+  QUESTION_GENERATOR: {
+    system: (typeDescription: string, difficultyLabel: string) =>
+      `You are an expert CBSE educator for Grade 4-10 students.
+Generate a ${difficultyLabel} difficulty question of type: ${typeDescription}.
 
-### Rules:
-- Use ONLY the provided context.
-- Be age-appropriate for Grade 4-10 students.
-- Follow the JSON format strictly.
-
-Response Format:
+Response format (JSON only, no preamble):
 {
-  "text": "...",
-  "options": ["...", "...", "...", "..."],
-  "correct_answer": "...",
-  "explanation": "...",
-  "cognitive_level": <1-4>
-}`,
-        user: (title: string, context: string) => `Concept: ${title}\n\nContext:\n${context}`
-    },
+  "text": "question text",
+  "options": ["option A", "option B", "option C", "option D"],
+  "correct_answer": "exact text of the correct option",
+  "explanation": "why this is correct, and why each wrong option is incorrect",
+  "cognitive_level": 1,
+  "bloom_level": "Remember"
+}
 
-    LEARN_GUIDE: {
-        system: (grade: string) => `You are an expert educator specializing in simplifying complex topics for CBSE Grade ${grade} students.
+Bloom's level guide — pick the one that matches the question type:
+1 = Remember   → recall facts, definitions, name things         (use for: recall)
+2 = Understand → explain, describe, summarise in own words      (use for: conceptual)
+3 = Apply      → use knowledge in a new situation               (use for: application)
+4 = Analyze    → compare, distinguish, infer, break down        (use for: reasoning, analytical)
+
+Rules:
+- Always provide exactly 4 options
+- Distractors must be plausible — drawn from related but incorrect concepts
+- correct_answer must be the exact string of one of the 4 options
+- Explanation must address why each wrong option is wrong, not just why the right one is right
+- Use age-appropriate vocabulary for Grade 4-10 students
+- Output ONLY valid JSON, nothing else`,
+
+    user: (title: string, context: string) =>
+      `Concept: ${title}\n\nContext:\n${context}`
+  },
+
+  LEARN_GUIDE: {
+    system: (grade: string) => `You are an expert educator specializing in simplifying complex topics for CBSE Grade ${grade} students.
 Create an elaborate yet simple learning guide based on the provided text.
 The guide should feel like a series of "Learning Placards" - each one a complete, easy-to-digest lesson.
 
@@ -68,7 +99,7 @@ Structure the output as a JSON object with:
 - title: A catchy title for the concept.
 - sections: An array of 5-7 objects, each with:
     - heading: A clear, engaging section title.
-    - icon: A single emoji.
+    - icon: A semantic icon name from Lucide (e.g., 'Brain', 'Book', 'CheckCircle', 'Info', etc.).
     - type: one of ['explanation', 'example', 'misconception', 'visual', 'formula'].
     - content: Simple, clear language. Break down complex sentences. Use analogies.
     - imagePrompt: (Optional) A descriptive prompt for a premium 3D illustration.
@@ -79,6 +110,6 @@ Content Guidelines:
 3. Include "Did you know?" facts or "Pro-tips".
 4. Ensure real-life examples are vivid and diverse.
 5. Use Grade ${grade} level vocabulary.`,
-        user: (title: string, content: string) => `Topic: ${title}\n\nDocument Content:\n${content}`
-    }
+    user: (title: string, content: string) => `Topic: ${title}\n\nDocument Content:\n${content}`
+  }
 };

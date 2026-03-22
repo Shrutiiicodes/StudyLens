@@ -12,15 +12,15 @@ async function checkAndCreateTable(tableName, testInsert, columns) {
     const { error } = await supabase.from(tableName).select('*').limit(1);
 
     if (error && error.code === '42P01') {
-        console.log(`  ❌ Table "${tableName}" does not exist.`);
-        console.log(`  ⚠️  Please create it in the Supabase Dashboard > SQL Editor.`);
-        console.log(`  Columns needed: ${columns}`);
+        console.log(`Table "${tableName}" does not exist.`);
+        console.log(`Please create it in the Supabase Dashboard > SQL Editor.`);
+        console.log(`Columns needed: ${columns}`);
         return false;
     } else if (error) {
-        console.log(`  ⚠️  Error querying "${tableName}": ${error.message}`);
+        console.log(`Error querying "${tableName}": ${error.message}`);
         return false;
     } else {
-        console.log(`  ✅ Table "${tableName}" exists!`);
+        console.log(`Table "${tableName}" exists!`);
         return true;
     }
 }
@@ -29,19 +29,19 @@ async function tryCreateViaPOST(tableName, sampleRow) {
     console.log(`  Attempting to create initial row in "${tableName}" to verify schema...`);
     const { data, error } = await supabase.from(tableName).insert(sampleRow).select();
     if (error) {
-        console.log(`  ⚠️  Insert test failed: ${error.message} (code: ${error.code})`);
+        console.log(`Insert test failed: ${error.message} (code: ${error.code})`);
         return false;
     }
     // Clean up test row
     if (data && data[0] && data[0].id) {
         await supabase.from(tableName).delete().eq('id', data[0].id);
-        console.log(`  ✅ Schema verified and test row cleaned up.`);
+        console.log(`Schema verified and test row cleaned up.`);
     }
     return true;
 }
 
 async function main() {
-    console.log('🔧 Study Lens Database Setup');
+    console.log('Study Lens Database Setup');
     console.log('============================\n');
 
     const tables = [
@@ -71,7 +71,7 @@ async function main() {
     }
 
     if (missing.length > 0) {
-        console.log('\n\n📋 SQL to create missing tables:');
+        console.log('\n\nSQL to create missing tables:');
         console.log('================================');
         console.log('Copy and paste this into Supabase Dashboard > SQL Editor:\n');
 
@@ -101,8 +101,20 @@ CREATE TABLE IF NOT EXISTS mastery (
   user_id text NOT NULL,
   concept_id uuid REFERENCES concepts(id) ON DELETE CASCADE,
   mastery_score float DEFAULT 0,
+  current_stage text DEFAULT 'diagnostic',
   last_updated timestamptz DEFAULT now()
 );
+
+--sessions table
+CREATE TABLE IF NOT EXISTS sessions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id text NOT NULL,
+    concept_id uuid REFERENCES concepts(id) ON DELETE CASCADE,
+    mode text NOT NULL,
+    score integer DEFAULT 0,
+    passed boolean DEFAULT false,
+    created_at timestamptz DEFAULT now()
+  ),
 
 -- Attempts table
 CREATE TABLE IF NOT EXISTS attempts (
@@ -115,6 +127,8 @@ CREATE TABLE IF NOT EXISTS attempts (
   cognitive_level integer DEFAULT 1,
   time_taken float DEFAULT 0,
   confidence float DEFAULT 0.5,
+  mode text DEFAULT 'diagnostic',
+  session_id uuid,
   created_at timestamptz DEFAULT now()
 );
 
@@ -123,6 +137,8 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE concepts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mastery ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS session_id UUID REFERENCES sessions(id);
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS mode TEXT DEFAULT 'diagnostic';
 
 -- Allow service role full access
 CREATE POLICY "Service role full access" ON profiles FOR ALL USING (true);
@@ -133,7 +149,7 @@ CREATE POLICY "Service role full access" ON attempts FOR ALL USING (true);
 
         console.log(sql);
     } else {
-        console.log('\n\n✅ All tables exist! Database is ready.');
+        console.log('\n\nAll tables exist! Database is ready.');
     }
 }
 

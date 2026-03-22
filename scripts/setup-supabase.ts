@@ -82,15 +82,31 @@ CREATE TABLE IF NOT EXISTS concepts (
 -- ═══════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS mastery (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL,
+  user_id TEXT NOT NULL,
   concept_id UUID REFERENCES concepts(id) ON DELETE CASCADE,
   mastery_score FLOAT DEFAULT 0,
+  current_stage TEXT DEFAULT 'diagnostic',  -- ADD THIS
   last_updated TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   UNIQUE(user_id, concept_id)
 );
+-- ═══════════════════════════════════════════
+-- 4. Sessions table (every session)
+-- ═══════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS sessions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  concept_id UUID REFERENCES concepts(id) ON DELETE CASCADE,
+  mode TEXT NOT NULL,
+  score INTEGER DEFAULT 0,
+  passed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_concept_id ON sessions(concept_id);
 
 -- ═══════════════════════════════════════════
--- 4. Attempts table (every question answered)
+-- 5. Attempts table (every question answered)
 -- ═══════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS attempts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

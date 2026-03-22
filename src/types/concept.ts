@@ -22,7 +22,7 @@ export interface ConceptNode {
 export interface ConceptRelation {
     source: string;
     target: string;
-    type: 'EXPLAINS' | 'HAS_EXAMPLE' | 'PREREQUISITE' | 'CAUSES_CONFUSION_WITH';
+    type: 'EXPLAINS' | 'HAS_EXAMPLE' | 'HAS_FORMULA' | 'HAS_MISCONCEPTION' | 'PREREQUISITE' | 'CAUSES_CONFUSION_WITH' | 'IS_A' | 'DEFINES' | 'CAUSES' | 'REQUIRES' | 'PART_OF' | 'CONTRASTS_WITH' | 'EXAMPLE_OF' | 'USED_FOR' | 'FEATURE_OF' | 'PRECEDES' | 'EXTENSION_OF';
 }
 
 export interface KnowledgeGraph {

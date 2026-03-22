@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase';
+import { CheckCircle, XCircle, LogOut } from 'lucide-react';
 
 interface UserData {
     id: string;
@@ -103,8 +104,11 @@ export default function ProfilePage() {
                     color: message.type === 'success' ? 'var(--accent-success)' : 'var(--accent-danger)',
                     fontSize: '0.9rem',
                     marginBottom: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
                 }}>
-                    {message.type === 'success' ? '✅ ' : '❌ '}{message.text}
+                    {message.type === 'success' ? <CheckCircle size={18} /> : <XCircle size={18} />} {message.text}
                 </div>
             )}
 
@@ -188,9 +192,12 @@ export default function ProfilePage() {
                         style={{
                             borderColor: 'rgba(239, 68, 68, 0.3)',
                             color: 'var(--accent-danger)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
                         }}
                     >
-                        🚪 Sign Out
+                        <LogOut size={18} /> Sign Out
                     </button>
                 </div>
             </div>

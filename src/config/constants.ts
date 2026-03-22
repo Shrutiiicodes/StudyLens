@@ -30,12 +30,38 @@ export const QUESTION_TYPES = ['recall', 'conceptual', 'application', 'reasoning
 export const DIFFICULTY_LEVELS = [1, 2, 3] as const;
 
 // ─── Cognitive Levels ───
+// Maps question type → Bloom's level (1=Remember, 2=Understand, 3=Apply, 4=Analyze)
 export const COGNITIVE_LEVEL_MAP: Record<string, number> = {
     recall: 1,
     conceptual: 2,
     application: 3,
     reasoning: 3,
     analytical: 4,
+};
+
+// ─── Relation Bloom's Map ───
+// Maps KG relation type → Bloom's cognitive level
+// Used by question generator to select appropriate question template
+export const RELATION_BLOOM_MAP: Record<string, number> = {
+    IS_A: 1, // Remember — classify
+    DEFINES: 1, // Remember — recall definition
+    EXAMPLE_OF: 1, // Remember — identify example
+    PART_OF: 2, // Understand — describe structure
+    FEATURE_OF: 2, // Understand — describe properties
+    CAUSES: 2, // Understand — explain cause-effect
+    CONTRASTS_WITH: 3, // Apply — compare and distinguish
+    USED_FOR: 3, // Apply — use in context
+    PRECEDES: 2, // Understand — sequence events
+    REQUIRES: 3, // Apply — identify dependencies
+    EXTENSION_OF: 4, // Analyze — relate advanced to foundational
+};
+
+// ─── Question Count Limits Per Mode ───
+export const QUESTION_LIMITS: Record<string, { min: number; max: number }> = {
+    diagnostic: { min: 5, max: 10 },
+    practice: { min: 5, max: 15 },
+    mastery: { min: 8, max: 15 },
+    spaced: { min: 5, max: 8 },
 };
 
 // ─── Assessment Weights ───
@@ -75,6 +101,34 @@ export const SAI_WEIGHTS = {
     calibration: 0.1,
 };
 
+// ─── MSS Weights ───
+// Weights applied to wrong attempts based on confidence level
+// High confidence + wrong = strong misconception signal (weight 2.0)
+// Medium confidence + wrong = mild misconception signal (weight 1.5)
+// Low confidence + wrong = likely unknown, not misconceived (weight 1.0)
+export const MSS_WEIGHTS = {
+    high_confidence_wrong: 2.0,   // confidence > 0.7
+    medium_confidence_wrong: 1.5, // confidence 0.4–0.7
+    low_confidence_wrong: 1.0,    // confidence < 0.4
+};
+
+// ─── MSS Cap for Summary Completion ───
+// If MSS exceeds this threshold when student passes summary,
+// mastery is capped at MSS_MASTERY_CAP instead of allowing full score
+export const MSS_THRESHOLD = 0.5;
+export const MSS_MASTERY_CAP = 0.85;
+
+// ─── Learn It Priority Weights ───
+export const LEARN_IT_WEIGHTS = {
+    ccms_deficit: 0.5, // (1 - CCMS) component
+    mss: 0.5,          // MSS component
+};
+
+// ─── DAG Validation ───
+// Minimum confidence for a REQUIRES edge to act as a hard DAG gate
+// Edges below this are kept as soft links but do not block progression
+export const DAG_EDGE_CONFIDENCE_THRESHOLD = 0.65;
+
 // ─── Grade Levels ───
 export const GRADE_LEVELS = Array.from({ length: 7 }, (_, i) => i + 4); // 4-10
 
@@ -89,3 +143,18 @@ export const EXPECTED_TIME: Record<number, number> = {
     2: 60,
     3: 90,
 };
+
+// ─── Verification Pass ───
+// Minimum confidence for a triple to pass the LLM verification pass
+// Triples below this threshold are discarded as potential hallucinations
+export const VERIFICATION_CONFIDENCE_THRESHOLD = 0.80;
+
+// ─── Spaced Repetition ───
+// Retrievability threshold below which a spaced review is triggered
+// R(t) = (1 + t / (9 × S))^(-1) — when R drops below this, review is due
+export const FSRS_REVIEW_THRESHOLD = 0.9;
+
+// ─── Forgetting Model ───
+// Default hours elapsed used when no prior mastery record exists
+// for spaced mode scoring
+export const DEFAULT_HOURS_ELAPSED = 24;

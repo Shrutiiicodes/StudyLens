@@ -2,6 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import {
+    FileText,
+    Target,
+    BarChart,
+    BookOpen,
+    Book,
+    ClipboardList,
+    Rocket,
+    Brain,
+    Search,
+    Sparkles
+} from 'lucide-react';
 
 interface ConceptRecord {
     id: string;
@@ -48,8 +60,8 @@ export default function DashboardPage() {
         <div className="animate-fade-in">
             {/* Header */}
             <div style={{ marginBottom: '32px' }}>
-                <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
-                    Welcome back, <span className="gradient-text">{user?.full_name || 'Student'}</span> 👋
+                <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Welcome back, <span className="gradient-text">{user?.full_name || 'Student'}</span>
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
                     Here&apos;s your learning progress overview
@@ -64,9 +76,9 @@ export default function DashboardPage() {
                 marginBottom: '32px',
             }}>
                 {[
-                    { label: 'Documents Uploaded', value: `${concepts.length}`, icon: '📄', gradient: 'var(--gradient-primary)' },
-                    { label: 'Tests Taken', value: stats ? `${stats.testsTaken}` : '0', icon: '🎯', gradient: 'var(--gradient-warm)' },
-                    { label: 'Ability Index', value: stats ? `${stats.abilityIndex}` : '0', icon: '📊', gradient: 'var(--gradient-secondary)' },
+                    { label: 'Documents Uploaded', value: `${concepts.length}`, icon: <FileText size={24} />, gradient: 'var(--gradient-primary)' },
+                    { label: 'Tests Taken', value: stats ? `${stats.testsTaken}` : '0', icon: <Target size={24} />, gradient: 'var(--gradient-warm)' },
+                    { label: 'Ability Index', value: stats ? `${stats.abilityIndex}` : '0', icon: <BarChart size={24} />, gradient: 'var(--gradient-secondary)' },
                 ].map((stat, idx) => (
                     <div key={idx} className="stat-card" style={{ position: 'relative', overflow: 'hidden' }}>
                         <div style={{
@@ -111,15 +123,17 @@ export default function DashboardPage() {
                     </div>
                 ) : concepts.length === 0 ? (
                     <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📚</div>
+                        <div style={{ fontSize: '3rem', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+                            <BookOpen size={48} color="var(--text-muted)" />
+                        </div>
                         <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '12px' }}>
                             No concepts yet
                         </h3>
                         <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>
                             Upload a PDF or DOCX document to extract concepts, build a knowledge graph, and start adaptive testing.
                         </p>
-                        <Link href="/dashboard/upload" className="btn-primary" style={{ textDecoration: 'none' }}>
-                            📄 Upload Your First Document
+                        <Link href="/dashboard/upload" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <FileText size={18} /> Upload Your First Document
                         </Link>
                     </div>
                 ) : (
@@ -130,8 +144,8 @@ export default function DashboardPage() {
                     }}>
                         {concepts.map((concept) => (
                             <div key={concept.id} className="glass-card" style={{ padding: '20px' }}>
-                                <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: '4px' }}>
-                                    📄 {concept.title}
+                                <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <FileText size={18} /> {concept.title}
                                 </h3>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '14px' }}>
                                     Uploaded {new Date(concept.created_at).toLocaleDateString()}
@@ -140,16 +154,16 @@ export default function DashboardPage() {
                                     <Link
                                         href={`/dashboard/learn/${concept.id}`}
                                         className="btn-secondary"
-                                        style={{ textDecoration: 'none', fontSize: '0.8rem', padding: '7px 12px' }}
+                                        style={{ textDecoration: 'none', fontSize: '0.8rem', padding: '7px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
                                     >
-                                        📖 Learn
+                                        <Book size={14} /> Learn
                                     </Link>
                                     <Link
                                         href="/dashboard/concepts"
                                         className="btn-primary"
-                                        style={{ textDecoration: 'none', fontSize: '0.8rem', padding: '7px 12px' }}
+                                        style={{ textDecoration: 'none', fontSize: '0.8rem', padding: '7px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
                                     >
-                                        📋 Progress
+                                        <ClipboardList size={14} /> Progress
                                     </Link>
                                 </div>
                             </div>
@@ -162,14 +176,14 @@ export default function DashboardPage() {
             {concepts.length === 0 && (
                 <div className="glass-card" style={{ padding: '24px' }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        🚀 Getting Started
+                        <Rocket size={20} className="text-primary" /> Getting Started
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {[
-                            { step: '1', text: 'Upload a PDF or DOCX study material', icon: '📄' },
-                            { step: '2', text: 'AI extracts concepts and builds a knowledge graph', icon: '🧠' },
-                            { step: '3', text: 'Take a diagnostic test to assess your understanding', icon: '🔍' },
-                            { step: '4', text: 'Get personalized practice based on your mastery level', icon: '🎯' },
+                            { step: '1', text: 'Upload a PDF or DOCX study material', icon: <FileText size={16} /> },
+                            { step: '2', text: 'AI extracts concepts and builds a knowledge graph', icon: <Brain size={16} /> },
+                            { step: '3', text: 'Take a diagnostic test to assess your understanding', icon: <Search size={16} /> },
+                            { step: '4', text: 'Get personalized practice based on your mastery level', icon: <Target size={16} /> },
                         ].map((item) => (
                             <div key={item.step} style={{
                                 display: 'flex',
@@ -194,7 +208,9 @@ export default function DashboardPage() {
                                 }}>
                                     {item.step}
                                 </span>
-                                <span style={{ fontSize: '0.95rem' }}>{item.icon} {item.text}</span>
+                                <span style={{ fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {item.icon} {item.text}
+                                </span>
                             </div>
                         ))}
                     </div>

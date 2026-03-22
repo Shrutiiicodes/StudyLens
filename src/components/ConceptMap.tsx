@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { Share2 } from 'lucide-react';
 
 interface ConceptMapNode {
     id: string;
@@ -125,7 +126,9 @@ export default function ConceptMap({ nodes, edges, width = 800, height = 500 }: 
                 alignItems: 'center',
                 gap: '12px',
             }}>
-                <div style={{ fontSize: '3rem' }}>🕸️</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                    <Share2 size={48} color="var(--accent-primary)" style={{ opacity: 0.3 }} />
+                </div>
                 <p style={{ color: 'var(--text-secondary)' }}>
                     Upload a document to see your concept map
                 </p>

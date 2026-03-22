@@ -1,6 +1,6 @@
 export type QuestionType = 'recall' | 'conceptual' | 'application' | 'reasoning' | 'analytical';
 export type DifficultyLevel = 1 | 2 | 3;
-
+export type BloomLevel = 'Remember' | 'Understand' | 'Apply' | 'Analyze';
 export interface Question {
     id: string;
     concept_id: string;
@@ -11,6 +11,7 @@ export interface Question {
     correct_answer: string;
     explanation: string;
     cognitive_level: number; // 1-4
+    bloom_level: BloomLevel;
 }
 
 export interface QuestionGenerationRequest {

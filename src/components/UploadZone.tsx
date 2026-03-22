@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import { FileText, Rocket, UploadCloud } from 'lucide-react';
 
 interface UploadZoneProps {
     onUpload: (file: File) => void;
@@ -83,18 +84,14 @@ export default function UploadZone({ onUpload, uploading }: UploadZoneProps) {
                     style={{ display: 'none' }}
                 />
 
-                <div style={{ marginBottom: '16px' }}>
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto' }}>
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                        <polyline points="17,8 12,3 7,8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
+                <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+                    <UploadCloud size={48} color="var(--accent-primary)" strokeWidth={1.5} />
                 </div>
 
                 {selectedFile ? (
                     <div>
-                        <p style={{ fontWeight: 600, fontSize: '1.05rem', marginBottom: '4px' }}>
-                            📄 {selectedFile.name}
+                        <p style={{ fontWeight: 600, fontSize: '1.05rem', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                            <FileText size={18} /> {selectedFile.name}
                         </p>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                             {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
@@ -117,8 +114,8 @@ export default function UploadZone({ onUpload, uploading }: UploadZoneProps) {
                     <button className="btn-secondary" onClick={() => setSelectedFile(null)}>
                         Cancel
                     </button>
-                    <button className="btn-primary" onClick={handleUpload}>
-                        🚀 Upload & Analyze
+                    <button className="btn-primary" onClick={handleUpload} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Rocket size={18} /> Upload & Analyze
                     </button>
                 </div>
             )}

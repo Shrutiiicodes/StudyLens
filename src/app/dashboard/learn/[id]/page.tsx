@@ -2,6 +2,41 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { 
+  ArrowLeft, 
+  Rocket, 
+  AlertTriangle, 
+  Image, 
+  Target, 
+  Pencil, 
+  Trophy,
+  Brain,
+  Book,
+  CheckCircle,
+  Info,
+  Lightbulb,
+  HelpCircle,
+  ClipboardList,
+  FileText,
+  Activity,
+  Zap,
+  Star,
+  Search,
+  Users
+} from 'lucide-react';
+
+// Map of common icons for dynamic lookup
+const lucideIcons: Record<string, any> = {
+    Brain, Book, CheckCircle, Info, Lightbulb, HelpCircle, 
+    ClipboardList, FileText, Activity, Zap, Star, Search, 
+    Users, Target, Trophy, Pencil, Rocket, AlertTriangle
+};
+
+const DynamicIcon = ({ name, size = 24 }: { name: string, size?: number }) => {
+    // If the name matches a known icon, return it
+    const IconComponent = lucideIcons[name] || HelpCircle;
+    return <IconComponent size={size} />;
+};
 
 interface LearnSection {
     heading: string;
@@ -99,7 +134,9 @@ export default function LearnPage() {
     if (error || !content) {
         return (
             <div className="animate-fade-in" style={{ textAlign: 'center', padding: '100px 20px' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⚠️</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                    <AlertTriangle size={48} color="var(--accent-warning)" />
+                </div>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '8px' }}>Oops!</h2>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>{error || 'Something went wrong'}</p>
                 <button className="btn-primary" onClick={() => window.location.reload()}>Try Again</button>
@@ -111,12 +148,14 @@ export default function LearnPage() {
         <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: '100px' }}>
             {/* Header */}
             <div style={{ marginBottom: '48px', textAlign: 'center' }}>
-                <button className="btn-ghost" onClick={() => router.back()} style={{ marginBottom: '16px' }}>
-                    ← Return to Journey
+                <button className="btn-ghost" onClick={() => router.back()} style={{ marginBottom: '16px', display: 'inline-flex', alignItems: 'center', gap: '8px', margin: '0 auto 16px' }}>
+                    <ArrowLeft size={16} /> Return to Journey
                 </button>
-                <span className="badge badge-info" style={{ display: 'block', width: 'fit-content', margin: '0 auto 12px' }}>
-                    🚀 Immersive Learning
-                </span>
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <span className="badge badge-info" style={{ display: 'flex', width: 'fit-content', margin: '0 auto 12px', alignItems: 'center', gap: '8px' }}>
+                        <Rocket size={14} /> Immersive Learning
+                    </span>
+                </div>
                 <h1 style={{ fontSize: '2.8rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: '8px' }}>
                     {content.title}
                 </h1>
@@ -159,9 +198,9 @@ export default function LearnPage() {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        fontSize: '1.6rem'
+                                        color: styles.accent
                                     }}>
-                                        {section.icon}
+                                        <DynamicIcon name={section.icon} size={28} />
                                     </div>
                                     <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>{section.heading}</h2>
                                 </div>
@@ -188,9 +227,12 @@ export default function LearnPage() {
                                     display: 'flex',
                                     flexDirection: 'column',
                                     justifyContent: 'center',
-                                    minHeight: '200px'
+                                    minHeight: '200px',
+                                    alignItems: 'center'
                                 }}>
-                                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🖼️</div>
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <Image size={40} color="var(--text-muted)" />
+                                    </div>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
                                         <strong>Visual Concept:</strong><br />
                                         {section.imagePrompt}
@@ -211,18 +253,18 @@ export default function LearnPage() {
                 borderRadius: 'var(--radius-xl)',
                 border: '1px solid var(--accent-primary)'
             }}>
-                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '16px' }}>
-                    Assessment Unlocked! 🎯
+                <h3 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center' }}>
+                    Assessment Unlocked! <Target size={28} className="text-primary" />
                 </h3>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '40px', fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto 40px' }}>
                     You&apos;ve explored all the knowledge placards. Are you ready to see how much you&apos;ve mastered?
                 </p>
                 <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <button className="btn-primary" onClick={() => router.push(`/dashboard/test/${conceptId}?mode=practice`)} style={{ padding: '18px 48px', fontSize: '1.1rem' }}>
-                        ✍️ Start Practice Test
+                    <button className="btn-primary" onClick={() => router.push(`/dashboard/test/${conceptId}?mode=practice`)} style={{ padding: '18px 48px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Pencil size={20} /> MCQ+ Reasoning
                     </button>
-                    <button className="btn-secondary" onClick={() => router.push(`/dashboard/test/${conceptId}?mode=mastery`)} style={{ padding: '18px 48px', fontSize: '1.1rem' }}>
-                        🏆 Challenge Mastery
+                    <button className="btn-secondary" onClick={() => router.push(`/dashboard/test/${conceptId}?mode=mastery`)} style={{ padding: '18px 48px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Trophy size={20} /> Mastery Test
                     </button>
                 </div>
             </div>

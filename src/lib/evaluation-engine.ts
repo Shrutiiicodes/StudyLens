@@ -66,14 +66,6 @@ export async function evaluateAnswer(
         case 'mastery':
             score = masteryScore([questionResult]);
             break;
-        case 'spaced': {
-            const lastUpdated = await getLastMasteryUpdate(userId, question.concept_id);
-            const hoursElapsed = lastUpdated
-                ? (Date.now() - new Date(lastUpdated).getTime()) / (1000 * 60 * 60)
-                : 0;
-            score = spacedReinforcementScore(questionResult, hoursElapsed);
-            break;
-        }
         default:
             score = practiceScore([questionResult]);
     }
@@ -93,7 +85,7 @@ export async function evaluateAnswer(
 /**
  * Stages in order of progression.
  */
-const STAGES = ['diagnostic', 'practice', 'mastery', 'spaced', 'summary'] as const;
+const STAGES = ['diagnostic', 'practice', 'mastery'] as const;
 const PASS_THRESHOLD = 60; // Score >= 60% to advance
 
 /**
@@ -121,12 +113,7 @@ export async function evaluateDiagnostic(
         case 'mastery':
             score = masteryScore(results) * 100;
             break;
-        case 'spaced': {
-            // Average spaced scores across all results
-            const avg = results.reduce((sum, r) => sum + spacedReinforcementScore(r, 0), 0) / results.length;
-            score = avg * 100;
-            break;
-        }
+
         case 'diagnostic':
         default:
             score = calculateInitialMastery(results);
@@ -216,11 +203,13 @@ export function getNextDifficulty(mastery: number): 1 | 2 | 3 {
  * Calculate SAI for a student.
  */
 export async function calculateStudentSAI(userId: string): Promise<number> {
-    // Get all mastery records
+    // Get all mastery records ordered by time — ORDER BY is critical
+    // for trend calculation. Unordered scores produce a meaningless slope.
     const { data: masteryRecords } = await supabase
         .from('mastery')
-        .select('mastery_score')
-        .eq('user_id', userId);
+        .select('mastery_score, last_updated')
+        .eq('user_id', userId)
+        .order('last_updated', { ascending: true }); // ADD THIS
 
     if (!masteryRecords || masteryRecords.length === 0) return 0;
 
@@ -252,6 +241,74 @@ export async function calculateStudentSAI(userId: string): Promise<number> {
 
     const sai = calculateSAI(avgMastery, scores, globalAccuracy, avgCalibration);
     return sai.sai;
+}
+
+/**
+ * Misconception Severity Score (MSS)
+ * Measures how entrenched a student's wrong beliefs are for a concept.
+ * 
+ * MSS = Sum(wrong_attempt_weight) / total_attempts
+ * 
+ * Weight rules:
+ * - Wrong answer with low confidence (< 0.4) → weight 2.0 (likely a misconception, not a guess)
+ * - Wrong answer with medium confidence (0.4–0.7) → weight 1.5
+ * - Wrong answer with high confidence (> 0.7) → weight 2.0 (confidently wrong = strong misconception)
+ */
+export async function calculateMSS(
+    userId: string,
+    conceptId: string
+): Promise<number> {
+    const { data: attempts } = await supabase
+        .from('attempts')
+        .select('correct, confidence')
+        .eq('user_id', userId)
+        .eq('concept_id', conceptId);
+
+    if (!attempts || attempts.length === 0) return 0;
+
+    const totalAttempts = attempts.length;
+    const wrongAttempts = attempts.filter(a => !a.correct);
+
+    if (wrongAttempts.length === 0) return 0;
+
+    const weightedWrongSum = wrongAttempts.reduce((sum, attempt) => {
+        const confidence = attempt.confidence ?? 0.5;
+
+        // High confidence + wrong = strong misconception signal
+        // Low confidence + wrong = could be misconception or just unknown
+        // Medium confidence + wrong = mild misconception signal
+        let weight: number;
+        if (confidence > 0.7) {
+            weight = 2.0; // Confidently wrong — entrenched wrong belief
+        } else if (confidence >= 0.4) {
+            weight = 1.5; // Moderately confident and wrong
+        } else {
+            weight = 1.0; // Low confidence wrong — likely just unknown, not misconceived
+        }
+
+        return sum + weight;
+    }, 0);
+
+    const mss = weightedWrongSum / totalAttempts;
+
+    // Clamp to 0–1 range
+    return Math.min(1, Math.max(0, mss));
+}
+
+/**
+ * Learn It Priority Score
+ * Determines which concepts to show most prominently in the Learn It feature.
+ * 
+ * Priority = (1 - CCMS) × 0.5 + MSS × 0.5
+ * 
+ * Higher score = show this concept first with detailed explanation + analogies
+ */
+export function calculateLearnItPriority(
+    ccms: number,        // 0–100 scale
+    mss: number          // 0–1 scale
+): number {
+    const normalisedCCMS = ccms / 100; // convert to 0–1
+    return (1 - normalisedCCMS) * 0.5 + mss * 0.5;
 }
 
 // ─── Helper Functions ───

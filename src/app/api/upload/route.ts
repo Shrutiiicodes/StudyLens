@@ -46,12 +46,30 @@ export async function POST(request: NextRequest) {
         let text = '';
 
         if (file.type === 'application/pdf') {
-            // pdf-parse v2 API: use PDFParse class
-            const { PDFParse } = await import('pdf-parse');
-            const parser = new PDFParse({ data: buffer });
-            const pdfData = await parser.getText();
-            text = pdfData.text;
-            await parser.destroy();
+            try {
+                const { PDFParse } = await import('pdf-parse');
+                const parser = new PDFParse({ data: buffer });
+                const result = await parser.getText();
+                text = result.text;
+
+                if (!text || text.trim().length < 100) {
+                    return NextResponse.json(
+                        {
+                            error: 'Could not extract text from this PDF. If it is a scanned document, please use a text-based PDF instead.',
+                        },
+                        { status: 422 }
+                    );
+                }
+            } catch (pdfError) {
+                console.error('PDF parsing error:', pdfError);
+                return NextResponse.json(
+                    {
+                        error: 'Failed to parse PDF file.',
+                        details: (pdfError as Error).message,
+                    },
+                    { status: 422 }
+                );
+            }
         } else {
             // DOCX parsing
             const mammoth = await import('mammoth');
@@ -96,7 +114,11 @@ export async function POST(request: NextRequest) {
         if (uploadError) {
             console.error('Storage upload error:', uploadError);
             return NextResponse.json(
-                { error: 'Failed to store document' },
+                { 
+                    error: 'Failed to store document', 
+                    details: uploadError.message,
+                    code: (uploadError as any).statusCode || (uploadError as any).code
+                },
                 { status: 500 }
             );
         }

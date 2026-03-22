@@ -5,6 +5,18 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ProgressCard from '@/components/ProgressCard';
 import ConceptMap from '@/components/ConceptMap';
 import MasteryGraph from '@/components/MasteryGraph';
+import { 
+  ArrowLeft, 
+  Target, 
+  BookOpen, 
+  ClipboardList, 
+  Share2, 
+  BarChart2, 
+  Search, 
+  FileEdit, 
+  Trophy, 
+  Clock 
+} from 'lucide-react';
 
 interface ConceptDetail {
     id: string;
@@ -101,9 +113,9 @@ export default function ConceptDetailPage() {
                     <button
                         className="btn-ghost"
                         onClick={() => router.back()}
-                        style={{ marginBottom: '12px', padding: '6px 0' }}
+                        style={{ marginBottom: '12px', padding: '6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
-                        ← Back
+                        <ArrowLeft size={18} /> Back
                     </button>
                     <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
                         {conceptTitle}
@@ -117,14 +129,16 @@ export default function ConceptDetailPage() {
                     <button
                         className="btn-primary"
                         onClick={() => router.push(`/dashboard/test/${conceptId}?mode=diagnostic&title=${encodeURIComponent(conceptTitle)}`)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
-                        🎯 Test It
+                        <Target size={18} /> Test It
                     </button>
                     <button
                         className="btn-secondary"
                         onClick={() => router.push(`/dashboard/learn/${conceptId}`)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
-                        📖 Learn It
+                        <BookOpen size={18} /> Learn It
                     </button>
                 </div>
             </div>
@@ -158,9 +172,12 @@ export default function ConceptDetailPage() {
                             fontSize: '0.9rem',
                             borderRadius: 'var(--radius-sm)',
                             textTransform: 'capitalize',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
                         }}
                     >
-                        {tab === 'overview' ? '📋' : tab === 'graph' ? '🕸️' : '📈'} {tab}
+                        {tab === 'overview' ? <ClipboardList size={16} /> : tab === 'graph' ? <Share2 size={16} /> : <BarChart2 size={16} />} {tab}
                     </button>
                 ))}
             </div>
@@ -175,30 +192,46 @@ export default function ConceptDetailPage() {
                             <button
                                 className="btn-secondary"
                                 onClick={() => router.push(`/dashboard/test/${conceptId}?mode=diagnostic&title=${encodeURIComponent(conceptTitle)}`)}
-                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left' }}
+                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}
                             >
-                                🔍 Diagnostic Test — 5 questions to gauge understanding
+                                <Search size={18} color="var(--accent-primary)" />
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>Diagnostic Test</div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>5 questions to gauge understanding</div>
+                                </div>
                             </button>
                             <button
                                 className="btn-secondary"
                                 onClick={() => router.push(`/dashboard/test/${conceptId}?mode=practice&title=${encodeURIComponent(conceptTitle)}`)}
-                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left' }}
+                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}
                             >
-                                📝 Practice Mode — Adaptive difficulty, instant feedback
+                                <FileEdit size={18} color="var(--accent-tertiary)" />
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>Practice Mode</div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Adaptive difficulty, instant feedback</div>
+                                </div>
                             </button>
                             <button
                                 className="btn-secondary"
                                 onClick={() => router.push(`/dashboard/test/${conceptId}?mode=mastery&title=${encodeURIComponent(conceptTitle)}`)}
-                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left' }}
+                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}
                             >
-                                🏆 Mastery Test — Prove complete understanding
+                                <Trophy size={18} color="var(--accent-success)" />
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>Mastery Test</div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Prove complete understanding</div>
+                                </div>
                             </button>
                             <button
                                 className="btn-secondary"
                                 onClick={() => router.push(`/dashboard/test/${conceptId}?mode=spaced&title=${encodeURIComponent(conceptTitle)}`)}
-                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left' }}
+                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}
                             >
-                                ⏰ Spaced Review — Reinforce before you forget
+                                <Clock size={18} color="var(--accent-warning)" />
+                                <div>
+                                    <div style={{ fontWeight: 600 }}>Spaced Review</div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Reinforce before you forget</div>
+                                </div>
                             </button>
                         </div>
                     </div>
@@ -234,8 +267,10 @@ export default function ConceptDetailPage() {
                 graphNodes.length > 0 ? (
                     <ConceptMap nodes={graphNodes} edges={graphEdges} />
                 ) : (
-                    <div className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🕸️</div>
+                    <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                            <Share2 size={48} style={{ opacity: 0.3 }} />
+                        </div>
                         <p style={{ color: 'var(--text-secondary)' }}>
                             Knowledge graph not available. The graph is built during document upload using Neo4j.
                         </p>
@@ -244,8 +279,10 @@ export default function ConceptDetailPage() {
             )}
 
             {activeTab === 'history' && (
-                <div className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '12px' }}>📈</div>
+                <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                        <BarChart2 size={48} style={{ opacity: 0.3 }} />
+                    </div>
                     <p style={{ color: 'var(--text-secondary)' }}>
                         Take some tests first to see your mastery progress over time.
                     </p>

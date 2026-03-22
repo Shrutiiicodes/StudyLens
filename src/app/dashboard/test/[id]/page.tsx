@@ -3,6 +3,22 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import QuestionCard from '@/components/QuestionCard';
+import {
+    Search,
+    FileEdit,
+    Trophy,
+    Clock,
+    AlertTriangle,
+    RefreshCw,
+    ArrowLeft,
+    Target,
+    Book,
+    BookOpen,
+    ArrowRight,
+    Pencil,
+    BarChart,
+    X
+} from 'lucide-react';
 
 interface QuestionData {
     id: string;
@@ -169,10 +185,15 @@ export default function TestPage() {
         : 0;
 
     const modeLabels: Record<string, string> = {
-        diagnostic: '🔍 Diagnostic Test',
-        practice: '📝 Practice Mode',
-        mastery: '🏆 Mastery Test',
-        spaced: '⏰ Spaced Review',
+        diagnostic: 'Easy 5 Test',
+        practice: 'MCQ+ Reasoning Mode',
+        mastery: 'Mastery Test',
+    };
+    
+    const modeIcons: Record<string, any> = {
+        diagnostic: Search,
+        practice: FileEdit,
+        mastery: Trophy,
     };
 
     // Loading state
@@ -206,7 +227,9 @@ export default function TestPage() {
         return (
             <div className="animate-fade-in" style={{ maxWidth: '700px', margin: '0 auto' }}>
                 <div className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⚠️</div>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                        <AlertTriangle size={60} color="var(--accent-danger)" />
+                    </div>
                     <h2 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '12px' }}>
                         Question Generation Failed
                     </h2>
@@ -217,14 +240,16 @@ export default function TestPage() {
                         <button
                             className="btn-primary"
                             onClick={() => window.location.reload()}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                         >
-                            🔄 Try Again
+                            <RefreshCw size={18} /> Try Again
                         </button>
                         <button
                             className="btn-secondary"
                             onClick={() => router.back()}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                         >
-                            ← Go Back
+                            <ArrowLeft size={18} /> Go Back
                         </button>
                     </div>
                 </div>
@@ -236,8 +261,8 @@ export default function TestPage() {
         return (
             <div className="animate-fade-in" style={{ maxWidth: '700px', margin: '0 auto' }}>
                 <div className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '4rem', marginBottom: '16px' }}>
-                        {scorePercent >= 85 ? '🏆' : scorePercent >= 60 ? '🎯' : '📚'}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                        {scorePercent >= 85 ? <Trophy size={60} color="var(--accent-success)" /> : scorePercent >= 60 ? <Target size={60} color="var(--accent-primary)" /> : <Book size={60} color="var(--accent-warning)" />}
                     </div>
 
                     <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
@@ -248,7 +273,9 @@ export default function TestPage() {
                         {evaluating
                             ? 'Saving your results...'
                             : passed
-                                ? `You passed! ${nextStage === 'summary' ? 'Write a summary to complete this concept.' : nextStage ? `Stage unlocked: ${nextStage}` : 'Great work!'}`
+                                ? nextStage && nextStage !== mode
+                                    ? `You passed! Stage unlocked: ${nextStage === 'practice' ? 'MCQ+ Reasoning' : 'Mastery Test'}`
+                                    : 'Great work! You have completed the learning journey for this concept.'
                                 : `You need 60% to pass. Try again to advance to the next stage.`}
                     </p>
 
@@ -312,17 +339,12 @@ export default function TestPage() {
 
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button className="btn-secondary" onClick={() => router.push(`/dashboard/learn/${conceptId}`)}>
-                            📖 Learn It
+                        <button className="btn-secondary" onClick={() => router.push(`/dashboard/learn/${conceptId}`)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <BookOpen size={18} /> Learn It
                         </button>
-                        {!evaluating && passed && nextStage && nextStage !== 'summary' && (
-                            <button className="btn-primary" onClick={() => router.push(`/dashboard/test/${conceptId}?mode=${nextStage}&title=${encodeURIComponent(conceptTitle)}`)}>
-                                ➡️ Next: {nextStage.charAt(0).toUpperCase() + nextStage.slice(1)}
-                            </button>
-                        )}
-                        {!evaluating && passed && nextStage === 'summary' && (
-                            <button className="btn-primary" onClick={() => router.push(`/dashboard/summary/${conceptId}?title=${encodeURIComponent(conceptTitle)}`)}>
-                                ✍️ Write Summary
+                        {!evaluating && passed && nextStage && nextStage !== mode && (
+                            <button className="btn-primary" onClick={() => router.push(`/dashboard/test/${conceptId}?mode=${nextStage}&title=${encodeURIComponent(conceptTitle)}`)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                Next: {nextStage === 'practice' ? 'MCQ+ Reasoning' : 'Mastery Test'} <ArrowRight size={18} />
                             </button>
                         )}
                         {!evaluating && !passed && (
@@ -344,15 +366,15 @@ export default function TestPage() {
                                     }
                                     setLoading(false);
                                 }).catch(() => setLoading(false));
-                            }}>
-                                🔄 Retry
+                            }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <RefreshCw size={18} /> Retry
                             </button>
                         )}
-                        <button className="btn-secondary" onClick={() => router.push('/dashboard/concepts')}>
-                            ← Back to Concepts
+                        <button className="btn-secondary" onClick={() => router.push('/dashboard/concepts')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ArrowLeft size={18} /> Back to Concepts
                         </button>
-                        <button className="btn-secondary" onClick={() => router.push('/dashboard')}>
-                            📊 Dashboard
+                        <button className="btn-secondary" onClick={() => router.push('/dashboard')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <BarChart size={18} /> Dashboard
                         </button>
                     </div>
                 </div>
@@ -369,15 +391,21 @@ export default function TestPage() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <div>
-                    <span className="badge badge-info">{modeLabels[mode]}</span>
+                    <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        {(() => {
+                            const IconComponent = modeIcons[mode];
+                            return IconComponent ? <IconComponent size={14} /> : null;
+                        })()}
+                        {modeLabels[mode]}
+                    </span>
                     {conceptTitle && (
                         <span style={{ marginLeft: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                             {conceptTitle}
                         </span>
                     )}
                 </div>
-                <button className="btn-ghost" onClick={() => router.back()}>
-                    ✕ Exit
+                <button className="btn-ghost" onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <X size={16} /> Exit
                 </button>
             </div>
 
@@ -393,8 +421,12 @@ export default function TestPage() {
             {/* Next Button */}
             {showResult && (
                 <div className="animate-fade-in" style={{ textAlign: 'center', marginTop: '20px' }}>
-                    <button className="btn-primary" onClick={handleNext}>
-                        {currentIndex < questions.length - 1 ? 'Next Question →' : 'View Results'}
+                    <button className="btn-primary" onClick={handleNext} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        {currentIndex < questions.length - 1 ? (
+                            <>Next Question <ArrowRight size={18} /></>
+                        ) : (
+                            <>View Results <ArrowRight size={18} /></>
+                        )}
                     </button>
                 </div>
             )}

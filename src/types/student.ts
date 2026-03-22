@@ -35,4 +35,4 @@ export interface StrengthWeakness {
   analytical: number;
 }
 
-export type AssessmentMode = 'diagnostic' | 'practice' | 'mastery' | 'spaced';
+export type AssessmentMode = 'diagnostic' | 'practice' | 'mastery';

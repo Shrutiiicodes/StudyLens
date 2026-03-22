@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateQuestionsForMode } from '@/lib/question-generator';
 import { evaluateDiagnostic } from '@/lib/evaluation-engine';
 import { QuestionResult } from '@/types/mastery';
+import { getServiceSupabase } from '@/lib/supabase';
 
+const supabase = { from: (...args: any[]) => getServiceSupabase().from(...args) };
 const STAGES_ORDER = ['diagnostic', 'practice', 'mastery', 'spaced', 'summary'] as const;
 const PASS_THRESHOLD = 60;
 
@@ -16,15 +18,36 @@ export async function POST(request: NextRequest) {
         const { action, conceptId, conceptTitle, userId, results, mode } = body;
 
         if (action === 'generate') {
-            if (!conceptId || !conceptTitle) {
-                return NextResponse.json(
-                    { error: 'conceptId and conceptTitle are required' },
-                    { status: 400 }
-                );
+            const assessmentMode = mode || 'diagnostic';
+
+            // For non-diagnostic modes, fetch current decayed mastery
+            // so difficulty sampling adapts to what the student currently knows
+            let currentMastery = 50; // neutral default
+
+            if (assessmentMode !== 'diagnostic' && userId) {
+                const { data: masteryRecord } = await supabase
+                    .from('mastery')
+                    .select('mastery_score, last_updated')
+                    .eq('user_id', userId)
+                    .eq('concept_id', conceptId)
+                    .single();
+
+                if (masteryRecord) {
+                    const hoursElapsed = masteryRecord.last_updated
+                        ? (Date.now() - new Date(masteryRecord.last_updated).getTime()) / (1000 * 60 * 60)
+                        : 0;
+                    // Apply forgetting model so difficulty reflects current state, not peak mastery
+                    currentMastery = masteryRecord.mastery_score * Math.exp(-0.05 * (hoursElapsed / 24));
+                    currentMastery = Math.max(0, Math.min(100, currentMastery));
+                }
             }
 
-            const assessmentMode = mode || 'diagnostic';
-            const questions = await generateQuestionsForMode(conceptId, conceptTitle, assessmentMode);
+            const questions = await generateQuestionsForMode(
+                conceptId,
+                conceptTitle,
+                assessmentMode,
+                currentMastery
+            );
 
             return NextResponse.json({
                 success: true,

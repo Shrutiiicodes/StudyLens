@@ -83,7 +83,18 @@ export async function generateQuestion(request: QuestionGenerationRequest): Prom
         options: string[];
         correct_answer: string;
         explanation: string;
+        cognitive_level?: number;
+        bloom_level?: string;
     }>(response);
+
+    // Use LLM-provided cognitive_level if valid, otherwise fall back to map
+    const cognitiveLevelFromLLM = parsed.cognitive_level;
+    const cognitiveLevelFromMap = COGNITIVE_LEVEL_MAP[request.type] || 1;
+    const finalCognitiveLevel = (
+        cognitiveLevelFromLLM &&
+        cognitiveLevelFromLLM >= 1 &&
+        cognitiveLevelFromLLM <= 4
+    ) ? cognitiveLevelFromLLM : cognitiveLevelFromMap;
 
     return {
         id: uuid(),
@@ -94,45 +105,43 @@ export async function generateQuestion(request: QuestionGenerationRequest): Prom
         options: parsed.options,
         correct_answer: parsed.correct_answer,
         explanation: parsed.explanation,
-        cognitive_level: COGNITIVE_LEVEL_MAP[request.type] || 1,
+        cognitive_level: finalCognitiveLevel,
+        bloom_level: parsed.bloom_level as any,
     };
 }
 
 // ─── Generate questions based on mode ───
 
-type AssessmentMode = 'diagnostic' | 'practice' | 'mastery' | 'spaced';
+type AssessmentMode = 'diagnostic' | 'practice' | 'mastery';
 
 /**
  * Determine question count based on concept context richness.
  * More concepts in the knowledge graph = more questions.
  */
+// Question count limits per mode — matches architecture spec
+const QUESTION_LIMITS: Record<AssessmentMode, { min: number; max: number }> = {
+    diagnostic: { min: 5, max: 10 },
+    practice: { min: 5, max: 15 },
+    mastery: { min: 8, max: 15 },
+};
+
 function getQuestionCount(context: string, mode: AssessmentMode): number {
-    // Try to count concepts from context
+    const limits = QUESTION_LIMITS[mode] ?? { min: 5, max: 10 };
+
+    // Count concept nodes from structured context
     let conceptCount = 1;
     try {
         const parsed = JSON.parse(context);
         if (Array.isArray(parsed)) {
-            conceptCount = parsed.length;
+            conceptCount = Math.max(1, parsed.length);
         }
     } catch {
-        // No structured context, use minimum
+        // Context is not structured JSON — use minimum
     }
 
-    // Base count on number of concepts: 2 questions per concept, min 5, max 15
-    const baseCount = Math.max(5, Math.min(conceptCount * 2, 15));
-
-    switch (mode) {
-        case 'diagnostic':
-            return Math.min(baseCount, 10); // Cap diagnostic at 10
-        case 'practice':
-            return baseCount;
-        case 'mastery':
-            return Math.max(baseCount, 8); // At least 8 for mastery
-        case 'spaced':
-            return Math.min(baseCount, 8); // Cap spaced at 8
-        default:
-            return 5;
-    }
+    // 2 questions per concept node, clamped to mode limits
+    const raw = conceptCount * 2;
+    return Math.max(limits.min, Math.min(raw, limits.max));
 }
 
 /**
@@ -141,7 +150,8 @@ function getQuestionCount(context: string, mode: AssessmentMode): number {
  */
 function getConfigsForMode(
     mode: AssessmentMode,
-    count: number
+    count: number,
+    currentMastery: number = 50  // ADD THIS PARAMETER
 ): Array<{ type: QuestionType; difficulty: DifficultyLevel }> {
     const types: QuestionType[] = ['recall', 'conceptual', 'application', 'reasoning', 'analytical'];
     const configs: Array<{ type: QuestionType; difficulty: DifficultyLevel }> = [];
@@ -152,21 +162,38 @@ function getConfigsForMode(
 
         switch (mode) {
             case 'diagnostic':
-                // Progressive difficulty: easy → medium → hard
+                // Progressive difficulty regardless of mastery —
+                // diagnostic purpose is to find the ceiling, not adapt to it
                 difficulty = (i < count / 3 ? 1 : i < (count * 2) / 3 ? 2 : 3) as DifficultyLevel;
                 break;
+
             case 'practice':
-                // Mostly medium, some easy
-                difficulty = (i % 3 === 0 ? 1 : 2) as DifficultyLevel;
+            case 'mastery': {
+                // Use mastery-adaptive probability distribution
+                // E(M) = max(0, 0.7 - 0.006M)
+                // Med(M) = 0.3 + 0.002M
+                // H(M) = 1 - (E + Med)
+                const m = Math.max(0, Math.min(100, currentMastery));
+                const easy = Math.max(0, 0.7 - 0.006 * m);
+                const medium = 0.3 + 0.002 * m;
+                const hard = Math.max(0, 1 - (easy + medium));
+                const total = easy + medium + hard;
+
+                const rand = Math.random();
+                const easyProb = easy / total;
+                const mediumProb = (easy + medium) / total;
+
+                if (rand < easyProb) difficulty = 1;
+                else if (rand < mediumProb) difficulty = 2;
+                else difficulty = 3;
+
+                // Mastery mode: enforce at least 60% medium/hard
+                if (mode === 'mastery' && difficulty === 1 && Math.random() > 0.4) {
+                    difficulty = 2;
+                }
                 break;
-            case 'mastery':
-                // Mostly hard, some medium
-                difficulty = (i % 3 === 0 ? 2 : 3) as DifficultyLevel;
-                break;
-            case 'spaced':
-                // Mixed across all levels
-                difficulty = ((i % 3) + 1) as DifficultyLevel;
-                break;
+            }
+
             default:
                 difficulty = 2;
         }
@@ -180,11 +207,12 @@ function getConfigsForMode(
 export async function generateQuestionsForMode(
     conceptId: string,
     conceptTitle: string,
-    mode: AssessmentMode = 'diagnostic'
+    mode: AssessmentMode = 'diagnostic',
+    currentMastery: number = 50  // ADD THIS PARAMETER
 ): Promise<Question[]> {
     const context = await getConceptContext(conceptId);
     const count = getQuestionCount(context, mode);
-    const configs = getConfigsForMode(mode, count);
+    const configs = getConfigsForMode(mode, count, currentMastery); // PASS IT HERE
     const questions: Question[] = [];
 
     for (let i = 0; i < configs.length; i++) {

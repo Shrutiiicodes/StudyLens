@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabase } from '@/lib/supabase';
+import { Microscope, Rocket } from 'lucide-react';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -14,6 +15,11 @@ export default function LoginPage() {
     const [grade, setGrade] = useState(6);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Auto-redirect if already logged in
     useEffect(() => {
@@ -123,6 +129,8 @@ export default function LoginPage() {
         }
     };
 
+    if (!mounted) return null;
+
     return (
         <div className="bg-grid" style={{
             minHeight: '100vh',
@@ -168,7 +176,7 @@ export default function LoginPage() {
                             justifyContent: 'center',
                             fontSize: '24px',
                         }}>
-                            🔬
+                            <Microscope size={24} color="white" />
                         </div>
                         <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                             <span className="gradient-text">Study</span> Lens
@@ -321,7 +329,7 @@ export default function LoginPage() {
                             fontSize: '0.95rem',
                         }}
                     >
-                        🚀 Continue as Demo Student
+                        <Rocket size={18} /> Continue as Demo Student
                     </button>
 
                     <div style={{ textAlign: 'center', marginTop: '20px' }}>

@@ -2,6 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { 
+  Search, 
+  FileEdit, 
+  Trophy, 
+  Clock, 
+  Pencil, 
+  FileText, 
+  CheckCircle, 
+  Book, 
+  Lock 
+} from 'lucide-react';
 
 interface ConceptRecord {
     id: string;
@@ -17,11 +28,9 @@ interface ProgressData {
 }
 
 const STAGES = [
-    { key: 'diagnostic', label: '🔍 Diagnostic', description: 'Initial knowledge check' },
-    { key: 'practice', label: '📝 Practice', description: 'Adaptive practice questions' },
-    { key: 'mastery', label: '🏆 Mastery', description: 'Prove full understanding' },
-    { key: 'spaced', label: '⏰ Spaced Review', description: 'Reinforce learning' },
-    { key: 'summary', label: '✍️ Summary', description: 'Write what you learned' },
+    { key: 'diagnostic', label: 'Easy 5', icon: <Search size={14} />, description: 'Initial knowledge check' },
+    { key: 'practice', label: 'MCQ+ Reasoning', icon: <FileEdit size={14} />, description: 'Adaptive practice questions' },
+    { key: 'mastery', label: 'Mastery Test', icon: <Trophy size={14} />, description: 'Prove full understanding' },
 ];
 
 export default function ConceptsPage() {
@@ -99,15 +108,17 @@ export default function ConceptsPage() {
 
             {concepts.length === 0 ? (
                 <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📄</div>
+                    <div style={{ fontSize: '3rem', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+                        <FileText size={48} color="var(--text-muted)" />
+                    </div>
                     <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '12px' }}>
                         No concepts yet
                     </h2>
                     <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
                         Upload a PDF or DOCX document to extract concepts and start your learning journey.
                     </p>
-                    <Link href="/dashboard/upload" className="btn-primary" style={{ textDecoration: 'none' }}>
-                        📄 Upload Document
+                    <Link href="/dashboard/upload" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', margin: '0 auto' }}>
+                        <FileText size={18} /> Upload Document
                     </Link>
                 </div>
             ) : (
@@ -123,24 +134,24 @@ export default function ConceptsPage() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                                         <div>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '4px' }}>
-                                                📄 {concept.title}
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <FileText size={20} /> {concept.title}
                                             </h3>
-                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginLeft: '28px' }}>
                                                 Uploaded {new Date(concept.created_at).toLocaleDateString()}
                                             </p>
                                         </div>
                                         <Link
                                             href={`/dashboard/learn/${concept.id}`}
                                             className="btn-secondary"
-                                            style={{ textDecoration: 'none', fontSize: '0.85rem', padding: '8px 16px' }}
+                                            style={{ textDecoration: 'none', fontSize: '0.85rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
                                         >
-                                            📖 Learn It
+                                            <Book size={16} /> Learn It
                                         </Link>
                                     </div>
                                     {isComplete && (
-                                        <span className="badge badge-success" style={{ fontSize: '0.8rem' }}>
-                                            ✅ Complete
+                                        <span className="badge badge-success" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <CheckCircle size={14} /> Complete
                                         </span>
                                     )}
                                     {p && !isComplete && (
@@ -204,9 +215,13 @@ export default function ConceptsPage() {
                                                         textAlign: 'center',
                                                         cursor: 'not-allowed',
                                                         fontSize: '0.85rem',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '8px',
                                                     }}
                                                 >
-                                                    🔒 {stage.label}
+                                                    <Lock size={14} /> {stage.label}
                                                 </div>
                                             );
                                         }
@@ -222,9 +237,14 @@ export default function ConceptsPage() {
                                                     padding: '10px 14px',
                                                     textAlign: 'center',
                                                     position: 'relative',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '8px',
                                                 }}
                                             >
-                                                {isCompleted ? '✅ ' : ''}{stage.label}
+                                                {isCompleted ? <CheckCircle size={14} /> : stage.icon}
+                                                {stage.label}
                                             </Link>
                                         );
                                     })}

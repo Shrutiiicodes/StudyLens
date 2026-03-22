@@ -3,6 +3,7 @@ import { runCypher } from './neo4j';
 import { chunkText, generateEmbedding } from './embeddings';
 import { ExtractedKnowledge, KnowledgeGraph, ConceptNode, ConceptRelation } from '@/types/concept';
 import { v4 as uuid } from 'uuid';
+import { PROMPTS } from '@/config/prompts';
 
 /**
  * Knowledge Graph Builder
@@ -16,12 +17,7 @@ import { v4 as uuid } from 'uuid';
 
 // ─── Step 1: Extract knowledge from text chunks ───
 
-import { PROMPTS } from '@/config/prompts';
-
-// ─── Step 1: Extract knowledge from text chunks ───
-
 async function extractKnowledgeFromChunk(chunk: string): Promise<ExtractedKnowledge> {
-    // Load exemplars (could be from a file or DB)
     const exemplars = `SciERC Style: 
     { "from": "Neurons", "to": "Signals", "type": "USED_FOR" }
     { "from": "Brain", "to": "Nervous System", "type": "PART_OF" }`;
@@ -34,7 +30,97 @@ async function extractKnowledgeFromChunk(chunk: string): Promise<ExtractedKnowle
         { jsonMode: true, temperature: 0.2 }
     );
 
-    return parseLLMJson<ExtractedKnowledge>(response);
+    const raw = parseLLMJson<ExtractedKnowledge>(response);
+
+    // Verify each relationship against the source chunk
+    const verifiedRelationships: ExtractedKnowledge['relationships'] = [];
+
+    for (const rel of raw.relationships) {
+        try {
+            const verifyResponse = await chatCompletion(
+                [
+                    {
+                        role: 'system',
+                        content: `You are a fact-verification assistant for educational content.
+Given a source passage and a factual triple, determine if the triple is
+directly and explicitly supported by the passage.
+
+Respond ONLY with JSON: {"verdict": "a" | "b" | "c", "confidence": 0.0-1.0}
+
+Verdicts:
+(a) Directly and explicitly stated in the passage
+(b) Implied or inferred — not directly stated
+(c) Not supported or contradicted`
+                    },
+                    {
+                        role: 'user',
+                        content: `Passage: "${chunk}"
+
+Triple to verify: (${rel.from}, ${rel.type}, ${rel.to})
+
+Is this triple directly supported by the passage?`
+                    }
+                ],
+                { jsonMode: true, temperature: 0.1 }
+            );
+
+            const result = parseLLMJson<{ verdict: string; confidence: number }>(verifyResponse);
+
+            if (result.verdict === 'a' && result.confidence >= 0.80) {
+                verifiedRelationships.push(rel);
+            } else {
+                console.log(`[KG Verify] Discarded: (${rel.from}, ${rel.type}, ${rel.to}) — verdict=${result.verdict}, confidence=${result.confidence}`);
+            }
+        } catch (err) {
+            // If verification call fails, discard the triple to be safe
+            console.warn(`[KG Verify] Verification failed for triple, discarding:`, rel, err);
+        }
+    }
+
+    return {
+        ...raw,
+        relationships: verifiedRelationships,
+    };
+}
+
+async function verifyTriple(
+    triple: { subject: string; predicate: string; object: string },
+    sourceChunk: string
+): Promise<{ keep: boolean; confidence: number }> {
+    const response = await chatCompletion([
+        {
+            role: 'system',
+            content: `You are a fact-verification assistant for educational content.
+Given a source passage and a factual triple, determine if the triple is 
+directly and explicitly supported by the passage.
+
+Respond ONLY with JSON:
+{"verdict": "a" | "b" | "c", "confidence": 0.0-1.0}
+
+Verdicts:
+(a) Directly and explicitly stated in the passage
+(b) Implied or inferred — not directly stated  
+(c) Not supported or contradicted`
+        },
+        {
+            role: 'user',
+            content: `Passage: "${sourceChunk}"
+
+Triple to verify: (${triple.subject}, ${triple.predicate}, ${triple.object})
+
+Is this triple directly supported by the passage?`
+        }
+    ], { jsonMode: true, temperature: 0.1 });
+
+    try {
+        const result = parseLLMJson<{ verdict: string; confidence: number }>(response);
+        return {
+            keep: result.verdict === 'a' && result.confidence >= 0.80,
+            confidence: result.confidence
+        };
+    } catch {
+        return { keep: false, confidence: 0 };
+    }
 }
 
 // ─── Step 2: Merge extracted knowledge ───
@@ -88,6 +174,80 @@ function mergeKnowledge(chunks: ExtractedKnowledge[]): ExtractedKnowledge {
     };
 }
 
+/**
+ * Validates the prerequisite DAG for a document.
+ * Detects cycles in REQUIRES + IS_A edges and removes the lowest-confidence
+ * edge in each cycle to ensure the graph remains a valid DAG.
+ */
+async function validatePrerequisiteDAG(
+    userId: string,
+    documentId: string
+): Promise<void> {
+    // Fetch all REQUIRES and IS_A edges for this document's concepts
+    const edges = await runCypher<{ fromId: string; toId: string; relType: string }>(
+        `MATCH (a:Concept {userId: $userId, documentId: $docId})-[r:REQUIRES|IS_A]->(b:Concept {userId: $userId})
+         RETURN a.id AS fromId, b.id AS toId, type(r) AS relType`,
+        { userId, docId: documentId }
+    );
+
+    if (edges.length === 0) {
+        console.log('[DAG] No prerequisite edges found — skipping validation');
+        return;
+    }
+
+    // Build adjacency list
+    const graph = new Map<string, string[]>();
+    for (const edge of edges) {
+        if (!graph.has(edge.fromId)) graph.set(edge.fromId, []);
+        graph.get(edge.fromId)!.push(edge.toId);
+    }
+
+    // DFS-based cycle detection
+    const visited = new Set<string>();
+    const inStack = new Set<string>();
+    const cyclicEdges: Array<{ from: string; to: string }> = [];
+
+    function dfs(node: string): void {
+        visited.add(node);
+        inStack.add(node);
+
+        for (const neighbor of graph.get(node) || []) {
+            if (!visited.has(neighbor)) {
+                dfs(neighbor);
+            } else if (inStack.has(neighbor)) {
+                // Cycle detected — record the back edge
+                cyclicEdges.push({ from: node, to: neighbor });
+            }
+        }
+
+        inStack.delete(node);
+    }
+
+    for (const node of graph.keys()) {
+        if (!visited.has(node)) dfs(node);
+    }
+
+    if (cyclicEdges.length === 0) {
+        console.log(`[DAG] Valid — no cycles found in ${edges.length} prerequisite edges`);
+        return;
+    }
+
+    console.log(`[DAG] Found ${cyclicEdges.length} cyclic edge(s) — removing`);
+
+    // Remove each cyclic edge from Neo4j
+    for (const edge of cyclicEdges) {
+        try {
+            await runCypher(
+                `MATCH (a:Concept {id: $fromId})-[r:REQUIRES|IS_A]->(b:Concept {id: $toId})
+                 DELETE r`,
+                { fromId: edge.from, toId: edge.to }
+            );
+            console.log(`[DAG] Removed cyclic edge: ${edge.from} → ${edge.to}`);
+        } catch (err) {
+            console.error(`[DAG] Failed to remove edge ${edge.from} → ${edge.to}:`, err);
+        }
+    }
+}
 // ─── Step 3: Write to Neo4j ───
 
 async function writeToNeo4j(
@@ -129,34 +289,31 @@ async function writeToNeo4j(
             properties: mainProps,
         });
 
-        // 2. Dynamically Create Related Nodes for Lists (examples, formulas, etc.)
-        const dynamicProps: Record<string, any> = { ...concept };
-        // We want to skip name and definition as they are in the main node
-        const SKIP_KEYS = ['name', 'definition'];
+        // 2. Create sub-nodes for examples, formulas, misconceptions
+        const CONCEPT_ARRAY_FIELDS = ['examples', 'formulas', 'misconceptions'] as const;
 
-        for (const [key, value] of Object.entries(dynamicProps)) {
-            if (SKIP_KEYS.includes(key)) continue;
+        for (const field of CONCEPT_ARRAY_FIELDS) {
+            const items = (concept as any)[field] as string[] | undefined;
+            if (!items?.length) continue;
 
-            const relType = key.toUpperCase();
-            const items = Array.isArray(value) ? value : [value];
+            const relType = field.toUpperCase(); // EXAMPLES, FORMULAS, MISCONCEPTIONS
+            const nodeLabel = field.slice(0, -1); // example, formula, misconception
+            const capitalLabel = nodeLabel.charAt(0).toUpperCase() + nodeLabel.slice(1);
 
             for (const item of items) {
                 if (!item || typeof item !== 'string') continue;
-
                 const subNodeId = uuid();
-                const nodeType = key.endsWith('s') ? key.slice(0, -1) : key;
-
                 await runCypher(
                     `MATCH (c:Concept {id: $conceptId})
-                     CREATE (s:${nodeType.charAt(0).toUpperCase() + nodeType.slice(1)} {id: $id, text: $text})
+                     CREATE (s:${capitalLabel} {id: $id, text: $text})
                      CREATE (c)-[:${relType}]->(s)`,
                     { conceptId, id: subNodeId, text: item }
                 );
 
                 nodes.push({
                     id: subNodeId,
-                    label: `${nodeType}: ${item.substring(0, 30)}...`,
-                    type: nodeType as any,
+                    label: `${nodeLabel}: ${item.substring(0, 30)}...`,
+                    type: nodeLabel as any,
                     properties: { text: item }
                 });
 
@@ -190,6 +347,7 @@ async function writeToNeo4j(
 
 // ─── Main Builder Function ───
 
+
 export async function buildKnowledgeGraph(
     userId: string,
     documentId: string,
@@ -219,6 +377,14 @@ export async function buildKnowledgeGraph(
     // 4. Write to Neo4j
     const graph = await writeToNeo4j(userId, documentId, merged);
     console.log(`[KG Builder] Knowledge graph created with ${graph.nodes.length} nodes`);
+
+    // 5. Validate prerequisite DAG — detect and remove cyclic edges
+    try {
+        await validatePrerequisiteDAG(userId, documentId);
+    } catch (dagError) {
+        // DAG validation failure should not block the upload
+        console.error('[KG Builder] DAG validation error (non-fatal):', dagError);
+    }
 
     return graph;
 }

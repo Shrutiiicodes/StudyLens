@@ -4,6 +4,16 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabase } from '@/lib/supabase';
+import { 
+  LayoutDashboard, 
+  FileText, 
+  Brain, 
+  History, 
+  Microscope, 
+  Settings, 
+  LogOut, 
+  Menu 
+} from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -63,10 +73,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
 
     const navItems = [
-        { href: '/dashboard', icon: '📊', label: 'Dashboard' },
-        { href: '/dashboard/upload', icon: '📄', label: 'Upload' },
-        { href: '/dashboard/concepts', icon: '🧠', label: 'Learning' },
-        { href: '/dashboard/history', icon: '📋', label: 'History' },
+        { href: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+        { href: '/dashboard/upload', icon: <FileText size={20} />, label: 'Upload' },
+        { href: '/dashboard/concepts', icon: <Brain size={20} />, label: 'Learning' },
+        { href: '/dashboard/history', icon: <History size={20} />, label: 'History' },
     ];
 
     if (!user) {
@@ -111,9 +121,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '18px',
                         }}>
-                            🔬
+                            <Microscope size={20} color="white" />
                         </div>
                         <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                             <span className="gradient-text">Study</span> Lens
@@ -130,7 +139,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 className={`sidebar-link ${pathname === item.href ? 'active' : ''}`}
                                 onClick={() => setSidebarOpen(false)}
                             >
-                                <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
+                                <span style={{ display: 'flex', alignItems: 'center' }}>
+                                    {item.icon}
+                                </span>
                                 {item.label}
                             </Link>
                         ))}
@@ -167,16 +178,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{user.full_name}</div>
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Grade {user.grade}</div>
                         </div>
-                        <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>⚙️</span>
+                        <Settings size={14} style={{ opacity: 0.5 }} />
                     </div>
                 </Link>
                 <div style={{ padding: '0 20px 20px' }}>
                     <button
                         className="btn-ghost"
                         onClick={handleLogout}
-                        style={{ width: '100%', textAlign: 'left', fontSize: '0.85rem', color: 'var(--accent-danger)', padding: '0' }}
+                        style={{ width: '100%', textAlign: 'left', fontSize: '0.85rem', color: 'var(--accent-danger)', padding: '0', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
-                        🚪 Sign Out
+                        <LogOut size={16} /> Sign Out
                     </button>
                 </div>
             </aside>
@@ -194,8 +205,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     display: 'none',
                     marginBottom: '24px',
                 }}>
-                    <button className="btn-ghost" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                        ☰ Menu
+                    <button className="btn-ghost" onClick={() => setSidebarOpen(!sidebarOpen)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Menu size={20} /> Menu
                     </button>
                 </div>
 

@@ -2,6 +2,23 @@
 
 import { useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { 
+  CheckCircle, 
+  ClipboardList, 
+  Brain, 
+  Pencil, 
+  Link2, 
+  PartyPopper, 
+  FileEdit, 
+  Trophy, 
+  MessageSquareText, 
+  Edit3, 
+  ArrowLeft, 
+  BarChart, 
+  X, 
+  RefreshCw, 
+  Send 
+} from 'lucide-react';
 
 export default function SummaryPage() {
     const params = useParams();
@@ -58,11 +75,19 @@ export default function SummaryPage() {
     };
 
     const rubricLabels: Record<string, string> = {
-        accuracy: '✅ Accuracy',
-        completeness: '📋 Completeness',
-        understanding: '🧠 Understanding',
-        clarity: '✍️ Clarity',
-        connections: '🔗 Connections',
+        accuracy: 'Accuracy',
+        completeness: 'Completeness',
+        understanding: 'Understanding',
+        clarity: 'Clarity',
+        connections: 'Connections',
+    };
+
+    const rubricIcons: Record<string, any> = {
+        accuracy: CheckCircle,
+        completeness: ClipboardList,
+        understanding: Brain,
+        clarity: Pencil,
+        connections: Link2,
     };
 
     // Results view
@@ -70,8 +95,8 @@ export default function SummaryPage() {
         return (
             <div className="animate-fade-in" style={{ maxWidth: '700px', margin: '0 auto' }}>
                 <div className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '4rem', marginBottom: '16px' }}>
-                        {result.passed ? '🎉' : '📝'}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                        {result.passed ? <PartyPopper size={64} color="var(--accent-success)" /> : <FileEdit size={64} color="var(--accent-primary)" />}
                     </div>
 
                     <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
@@ -80,7 +105,7 @@ export default function SummaryPage() {
 
                     <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', marginBottom: '32px' }}>
                         {result.passed
-                            ? `You've demonstrated strong understanding of ${conceptTitle}. Concept complete! 🏆`
+                            ? `You've demonstrated strong understanding of ${conceptTitle}. Concept complete!`
                             : `Your summary needs improvement. Try adding more detail about the key concepts.`}
                     </p>
 
@@ -123,24 +148,28 @@ export default function SummaryPage() {
                         marginBottom: '24px',
                         textAlign: 'left',
                     }}>
-                        {Object.entries(result.rubric).map(([key, value]) => (
-                            <div key={key} className="stat-card" style={{ padding: '12px' }}>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                                    {rubricLabels[key] || key}
+                        {(Object.entries(result.rubric) as [string, number][]).map(([key, value]) => {
+                            const IconComponent = rubricIcons[key];
+                            return (
+                                <div key={key} className="stat-card" style={{ padding: '12px' }}>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        {IconComponent && <IconComponent size={12} />}
+                                        {rubricLabels[key] || key}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '3px' }}>
+                                        {[1, 2, 3, 4, 5].map((i) => (
+                                            <div key={i} style={{
+                                                width: '16px',
+                                                height: '6px',
+                                                borderRadius: '3px',
+                                                background: i <= value ? 'var(--accent-primary)' : 'var(--bg-elevated)',
+                                            }} />
+                                        ))}
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 600, marginTop: '4px' }}>{value}/5</div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '3px' }}>
-                                    {[1, 2, 3, 4, 5].map((i) => (
-                                        <div key={i} style={{
-                                            width: '16px',
-                                            height: '6px',
-                                            borderRadius: '3px',
-                                            background: i <= value ? 'var(--accent-primary)' : 'var(--bg-elevated)',
-                                        }} />
-                                    ))}
-                                </div>
-                                <div style={{ fontSize: '0.85rem', fontWeight: 600, marginTop: '4px' }}>{value}/5</div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     {/* Feedback */}
@@ -149,24 +178,27 @@ export default function SummaryPage() {
                         marginBottom: '24px',
                         textAlign: 'left',
                         background: 'var(--bg-glass)',
+                        display: 'flex',
+                        gap: '12px',
                     }}>
+                        <MessageSquareText size={20} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
                         <p style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
-                            💬 {result.feedback}
+                            {result.feedback}
                         </p>
                     </div>
 
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
                         {!result.passed && (
-                            <button className="btn-primary" onClick={() => { setResult(null); }}>
-                                ✏️ Try Again
+                            <button className="btn-primary" onClick={() => { setResult(null); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Edit3 size={18} /> Try Again
                             </button>
                         )}
-                        <button className="btn-secondary" onClick={() => router.push('/dashboard/concepts')}>
-                            ← Back to Concepts
+                        <button className="btn-secondary" onClick={() => router.push('/dashboard/concepts')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ArrowLeft size={18} /> Back to Concepts
                         </button>
-                        <button className="btn-secondary" onClick={() => router.push('/dashboard')}>
-                            📊 Dashboard
+                        <button className="btn-secondary" onClick={() => router.push('/dashboard')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <BarChart size={18} /> Dashboard
                         </button>
                     </div>
                 </div>
@@ -180,13 +212,15 @@ export default function SummaryPage() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <div>
-                    <span className="badge badge-info">📝 Summary Assignment</span>
+                    <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <Pencil size={14} /> Summary Assignment
+                    </span>
                     <span style={{ marginLeft: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                         {conceptTitle}
                     </span>
                 </div>
-                <button className="btn-ghost" onClick={() => router.back()}>
-                    ✕ Exit
+                <button className="btn-ghost" onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <X size={16} /> Exit
                 </button>
             </div>
 
@@ -275,9 +309,17 @@ export default function SummaryPage() {
                         padding: '14px 32px',
                         fontSize: '1rem',
                         opacity: submitting || summary.trim().length < 50 ? 0.6 : 1,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        margin: '0 auto',
                     }}
                 >
-                    {submitting ? '🔄 Evaluating...' : '📤 Submit Summary'}
+                    {submitting ? (
+                        <><RefreshCw size={18} className="animate-spin" /> Evaluating...</>
+                    ) : (
+                        <><Send size={18} /> Submit Summary</>
+                    )}
                 </button>
             </div>
         </div>

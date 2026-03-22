@@ -1,5 +1,7 @@
 'use client';
 
+import { Clock } from 'lucide-react';
+
 interface ProgressCardProps {
     title: string;
     mastery: number;
@@ -47,7 +49,10 @@ export default function ProgressCard({
                 cursor: onClick ? 'pointer' : 'default',
                 position: 'relative',
                 overflow: 'hidden',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
             }}
+            onMouseOver={(e) => { if (onClick) (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; }}
+            onMouseOut={(e) => { if (onClick) (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}
         >
             {/* Accent line */}
             <div style={{
@@ -71,9 +76,11 @@ export default function ProgressCard({
                     )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                    <span className={`badge ${badge.class}`}>{badge.text}</span>
+                    <span className={`badge ${badge.class}`} style={{ fontSize: '0.7rem', fontWeight: 700 }}>{badge.text}</span>
                     {needsReview && (
-                        <span className="badge badge-warning">⏰ REVIEW</span>
+                        <span className="badge badge-warning" style={{ fontSize: '0.7rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Clock size={10} /> REVIEW
+                        </span>
                     )}
                 </div>
             </div>

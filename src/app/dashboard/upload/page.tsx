@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import UploadZone from '@/components/UploadZone';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { XCircle, CheckCircle, AlertTriangle, Target, FileText } from 'lucide-react';
 
 interface ConceptRecord {
     id: string;
@@ -110,8 +111,11 @@ export default function UploadPage() {
                     background: 'rgba(239, 68, 68, 0.08)',
                     border: '1px solid rgba(239, 68, 68, 0.2)',
                     color: 'var(--accent-danger)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
                 }}>
-                    ❌ {error}
+                    <XCircle size={20} /> {error}
                 </div>
             )}
 
@@ -127,9 +131,8 @@ export default function UploadPage() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '24px',
                         }}>
-                            ✅
+                            <CheckCircle size={24} color="var(--accent-success)" />
                         </div>
                         <div>
                             <h3 style={{ fontWeight: 600, fontSize: '1.1rem' }}>Document Analyzed Successfully!</h3>
@@ -178,8 +181,11 @@ export default function UploadPage() {
                                     color: 'var(--accent-warning)',
                                     fontSize: '0.85rem',
                                     marginBottom: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
                                 }}>
-                                    ⚠️ {w}
+                                    <AlertTriangle size={16} /> {w}
                                 </div>
                             ))}
                         </div>
@@ -190,12 +196,12 @@ export default function UploadPage() {
                         <Link
                             className="btn-primary"
                             href={`/dashboard/test/${result.concept?.id}?mode=diagnostic&title=${encodeURIComponent(result.concept?.title || '')}`}
-                            style={{ textDecoration: 'none' }}
+                            style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
                         >
-                            🎯 Take Diagnostic Test
+                            <Target size={18} /> Take Easy 5 Test
                         </Link>
-                        <button className="btn-secondary" onClick={() => { setResult(null); }}>
-                            📄 Upload Another
+                        <button className="btn-secondary" onClick={() => { setResult(null); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <FileText size={18} /> Upload Another
                         </button>
                     </div>
                 </div>
@@ -212,8 +218,10 @@ export default function UploadPage() {
                         {concepts.map((c) => (
                             <div key={c.id} className="glass-card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>📄 {c.title}</div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <FileText size={16} /> {c.title}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '24px' }}>
                                         Uploaded {new Date(c.created_at).toLocaleDateString()}
                                     </div>
                                 </div>
