@@ -135,7 +135,11 @@ export async function evaluateDiagnostic(
         .single();
 
     if (sessionError) {
-        console.error('Failed to create session:', sessionError);
+        if (sessionError.code === '23503') {
+            console.warn('Skipping session persistence: user is a Demo account not present in Supabase Auth.');
+        } else {
+            console.error('Failed to create session:', sessionError);
+        }
     }
 
     const sessionId = sessionData?.id;
@@ -165,7 +169,7 @@ export async function evaluateDiagnostic(
     for (const result of results) {
         await supabase.from('attempts').insert({
             user_id: userId,
-            concept_id: conceptId,
+            concept_id: result.concept_id || conceptId,
             question_id: result.question_id,
             correct: result.correct,
             difficulty: result.difficulty,

@@ -3,7 +3,8 @@ import { runCypher } from './neo4j';
 import { Question, QuestionType, DifficultyLevel, QuestionGenerationRequest } from '@/types/question';
 import { COGNITIVE_LEVEL_MAP } from '@/config/constants';
 import { v4 as uuid } from 'uuid';
-
+import { supabase } from './supabase';
+import { needsSpacedReinforcement } from './forgetting-model';
 /**
  * Question Generator
  * 
@@ -57,8 +58,8 @@ import { PROMPTS } from '@/config/prompts';
 // ─── Generate a single question ───
 
 export async function generateQuestion(request: QuestionGenerationRequest): Promise<Question> {
-    // Get concept context from KG
-    const context = request.context || (await getConceptContext(request.concept_id));
+    // Get concept context from KG (support empty strings when Neo4j fails)
+    const context = request.context !== undefined ? request.context : (await getConceptContext(request.concept_id));
 
     const difficultyLabel = { 1: 'Easy', 2: 'Medium', 3: 'Hard' }[request.difficulty];
     const typeDescription = request.type.toUpperCase();
@@ -120,9 +121,9 @@ type AssessmentMode = 'diagnostic' | 'practice' | 'mastery';
  */
 // Question count limits per mode — matches architecture spec
 const QUESTION_LIMITS: Record<AssessmentMode, { min: number; max: number }> = {
-    diagnostic: { min: 5, max: 10 },
-    practice: { min: 5, max: 15 },
-    mastery: { min: 8, max: 15 },
+    diagnostic: { min: 3, max: 5 },
+    practice: { min: 3, max: 7 },
+    mastery: { min: 5, max: 8 },
 };
 
 function getQuestionCount(context: string, mode: AssessmentMode): number {
@@ -208,12 +209,51 @@ export async function generateQuestionsForMode(
     conceptId: string,
     conceptTitle: string,
     mode: AssessmentMode = 'diagnostic',
-    currentMastery: number = 50  // ADD THIS PARAMETER
+    currentMastery: number = 50,
+    userId?: string
 ): Promise<Question[]> {
     const context = await getConceptContext(conceptId);
-    const count = getQuestionCount(context, mode);
-    const configs = getConfigsForMode(mode, count, currentMastery); // PASS IT HERE
+    let count = getQuestionCount(context, mode);
     const questions: Question[] = [];
+
+    // -- SPACED REPETITION INJECTION (SILENT) --
+    if (userId && (mode === 'practice' || mode === 'mastery')) {
+        try {
+            const { data: records } = await supabase
+                .from('mastery')
+                .select('concept_id, mastery_score, last_updated, concepts(title)')
+                .eq('user_id', userId)
+                .neq('concept_id', conceptId);
+            
+            if (records && records.length > 0) {
+                // Find concepts mathematically due for Spaced Revision
+                const spacedConcepts = records.filter(r => needsSpacedReinforcement(r.mastery_score, r.last_updated));
+                
+                if (spacedConcepts.length > 0) {
+                    const maxSpaced = mode === 'mastery' ? 2 : 1;
+                    const toSpace = spacedConcepts.sort(() => 0.5 - Math.random()).slice(0, Math.min(maxSpaced, Math.floor(count / 2)));
+                    
+                    for (const sc of toSpace) {
+                        const sContext = await getConceptContext(sc.concept_id);
+                        const sTitle = (sc.concepts as any)?.title || 'Review Concept';
+                        const sq = await generateQuestion({
+                            concept_id: sc.concept_id,
+                            concept_title: sTitle,
+                            type: 'recall',
+                            difficulty: 2,
+                            context: sContext
+                        });
+                        questions.push(sq);
+                        count--; // Trade a standard token generation slot for this spaced review slot
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('[QGen] Spaced Injection Failed', e);
+        }
+    }
+
+    const configs = getConfigsForMode(mode, count, currentMastery);
 
     for (let i = 0; i < configs.length; i++) {
         try {
@@ -230,7 +270,8 @@ export async function generateQuestionsForMode(
         }
     }
 
-    return questions;
+    // Return the dynamically assembled test completely shuffled so spaced concepts blend in natively
+    return questions.sort(() => Math.random() - 0.5);
 }
 
 // Keep backward compatibility

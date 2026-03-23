@@ -43,6 +43,7 @@ export interface QuestionResult {
     cognitive_level: number;
     time_taken: number;
     confidence: number;
+    concept_id?: string;
 }
 
 export interface DifficultyDistribution {

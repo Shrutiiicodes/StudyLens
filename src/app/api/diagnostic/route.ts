@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
             }
 
             const assessmentMode = mode || 'diagnostic';
-            const questions = await generateQuestionsForMode(conceptId, conceptTitle, assessmentMode);
+            const questions = await generateQuestionsForMode(conceptId, conceptTitle, assessmentMode, 50, userId);
 
             return NextResponse.json({
                 success: true,

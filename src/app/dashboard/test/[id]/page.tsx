@@ -181,11 +181,22 @@ export default function TestPage() {
 
     useEffect(() => {
         async function fetchQuestions() {
+            // Reset test state for new session
+            setTestComplete(false);
+            setResults([]);
+            setCurrentIndex(0);
+            setShowResult(false);
+            setEvaluating(false);
+            setPassed(false);
+
             setLoading(true);
             setError('');
             const title = searchParams.get('title') || '';
 
             try {
+                const stored = localStorage.getItem('study-lens-user');
+                const userId = stored ? JSON.parse(stored).id : null;
+
                 const res = await fetch('/api/diagnostic', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -194,6 +205,7 @@ export default function TestPage() {
                         conceptId,
                         conceptTitle: title,
                         mode,
+                        userId, // Pass user boundary for spaced repetition graph lookups
                     }),
                 });
 
@@ -247,6 +259,7 @@ export default function TestPage() {
                         cognitive_level: q.cognitive_level,
                         time_taken: results[i]?.timeTaken ?? 0,
                         confidence: results[i]?.confidence ?? 0.5,
+                        concept_id: q.concept_id,
                     }));
 
                     const evalRes = await fetch('/api/diagnostic', {

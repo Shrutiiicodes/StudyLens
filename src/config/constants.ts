@@ -58,10 +58,9 @@ export const RELATION_BLOOM_MAP: Record<string, number> = {
 
 // ─── Question Count Limits Per Mode ───
 export const QUESTION_LIMITS: Record<string, { min: number; max: number }> = {
-    diagnostic: { min: 5, max: 10 },
-    practice: { min: 5, max: 15 },
-    mastery: { min: 8, max: 15 },
-    spaced: { min: 5, max: 8 },
+    diagnostic: { min: 3, max: 5 },
+    practice: { min: 3, max: 7 },
+    mastery: { min: 5, max: 8 },
 };
 
 // ─── Assessment Weights ───
@@ -133,7 +132,7 @@ export const DAG_EDGE_CONFIDENCE_THRESHOLD = 0.65;
 export const GRADE_LEVELS = Array.from({ length: 7 }, (_, i) => i + 4); // 4-10
 
 // ─── LLM Config ───
-export const GROQ_MODEL = 'llama-3.3-70b-versatile';
+export const GROQ_MODEL = 'qwen/qwen3-32b';
 export const GROQ_TEMPERATURE = 0.3;
 export const GROQ_MAX_TOKENS = 4096;
 
