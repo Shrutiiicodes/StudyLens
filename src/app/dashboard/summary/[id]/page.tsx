@@ -276,7 +276,7 @@ export default function SummaryPage() {
                         fontSize: '0.8rem',
                         color: summary.length < 50 ? 'var(--accent-warning)' : 'var(--text-muted)',
                     }}>
-                        {summary.length} characters {summary.length < 50 ? '(minimum 50)' : '✓'}
+                        {summary.length} characters {summary.length < 50 ? '(minimum 50)' : <CheckCircle size={14} style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: '4px' }} />}
                     </span>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         ~{Math.ceil(summary.split(/\s+/).filter(Boolean).length)} words

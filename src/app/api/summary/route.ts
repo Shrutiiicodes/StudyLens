@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { evaluateSummary, getConceptContext } from '@/lib/question-generator';
 import { getServiceSupabase } from '@/lib/supabase';
-import { calculateMSS } from '@/lib/evaluation-engine';
+
 
 /**
  * POST /api/summary
@@ -93,9 +93,6 @@ export async function POST(request: NextRequest) {
                 // If student has high MSS, cap mastery gain — misconceptions
                 // need more reinforcement before marking fully complete
                 let mss = 0;
-                try {
-                    mss = await calculateMSS(userId, conceptId);
-                } catch { /* non-fatal */ }
 
                 // High MSS (>0.5) = misconceptions still present
                 // Cap mastery at 85 instead of allowing full 100

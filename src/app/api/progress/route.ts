@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 
-const STAGES = ['diagnostic', 'practice', 'mastery', 'spaced', 'summary'] as const;
+const STAGES = ['diagnostic', 'practice', 'mastery'] as const;
 
 /**
  * GET /api/progress?userId=xxx&conceptId=xxx

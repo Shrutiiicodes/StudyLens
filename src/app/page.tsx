@@ -4,16 +4,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  FileText,
-  Brain,
-  Target,
-  BarChart,
-  Clock,
-  Trophy,
-  Microscope,
-  Rocket,
-  Sparkles,
-  Infinity
+  FileText, Brain, Target, BarChart, Clock, Trophy, Microscope, Rocket, Sparkles, Infinity
 } from 'lucide-react';
 
 export default function HomePage() {

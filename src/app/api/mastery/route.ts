@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { calculateStudentSAI, calculateMSS, calculateLearnItPriority } from '@/lib/evaluation-engine';
+import { calculateStudentSAI } from '@/lib/evaluation-engine';
 import { getForgettingState, needsSpacedReinforcement } from '@/lib/forgetting-model';
 import { getDifficultyDistribution } from '@/lib/personalization-engine';
 
@@ -47,17 +47,9 @@ export async function GET(request: NextRequest) {
 
                 // Calculate MSS for this concept
                 let mss = 0;
-                try {
-                    mss = await calculateMSS(userId, record.concept_id);
-                } catch (e) {
-                    console.warn('[Mastery] MSS calculation failed for concept:', record.concept_id);
-                }
 
                 // Calculate Learn It priority
-                const learnItPriority = calculateLearnItPriority(
-                    forgettingState.decayed_mastery,
-                    mss
-                );
+                const learnItPriority = 0
 
                 return {
                     concept_id: record.concept_id,

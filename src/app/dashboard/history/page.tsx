@@ -47,7 +47,7 @@ const demoHistory = [
     {
         id: '4',
         concept: 'Force & Motion',
-        mode: 'spaced',
+        mode: 'practice',
         score: 67,
         correct: 3,
         total: 5,
@@ -90,14 +90,12 @@ const modeIcons: Record<string, any> = {
     diagnostic: Search,
     practice: FileEdit,
     mastery: Trophy,
-    spaced: Clock,
 };
 
 const modeColors: Record<string, string> = {
     diagnostic: '#06b6d4',
     practice: '#6c5ce7',
     mastery: '#22c55e',
-    spaced: '#f59e0b',
 };
 
 export default function HistoryPage() {
@@ -175,7 +173,7 @@ export default function HistoryPage() {
                                 })()}
                             </div>
                             <div>
-                                <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '4px' }}>
+                                <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '4px', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                     {item.concept}
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>

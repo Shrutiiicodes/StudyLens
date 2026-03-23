@@ -5,17 +5,17 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ProgressCard from '@/components/ProgressCard';
 import ConceptMap from '@/components/ConceptMap';
 import MasteryGraph from '@/components/MasteryGraph';
-import { 
-  ArrowLeft, 
-  Target, 
-  BookOpen, 
-  ClipboardList, 
-  Share2, 
-  BarChart2, 
-  Search, 
-  FileEdit, 
-  Trophy, 
-  Clock 
+import {
+    ArrowLeft,
+    Target,
+    BookOpen,
+    ClipboardList,
+    Share2,
+    BarChart2,
+    Search,
+    FileEdit,
+    Trophy,
+    Clock
 } from 'lucide-react';
 
 interface ConceptDetail {
@@ -222,17 +222,7 @@ export default function ConceptDetailPage() {
                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Prove complete understanding</div>
                                 </div>
                             </button>
-                            <button
-                                className="btn-secondary"
-                                onClick={() => router.push(`/dashboard/test/${conceptId}?mode=spaced&title=${encodeURIComponent(conceptTitle)}`)}
-                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}
-                            >
-                                <Clock size={18} color="var(--accent-warning)" />
-                                <div>
-                                    <div style={{ fontWeight: 600 }}>Spaced Review</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Reinforce before you forget</div>
-                                </div>
-                            </button>
+
                         </div>
                     </div>
 

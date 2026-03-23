@@ -79,100 +79,15 @@ export function misconceptionPenalty(
 // ─── Scoring Functions ───
 
 /**
- * Diagnostic Score:
- * DS = 0.5*Acc + 0.3*CD + 0.2*CC
- * M_init = 100 * DS
+ * Unified Score:
+ * Simple accuracy-based scoring for all stages.
+ * returns value between 0 and 1.
  */
-export function diagnosticScore(result: QuestionResult): number {
-    const acc = accuracy(result.correct);
-    const cd = cognitiveDepth(result.cognitive_level);
-    const cc = confidenceCalibration(result.correct, result.confidence);
-
-    return (
-        DIAGNOSTIC_WEIGHTS.accuracy * acc +
-        DIAGNOSTIC_WEIGHTS.cognitive_depth * cd +
-        DIAGNOSTIC_WEIGHTS.confidence_calibration * cc
-    );
-}
-
-/**
- * Calculate initial mastery from diagnostic results.
- * M_init = 100 * average(DS)
- */
-export function calculateInitialMastery(results: QuestionResult[]): number {
+export function calculateUnifiedScore(results: QuestionResult[]): number {
     if (results.length === 0) return 0;
-
-    const avgDS =
-        results.reduce((sum, r) => sum + diagnosticScore(r), 0) / results.length;
-    return Math.round(100 * avgDS);
-}
-
-/**
- * Practice Score:
- * PS = 0.4*Acc̄ + 0.2*CD̄ + 0.15*SĒ + 0.15*CC̄ + 0.1*MP
- * 
- * Uses averaged values (denoted by bar) over the session.
- */
-export function practiceScore(
-    results: QuestionResult[],
-    misconceptionFreq: number = 0,
-    totalAttempts: number = 0
-): number {
-    if (results.length === 0) return 0;
-
     const n = results.length;
     const avgAcc = results.reduce((s, r) => s + accuracy(r.correct), 0) / n;
-    const avgCD = results.reduce((s, r) => s + cognitiveDepth(r.cognitive_level), 0) / n;
-    const avgSE = results.reduce(
-        (s, r) => s + speedEfficiency(getExpectedTime(r.difficulty), r.time_taken),
-        0
-    ) / n;
-    const avgCC = results.reduce(
-        (s, r) => s + confidenceCalibration(r.correct, r.confidence),
-        0
-    ) / n;
-    const mp = misconceptionPenalty(misconceptionFreq, totalAttempts || n);
-
-    return (
-        PRACTICE_WEIGHTS.accuracy * avgAcc +
-        PRACTICE_WEIGHTS.cognitive_depth * avgCD +
-        PRACTICE_WEIGHTS.speed_efficiency * avgSE +
-        PRACTICE_WEIGHTS.confidence_calibration * avgCC +
-        PRACTICE_WEIGHTS.misconception_penalty * mp
-    );
-}
-
-/**
- * Mastery Score:
- * MS = 0.35*Acc̄ + 0.30*CD̄ + 0.15*MP + 0.10*SĒ + 0.10*CC̄
- */
-export function masteryScore(
-    results: QuestionResult[],
-    misconceptionFreq: number = 0,
-    totalAttempts: number = 0
-): number {
-    if (results.length === 0) return 0;
-
-    const n = results.length;
-    const avgAcc = results.reduce((s, r) => s + accuracy(r.correct), 0) / n;
-    const avgCD = results.reduce((s, r) => s + cognitiveDepth(r.cognitive_level), 0) / n;
-    const avgSE = results.reduce(
-        (s, r) => s + speedEfficiency(getExpectedTime(r.difficulty), r.time_taken),
-        0
-    ) / n;
-    const avgCC = results.reduce(
-        (s, r) => s + confidenceCalibration(r.correct, r.confidence),
-        0
-    ) / n;
-    const mp = misconceptionPenalty(misconceptionFreq, totalAttempts || n);
-
-    return (
-        MASTERY_WEIGHTS.accuracy * avgAcc +
-        MASTERY_WEIGHTS.cognitive_depth * avgCD +
-        MASTERY_WEIGHTS.misconception_penalty * mp +
-        MASTERY_WEIGHTS.speed_efficiency * avgSE +
-        MASTERY_WEIGHTS.confidence_calibration * avgCC
-    );
+    return avgAcc;
 }
 
 /**
@@ -215,7 +130,6 @@ export function updateMastery(
         diagnostic: 1.0, // Diagnostic sets initial mastery
         practice: LAMBDA_PRACTICE,
         mastery: LAMBDA_MASTERY,
-        spaced: LAMBDA_SPACED,
     };
 
     const lambda = lambdaMap[mode];

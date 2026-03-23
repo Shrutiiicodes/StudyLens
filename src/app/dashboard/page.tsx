@@ -144,8 +144,9 @@ export default function DashboardPage() {
                     }}>
                         {concepts.map((concept) => (
                             <div key={concept.id} className="glass-card" style={{ padding: '20px' }}>
-                                <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <FileText size={18} /> {concept.title}
+                                <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                                    <FileText size={18} style={{ flexShrink: 0 }} />
+                                    <span>{concept.title}</span>
                                 </h3>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '14px' }}>
                                     Uploaded {new Date(concept.created_at).toLocaleDateString()}

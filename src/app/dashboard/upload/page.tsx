@@ -218,8 +218,8 @@ export default function UploadPage() {
                         {concepts.map((c) => (
                             <div key={c.id} className="glass-card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <div style={{ fontWeight: 600, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <FileText size={16} /> {c.title}
+                                    <div style={{ fontWeight: 600, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                                        <FileText size={16} style={{ flexShrink: 0 }} /> <span>{c.title}</span>
                                     </div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '24px' }}>
                                         Uploaded {new Date(c.created_at).toLocaleDateString()}

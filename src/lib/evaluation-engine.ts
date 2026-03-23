@@ -6,7 +6,7 @@
  * 2. Calculate score based on mode
  * 3. Update mastery
  * 4. Store attempt
- * 5. ★ Compute and persist all evaluation metrics (FAS, WBS, CCMS, MSS, LIP, RCI, calibration)
+ * 5. * Compute and persist all evaluation metrics (FAS, WBS, CCMS, MSS, LIP, RCI, calibration)
  */
 
 import { getServiceSupabase } from './supabase';
@@ -17,9 +17,7 @@ const supabase = {
 };
 
 import {
-    calculateInitialMastery,
-    practiceScore,
-    masteryScore,
+    calculateUnifiedScore,
     spacedReinforcementScore,
     updateMastery,
     sampleDifficulty,
@@ -61,28 +59,7 @@ export async function evaluateAnswer(
 
     const currentMastery = await getCurrentMastery(userId, question.concept_id);
 
-    let score: number;
-    switch (mode) {
-        case 'diagnostic':
-            score = calculateInitialMastery([questionResult]) / 100;
-            break;
-        case 'practice':
-            score = practiceScore([questionResult]);
-            break;
-        case 'mastery':
-            score = masteryScore([questionResult]);
-            break;
-        case 'spaced': {
-            const lastUpdated = await getLastMasteryUpdate(userId, question.concept_id);
-            const hoursElapsed = lastUpdated
-                ? (Date.now() - new Date(lastUpdated).getTime()) / (1000 * 60 * 60)
-                : 0;
-            score = spacedReinforcementScore(questionResult, hoursElapsed);
-            break;
-        }
-        default:
-            score = practiceScore([questionResult]);
-    }
+    const score = calculateUnifiedScore([questionResult]);
 
     const masteryUpdate = updateMastery(currentMastery, score, mode);
     await saveMastery(userId, question.concept_id, masteryUpdate.new_score);
@@ -95,7 +72,7 @@ export async function evaluateAnswer(
     };
 }
 
-const STAGES = ['diagnostic', 'practice', 'mastery', 'spaced', 'summary'] as const;
+const STAGES = ['diagnostic', 'practice', 'mastery'] as const;
 const PASS_THRESHOLD = 60;
 
 /**
@@ -116,25 +93,7 @@ export async function evaluateDiagnostic(
     metrics: ReturnType<typeof computeAllSessionMetrics>;
 }> {
     // ── 1. Compute raw score ──────────────────────────────────────────────
-    let score: number;
-    switch (mode) {
-        case 'practice':
-            score = practiceScore(results) * 100;
-            break;
-        case 'mastery':
-            score = masteryScore(results) * 100;
-            break;
-        case 'spaced': {
-            const avg =
-                results.reduce((sum, r) => sum + spacedReinforcementScore(r, 0), 0) /
-                results.length;
-            score = avg * 100;
-            break;
-        }
-        case 'diagnostic':
-        default:
-            score = calculateInitialMastery(results);
-    }
+    const score = calculateUnifiedScore(results) * 100;
 
     // ── 2. Compute all Group-3 eval metrics ───────────────────────────────
     const attemptResults: AttemptResult[] = results.map((r) => ({
@@ -163,7 +122,7 @@ export async function evaluateDiagnostic(
             mode,
             score: Math.round(score),
             passed,
-            // ★ Persist all eval metrics
+            // * Persist all eval metrics
             fas: Math.round(sessionMetrics.fas * 10000) / 10000,
             wbs: Math.round(sessionMetrics.wbs * 10000) / 10000,
             ccms: Math.round(sessionMetrics.ccms * 10000) / 10000,

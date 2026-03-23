@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateQuestionsForMode } from '@/lib/question-generator';
 import { evaluateDiagnostic } from '@/lib/evaluation-engine';
 import { QuestionResult } from '@/types/mastery';
-import { getServiceSupabase } from '@/lib/supabase';
-
-const supabase = { from: (...args: any[]) => getServiceSupabase().from(...args) };
-const STAGES_ORDER = ['diagnostic', 'practice', 'mastery', 'spaced', 'summary'] as const;
-const PASS_THRESHOLD = 60;
 
 /**
  * POST /api/diagnostic
@@ -18,36 +13,15 @@ export async function POST(request: NextRequest) {
         const { action, conceptId, conceptTitle, userId, results, mode } = body;
 
         if (action === 'generate') {
-            const assessmentMode = mode || 'diagnostic';
-
-            // For non-diagnostic modes, fetch current decayed mastery
-            // so difficulty sampling adapts to what the student currently knows
-            let currentMastery = 50; // neutral default
-
-            if (assessmentMode !== 'diagnostic' && userId) {
-                const { data: masteryRecord } = await supabase
-                    .from('mastery')
-                    .select('mastery_score, last_updated')
-                    .eq('user_id', userId)
-                    .eq('concept_id', conceptId)
-                    .single();
-
-                if (masteryRecord) {
-                    const hoursElapsed = masteryRecord.last_updated
-                        ? (Date.now() - new Date(masteryRecord.last_updated).getTime()) / (1000 * 60 * 60)
-                        : 0;
-                    // Apply forgetting model so difficulty reflects current state, not peak mastery
-                    currentMastery = masteryRecord.mastery_score * Math.exp(-0.05 * (hoursElapsed / 24));
-                    currentMastery = Math.max(0, Math.min(100, currentMastery));
-                }
+            if (!conceptId || !conceptTitle) {
+                return NextResponse.json(
+                    { error: 'conceptId and conceptTitle are required' },
+                    { status: 400 }
+                );
             }
 
-            const questions = await generateQuestionsForMode(
-                conceptId,
-                conceptTitle,
-                assessmentMode,
-                currentMastery
-            );
+            const assessmentMode = mode || 'diagnostic';
+            const questions = await generateQuestionsForMode(conceptId, conceptTitle, assessmentMode);
 
             return NextResponse.json({
                 success: true,
@@ -75,7 +49,27 @@ export async function POST(request: NextRequest) {
                 recommendedPath: diagnostic.recommendedPath,
                 masteryUpdate: diagnostic.masteryUpdate,
                 nextStage: diagnostic.nextStage,
-                passed: diagnostic.passed,
+                 passed: diagnostic.passed,
+                // * Now included in every evaluate response
+                metrics: {
+                    fas: roundTo(diagnostic.metrics.fas, 4),
+                    wbs: roundTo(diagnostic.metrics.wbs, 4),
+                    ccms: roundTo(diagnostic.metrics.ccms, 4),
+                    mss: roundTo(diagnostic.metrics.mss, 4),
+                    lip: roundTo(diagnostic.metrics.lip, 4),
+                    rci_avg: roundTo(diagnostic.metrics.rci_avg, 4),
+                    calibration_error: roundTo(diagnostic.metrics.calibration_error, 4),
+                    // Human-readable labels for the frontend
+                    labels: {
+                        fas: 'Fractional Assessment Score',
+                        wbs: 'Weighted Bloom Score',
+                        ccms: 'Composite Confidence Mastery Score',
+                        mss: 'Mastery Sensitivity Score',
+                        lip: 'Learning Improvement Priority',
+                        rci_avg: 'Avg Response Confidence Index',
+                        calibration_error: 'Calibration Error',
+                    },
+                },
             });
         }
 
@@ -85,11 +79,15 @@ export async function POST(request: NextRequest) {
         );
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        const stack = error instanceof Error ? error.stack : '';
-        console.error('Diagnostic error:', message, stack);
+        console.error('Diagnostic error:', message);
         return NextResponse.json(
             { error: `Diagnostic failed: ${message}` },
             { status: 500 }
         );
     }
+}
+
+function roundTo(value: number | undefined, decimals: number): number {
+    if (value == null) return 0;
+    return Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
 }

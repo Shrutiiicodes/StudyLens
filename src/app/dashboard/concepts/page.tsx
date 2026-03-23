@@ -134,8 +134,8 @@ export default function ConceptsPage() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                                         <div>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <FileText size={20} /> {concept.title}
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                                                <FileText size={20} style={{ flexShrink: 0 }} /> <span>{concept.title}</span>
                                             </h3>
                                             <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginLeft: '28px' }}>
                                                 Uploaded {new Date(concept.created_at).toLocaleDateString()}
@@ -199,9 +199,7 @@ export default function ConceptsPage() {
                                         const isCurrent = !isComplete && idx === currentStageIdx;
                                         const isLocked = !isComplete && idx > currentStageIdx;
 
-                                        const href = stage.key === 'summary'
-                                            ? `/dashboard/summary/${concept.id}?title=${encodeURIComponent(concept.title)}`
-                                            : `/dashboard/test/${concept.id}?mode=${stage.key}&title=${encodeURIComponent(concept.title)}`;
+                                        const href = `/dashboard/test/${concept.id}?mode=${stage.key}&title=${encodeURIComponent(concept.title)}`;
 
                                         if (isLocked) {
                                             return (
