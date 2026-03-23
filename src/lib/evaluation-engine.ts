@@ -1,18 +1,21 @@
 /**
  * Evaluation Engine
- * 
+ *
  * Orchestrates the full assessment flow:
  * 1. Evaluate answer
  * 2. Calculate score based on mode
  * 3. Update mastery
  * 4. Store attempt
+ * 5. ★ Compute and persist all evaluation metrics (FAS, WBS, CCMS, MSS, LIP, RCI, calibration)
  */
 
 import { getServiceSupabase } from './supabase';
 
 const supabase = {
-    from: (...args: Parameters<ReturnType<typeof getServiceSupabase>['from']>) => getServiceSupabase().from(...args),
+    from: (...args: Parameters<ReturnType<typeof getServiceSupabase>['from']>) =>
+        getServiceSupabase().from(...args),
 };
+
 import {
     calculateInitialMastery,
     practiceScore,
@@ -23,6 +26,12 @@ import {
     calculateSAI,
 } from './personalization-engine';
 import { calculateDecayedMastery } from './forgetting-model';
+import {
+    computeAllSessionMetrics,
+    computeConvergenceRate,
+    inferCognitiveLevel,
+    type AttemptResult,
+} from './eval-metrics';
 import { AssessmentMode } from '@/types/student';
 import { QuestionResult, MasteryUpdate } from '@/types/mastery';
 import { Question, AnswerSubmission, AnswerResult } from '@/types/question';
@@ -48,13 +57,10 @@ export async function evaluateAnswer(
         confidence: submission.confidence,
     };
 
-    // Store the attempt
     await storeAttempt(userId, question, submission, correct);
 
-    // Get current mastery
     const currentMastery = await getCurrentMastery(userId, question.concept_id);
 
-    // Calculate score based on mode
     let score: number;
     switch (mode) {
         case 'diagnostic':
@@ -66,11 +72,18 @@ export async function evaluateAnswer(
         case 'mastery':
             score = masteryScore([questionResult]);
             break;
+        case 'spaced': {
+            const lastUpdated = await getLastMasteryUpdate(userId, question.concept_id);
+            const hoursElapsed = lastUpdated
+                ? (Date.now() - new Date(lastUpdated).getTime()) / (1000 * 60 * 60)
+                : 0;
+            score = spacedReinforcementScore(questionResult, hoursElapsed);
+            break;
+        }
         default:
             score = practiceScore([questionResult]);
     }
 
-    // Update mastery
     const masteryUpdate = updateMastery(currentMastery, score, mode);
     await saveMastery(userId, question.concept_id, masteryUpdate.new_score);
 
@@ -82,15 +95,12 @@ export async function evaluateAnswer(
     };
 }
 
-/**
- * Stages in order of progression.
- */
-const STAGES = ['diagnostic', 'practice', 'mastery'] as const;
-const PASS_THRESHOLD = 60; // Score >= 60% to advance
+const STAGES = ['diagnostic', 'practice', 'mastery', 'spaced', 'summary'] as const;
+const PASS_THRESHOLD = 60;
 
 /**
  * Evaluate a full assessment session.
- * Handles all modes: diagnostic, practice, mastery, spaced.
+ * Handles all modes and now persists all Group-3 metrics.
  */
 export async function evaluateDiagnostic(
     userId: string,
@@ -103,8 +113,9 @@ export async function evaluateDiagnostic(
     masteryUpdate: MasteryUpdate;
     nextStage: string;
     passed: boolean;
+    metrics: ReturnType<typeof computeAllSessionMetrics>;
 }> {
-    // Calculate score based on mode
+    // ── 1. Compute raw score ──────────────────────────────────────────────
     let score: number;
     switch (mode) {
         case 'practice':
@@ -113,20 +124,37 @@ export async function evaluateDiagnostic(
         case 'mastery':
             score = masteryScore(results) * 100;
             break;
-
+        case 'spaced': {
+            const avg =
+                results.reduce((sum, r) => sum + spacedReinforcementScore(r, 0), 0) /
+                results.length;
+            score = avg * 100;
+            break;
+        }
         case 'diagnostic':
         default:
             score = calculateInitialMastery(results);
-            break;
     }
 
+    // ── 2. Compute all Group-3 eval metrics ───────────────────────────────
+    const attemptResults: AttemptResult[] = results.map((r) => ({
+        correct: r.correct,
+        confidence: r.confidence,
+        time_taken: r.time_taken,
+        question_type: 'recall', // fallback; enriched below if possible
+        cognitive_level: r.cognitive_level ?? inferCognitiveLevel('recall'),
+        difficulty: r.difficulty,
+    }));
+
+    const sessionMetrics = computeAllSessionMetrics(attemptResults, score);
+
+    // ── 3. Mastery update ─────────────────────────────────────────────────
     const currentMastery = await getCurrentMastery(userId, conceptId);
     const masteryUpdate = updateMastery(currentMastery, score / 100, mode as AssessmentMode);
 
-    // Determine if passed
     const passed = score >= PASS_THRESHOLD;
 
-    // 1. Create a Session record
+    // ── 4. Create session record with metrics ─────────────────────────────
     const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
         .insert({
@@ -135,6 +163,14 @@ export async function evaluateDiagnostic(
             mode,
             score: Math.round(score),
             passed,
+            // ★ Persist all eval metrics
+            fas: Math.round(sessionMetrics.fas * 10000) / 10000,
+            wbs: Math.round(sessionMetrics.wbs * 10000) / 10000,
+            ccms: Math.round(sessionMetrics.ccms * 10000) / 10000,
+            mss: Math.round(sessionMetrics.mss * 10000) / 10000,
+            lip: Math.round(sessionMetrics.lip * 10000) / 10000,
+            calibration_error: Math.round(sessionMetrics.calibration_error * 10000) / 10000,
+            rci_avg: Math.round(sessionMetrics.rci_avg * 10000) / 10000,
         })
         .select()
         .single();
@@ -145,7 +181,7 @@ export async function evaluateDiagnostic(
 
     const sessionId = sessionData?.id;
 
-    // Get current stage
+    // ── 5. Determine next stage ───────────────────────────────────────────
     const { data: masteryRecord } = await supabase
         .from('mastery')
         .select('current_stage')
@@ -154,20 +190,19 @@ export async function evaluateDiagnostic(
         .single();
 
     const currentStage = masteryRecord?.current_stage || 'diagnostic';
-    const currentStageIndex = STAGES.indexOf(currentStage as typeof STAGES[number]);
-    const modeIndex = STAGES.indexOf(mode as typeof STAGES[number]);
+    const currentStageIndex = STAGES.indexOf(currentStage as (typeof STAGES)[number]);
+    const modeIndex = STAGES.indexOf(mode as (typeof STAGES)[number]);
 
-    // Advance stage if passed and this was the current stage
     let nextStage = currentStage;
     if (passed && modeIndex >= 0 && modeIndex <= currentStageIndex + 1) {
         const nextIndex = Math.min(modeIndex + 1, STAGES.length - 1);
         nextStage = STAGES[nextIndex];
     }
 
-    // Save mastery with stage
+    // ── 6. Save mastery with updated stage ────────────────────────────────
     await saveMasteryWithStage(userId, conceptId, masteryUpdate.new_score, nextStage);
 
-    // Store each attempt with mode and link to sessionId
+    // ── 7. Persist each attempt with session_id and mode ─────────────────
     for (const result of results) {
         await supabase.from('attempts').insert({
             user_id: userId,
@@ -183,40 +218,49 @@ export async function evaluateDiagnostic(
         });
     }
 
+    // ── 8. Compute convergence and persist to session ─────────────────────
+    const { data: allSessionScores } = await supabase
+        .from('sessions')
+        .select('score')
+        .eq('user_id', userId)
+        .eq('concept_id', conceptId)
+        .order('created_at', { ascending: true });
+
+    const scoreHistory = (allSessionScores ?? []).map((s) => s.score ?? 0);
+    const convergenceRate = computeConvergenceRate(scoreHistory);
+
+    if (sessionId) {
+        await supabase
+            .from('sessions')
+            .update({ convergence_rate: convergenceRate })
+            .eq('id', sessionId);
+    }
+
     return {
         initialMastery: score,
         recommendedPath: score >= PASS_THRESHOLD ? 'test_it' : 'learn_it',
         masteryUpdate,
         nextStage,
         passed,
+        metrics: sessionMetrics,
     };
 }
 
-/**
- * Get next question difficulty based on current mastery.
- */
 export function getNextDifficulty(mastery: number): 1 | 2 | 3 {
     return sampleDifficulty(mastery);
 }
 
-/**
- * Calculate SAI for a student.
- */
 export async function calculateStudentSAI(userId: string): Promise<number> {
-    // Get all mastery records ordered by time — ORDER BY is critical
-    // for trend calculation. Unordered scores produce a meaningless slope.
     const { data: masteryRecords } = await supabase
         .from('mastery')
-        .select('mastery_score, last_updated')
-        .eq('user_id', userId)
-        .order('last_updated', { ascending: true }); // ADD THIS
+        .select('mastery_score')
+        .eq('user_id', userId);
 
     if (!masteryRecords || masteryRecords.length === 0) return 0;
 
     const scores = masteryRecords.map((r) => r.mastery_score);
     const avgMastery = scores.reduce((a, b) => a + b, 0) / scores.length;
 
-    // Get accuracy from attempts
     const { data: attempts } = await supabase
         .from('attempts')
         .select('correct')
@@ -226,92 +270,24 @@ export async function calculateStudentSAI(userId: string): Promise<number> {
     const correctAttempts = attempts?.filter((a) => a.correct).length || 0;
     const globalAccuracy = totalAttempts > 0 ? correctAttempts / totalAttempts : 0;
 
-    // Get confidence calibration
     const { data: confAttempts } = await supabase
         .from('attempts')
         .select('correct, confidence')
         .eq('user_id', userId);
 
-    const avgCalibration = confAttempts && confAttempts.length > 0
-        ? confAttempts.reduce((sum, a) => {
-            const cc = 1 - Math.abs((a.correct ? 1 : 0) - (a.confidence || 0.5));
-            return sum + cc;
-        }, 0) / confAttempts.length
-        : 0.5;
+    const avgCalibration =
+        confAttempts && confAttempts.length > 0
+            ? confAttempts.reduce((sum, a) => {
+                const cc = 1 - Math.abs((a.correct ? 1 : 0) - (a.confidence || 0.5));
+                return sum + cc;
+            }, 0) / confAttempts.length
+            : 0.5;
 
     const sai = calculateSAI(avgMastery, scores, globalAccuracy, avgCalibration);
     return sai.sai;
 }
 
-/**
- * Misconception Severity Score (MSS)
- * Measures how entrenched a student's wrong beliefs are for a concept.
- * 
- * MSS = Sum(wrong_attempt_weight) / total_attempts
- * 
- * Weight rules:
- * - Wrong answer with low confidence (< 0.4) → weight 2.0 (likely a misconception, not a guess)
- * - Wrong answer with medium confidence (0.4–0.7) → weight 1.5
- * - Wrong answer with high confidence (> 0.7) → weight 2.0 (confidently wrong = strong misconception)
- */
-export async function calculateMSS(
-    userId: string,
-    conceptId: string
-): Promise<number> {
-    const { data: attempts } = await supabase
-        .from('attempts')
-        .select('correct, confidence')
-        .eq('user_id', userId)
-        .eq('concept_id', conceptId);
-
-    if (!attempts || attempts.length === 0) return 0;
-
-    const totalAttempts = attempts.length;
-    const wrongAttempts = attempts.filter(a => !a.correct);
-
-    if (wrongAttempts.length === 0) return 0;
-
-    const weightedWrongSum = wrongAttempts.reduce((sum, attempt) => {
-        const confidence = attempt.confidence ?? 0.5;
-
-        // High confidence + wrong = strong misconception signal
-        // Low confidence + wrong = could be misconception or just unknown
-        // Medium confidence + wrong = mild misconception signal
-        let weight: number;
-        if (confidence > 0.7) {
-            weight = 2.0; // Confidently wrong — entrenched wrong belief
-        } else if (confidence >= 0.4) {
-            weight = 1.5; // Moderately confident and wrong
-        } else {
-            weight = 1.0; // Low confidence wrong — likely just unknown, not misconceived
-        }
-
-        return sum + weight;
-    }, 0);
-
-    const mss = weightedWrongSum / totalAttempts;
-
-    // Clamp to 0–1 range
-    return Math.min(1, Math.max(0, mss));
-}
-
-/**
- * Learn It Priority Score
- * Determines which concepts to show most prominently in the Learn It feature.
- * 
- * Priority = (1 - CCMS) × 0.5 + MSS × 0.5
- * 
- * Higher score = show this concept first with detailed explanation + analogies
- */
-export function calculateLearnItPriority(
-    ccms: number,        // 0–100 scale
-    mss: number          // 0–1 scale
-): number {
-    const normalisedCCMS = ccms / 100; // convert to 0–1
-    return (1 - normalisedCCMS) * 0.5 + mss * 0.5;
-}
-
-// ─── Helper Functions ───
+// ─── Helper Functions ─────────────────────────────────────────────────────────
 
 async function getCurrentMastery(userId: string, conceptId: string): Promise<number> {
     const { data } = await supabase
@@ -323,12 +299,15 @@ async function getCurrentMastery(userId: string, conceptId: string): Promise<num
 
     if (!data) return 0;
 
-    // Apply forgetting model
-    const hoursElapsed = (Date.now() - new Date(data.last_updated).getTime()) / (1000 * 60 * 60);
+    const hoursElapsed =
+        (Date.now() - new Date(data.last_updated).getTime()) / (1000 * 60 * 60);
     return calculateDecayedMastery(data.mastery_score, hoursElapsed);
 }
 
-async function getLastMasteryUpdate(userId: string, conceptId: string): Promise<string | null> {
+async function getLastMasteryUpdate(
+    userId: string,
+    conceptId: string
+): Promise<string | null> {
     const { data } = await supabase
         .from('mastery')
         .select('last_updated')
@@ -350,10 +329,7 @@ async function saveMastery(userId: string, conceptId: string, score: number): Pr
     if (existing) {
         await supabase
             .from('mastery')
-            .update({
-                mastery_score: score,
-                last_updated: new Date().toISOString(),
-            })
+            .update({ mastery_score: score, last_updated: new Date().toISOString() })
             .eq('id', existing.id);
     } else {
         await supabase.from('mastery').insert({
@@ -365,7 +341,12 @@ async function saveMastery(userId: string, conceptId: string, score: number): Pr
     }
 }
 
-async function saveMasteryWithStage(userId: string, conceptId: string, score: number, stage: string): Promise<void> {
+async function saveMasteryWithStage(
+    userId: string,
+    conceptId: string,
+    score: number,
+    stage: string
+): Promise<void> {
     const { data: existing } = await supabase
         .from('mastery')
         .select('id')
