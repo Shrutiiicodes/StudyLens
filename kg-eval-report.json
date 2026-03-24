@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-03-24T19:04:35.665Z",
+  "userId": "all",
+  "overallScore": 69.54,
+  "passed": 4,
+  "failed": 3,
+  "elapsedMs": 7140,
+  "checks": [
+    {
+      "name": "Structural Integrity",
+      "passed": true,
+      "score": 99.09,
+      "details": "2207 nodes, 600 rels, 87 concepts, 20 orphans",
+      "issues": []
+    },
+    {
+      "name": "Schema Compliance",
+      "passed": true,
+      "score": 100,
+      "details": "Checked 5 required properties on Concept nodes",
+      "issues": []
+    },
+    {
+      "name": "Relation Validity",
+      "passed": false,
+      "score": 80,
+      "details": "33 distinct relation types, 5 self-loops",
+      "issues": [
+        "5 self-loop relation(s) detected"
+      ]
+    },
+    {
+      "name": "Completeness",
+      "passed": true,
+      "score": 95.69,
+      "details": "Average coverage across 4 completeness metrics",
+      "issues": []
+    },
+    {
+      "name": "Consistency",
+      "passed": false,
+      "score": 35,
+      "details": "5 dup groups, 10 bidir contradictions, 0 unlinked",
+      "issues": [
+        "5 duplicate concept name(s) found",
+        "10 bidirectional relations of the same type (possible contradiction)"
+      ]
+    },
+    {
+      "name": "Density & Connectivity",
+      "passed": false,
+      "score": 15,
+      "details": "2207 nodes, 600 rels, avg degree 0.27, density 0.0123%",
+      "issues": [
+        "Very low average degree (0.27) — most nodes are disconnected"
+      ]
+    },
+    {
+      "name": "Link Prediction Proxy",
+      "passed": true,
+      "score": 62,
+      "details": "31/50 related pairs have ≥1 common neighbor",
+      "issues": []
+    }
+  ]
+}

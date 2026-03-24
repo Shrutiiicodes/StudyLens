@@ -284,8 +284,8 @@ export default function HomePage() {
           {[
             { step: '01', title: 'Upload Your Material', description: 'Upload a PDF or DOCX file with your study material. Our AI validates it for academic quality.' },
             { step: '02', title: 'AI Builds Knowledge Graph', description: 'Concepts, definitions, examples, formulas, and misconceptions are extracted and connected.' },
-            { step: '03', title: 'Take Diagnostic Test', description: '5 carefully crafted questions assess your current understanding across cognitive levels.' },
-            { step: '04', title: 'Personalized Learning Path', description: 'Based on your diagnostic, choose "Test It" to prove mastery or "Learn It" to study deeper.' },
+            { step: '03', title: 'Take Easy 5', description: '5 carefully crafted questions assess your current understanding across cognitive levels.' },
+            { step: '04', title: 'Personalized Learning Path', description: 'Based on your Easy 5, choose "Test It" to prove mastery or "Learn It" to study deeper.' },
             { step: '05', title: 'Track & Grow', description: 'Watch your mastery grow with spaced reinforcement and adaptive difficulty.' },
           ].map((item, idx) => (
             <div key={idx} className="glass-card animate-fade-in" style={{

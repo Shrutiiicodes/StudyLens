@@ -196,7 +196,7 @@ export default function ConceptDetailPage() {
                             >
                                 <Search size={18} color="var(--accent-primary)" />
                                 <div>
-                                    <div style={{ fontWeight: 600 }}>Diagnostic Test</div>
+                                    <div style={{ fontWeight: 600 }}>Easy 5</div>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>5 questions to gauge understanding</div>
                                 </div>
                             </button>
@@ -207,7 +207,7 @@ export default function ConceptDetailPage() {
                             >
                                 <FileEdit size={18} color="var(--accent-tertiary)" />
                                 <div>
-                                    <div style={{ fontWeight: 600 }}>Practice Mode</div>
+                                    <div style={{ fontWeight: 600 }}>Practice Test</div>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Adaptive difficulty, instant feedback</div>
                                 </div>
                             </button>

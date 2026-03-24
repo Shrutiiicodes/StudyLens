@@ -29,7 +29,7 @@ interface ProgressData {
 
 const STAGES = [
     { key: 'diagnostic', label: 'Easy 5', icon: <Search size={14} />, description: 'Initial knowledge check' },
-    { key: 'practice', label: 'MCQ+ Reasoning', icon: <FileEdit size={14} />, description: 'Adaptive practice questions' },
+    { key: 'practice', label: 'Practice Test', icon: <FileEdit size={14} />, description: 'Adaptive practice questions' },
     { key: 'mastery', label: 'Mastery Test', icon: <Trophy size={14} />, description: 'Prove full understanding' },
 ];
 

@@ -102,7 +102,6 @@ Structure the output as a JSON object with:
     - icon: A semantic icon name from Lucide (e.g., 'Brain', 'Book', 'CheckCircle', 'Info', etc.).
     - type: one of ['explanation', 'example', 'misconception', 'visual', 'formula'].
     - content: Simple, clear language. Break down complex sentences. Use analogies.
-    - imagePrompt: (Optional) A descriptive prompt for a premium 3D illustration.
 
 Content Guidelines:
 1. Start with a "Big Picture" placard.

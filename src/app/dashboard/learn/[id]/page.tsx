@@ -6,7 +6,6 @@ import {
   ArrowLeft, 
   Rocket, 
   AlertTriangle, 
-  Image, 
   Target, 
   Pencil, 
   Trophy,
@@ -179,7 +178,7 @@ export default function LearnPage() {
                                 background: styles.bg,
                                 position: 'relative',
                                 display: 'grid',
-                                gridTemplateColumns: (section.imagePrompt && section.imagePrompt.length > 5) ? '1.5fr 1fr' : '1fr',
+                                gridTemplateColumns: '1fr',
                                 gap: '40px',
                                 alignItems: 'center',
                             }}
@@ -214,31 +213,6 @@ export default function LearnPage() {
                                     {section.content}
                                 </div>
                             </div>
-
-                            {/* Placard Visual */}
-                            {section.imagePrompt && section.imagePrompt.length > 5 && (
-                                <div style={{
-                                    padding: '30px',
-                                    background: 'rgba(0,0,0,0.2)',
-                                    borderRadius: 'var(--radius-lg)',
-                                    border: `1px solid ${styles.border}`,
-                                    textAlign: 'center',
-                                    height: '100%',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'center',
-                                    minHeight: '200px',
-                                    alignItems: 'center'
-                                }}>
-                                    <div style={{ marginBottom: '16px' }}>
-                                        <Image size={40} color="var(--text-muted)" />
-                                    </div>
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
-                                        <strong>Visual Concept:</strong><br />
-                                        {section.imagePrompt}
-                                    </p>
-                                </div>
-                            )}
                         </div>
                     );
                 })}
@@ -261,7 +235,7 @@ export default function LearnPage() {
                 </p>
                 <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
                     <button className="btn-primary" onClick={() => router.push(`/dashboard/test/${conceptId}?mode=practice`)} style={{ padding: '18px 48px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <Pencil size={20} /> MCQ+ Reasoning
+                        <Pencil size={20} /> Practice Test
                     </button>
                     <button className="btn-secondary" onClick={() => router.push(`/dashboard/test/${conceptId}?mode=mastery`)} style={{ padding: '18px 48px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <Trophy size={20} /> Mastery Test

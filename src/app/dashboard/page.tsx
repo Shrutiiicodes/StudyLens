@@ -183,7 +183,7 @@ export default function DashboardPage() {
                         {[
                             { step: '1', text: 'Upload a PDF or DOCX study material', icon: <FileText size={16} /> },
                             { step: '2', text: 'AI extracts concepts and builds a knowledge graph', icon: <Brain size={16} /> },
-                            { step: '3', text: 'Take a diagnostic test to assess your understanding', icon: <Search size={16} /> },
+                            { step: '3', text: 'Take an Easy 5 test to assess your understanding', icon: <Search size={16} /> },
                             { step: '4', text: 'Get personalized practice based on your mastery level', icon: <Target size={16} /> },
                         ].map((item) => (
                             <div key={item.step} style={{

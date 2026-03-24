@@ -300,8 +300,8 @@ export default function TestPage() {
         results.length > 0 ? Math.round((correctCount / results.length) * 100) : 0;
 
     const modeLabels: Record<string, React.ReactNode> = {
-        diagnostic: <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Search size={16} /> Diagnostic Test</div>,
-        practice: <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FileEdit size={16} /> Practice Mode</div>,
+        diagnostic: <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Search size={16} /> Easy 5</div>,
+        practice: <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FileEdit size={16} /> Practice Test</div>,
         mastery: <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Trophy size={16} /> Mastery Test</div>,
     };
 
