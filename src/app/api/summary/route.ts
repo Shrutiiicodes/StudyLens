@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { evaluateSummary, getConceptContext } from '@/lib/question-generator';
+import { getConceptContext } from '@/lib/question-generator';
 import { getServiceSupabase } from '@/lib/supabase';
 
 

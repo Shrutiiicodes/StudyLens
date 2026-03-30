@@ -1,16 +1,16 @@
 {
-  "timestamp": "2026-03-24T19:04:35.665Z",
+  "timestamp": "2026-03-30T10:42:22.391Z",
   "userId": "all",
-  "overallScore": 69.54,
-  "passed": 4,
-  "failed": 3,
-  "elapsedMs": 7140,
+  "overallScore": 91.99,
+  "passed": 7,
+  "failed": 0,
+  "elapsedMs": 6327,
   "checks": [
     {
       "name": "Structural Integrity",
       "passed": true,
       "score": 99.09,
-      "details": "2207 nodes, 600 rels, 87 concepts, 20 orphans",
+      "details": "2202 nodes, 584 rels, 82 concepts, 20 orphans",
       "issues": []
     },
     {
@@ -22,44 +22,39 @@
     },
     {
       "name": "Relation Validity",
-      "passed": false,
-      "score": 80,
-      "details": "33 distinct relation types, 5 self-loops",
-      "issues": [
-        "5 self-loop relation(s) detected"
-      ]
+      "passed": true,
+      "score": 100,
+      "details": "33 distinct relation types, 0 self-loops",
+      "issues": []
     },
     {
       "name": "Completeness",
       "passed": true,
-      "score": 95.69,
+      "score": 97.87,
       "details": "Average coverage across 4 completeness metrics",
       "issues": []
     },
     {
       "name": "Consistency",
-      "passed": false,
-      "score": 35,
-      "details": "5 dup groups, 10 bidir contradictions, 0 unlinked",
-      "issues": [
-        "5 duplicate concept name(s) found",
-        "10 bidirectional relations of the same type (possible contradiction)"
-      ]
+      "passed": true,
+      "score": 100,
+      "details": "0 dup groups, 0 bidir contradictions, 0 unlinked",
+      "issues": []
     },
     {
       "name": "Density & Connectivity",
-      "passed": false,
-      "score": 15,
-      "details": "2207 nodes, 600 rels, avg degree 0.27, density 0.0123%",
+      "passed": true,
+      "score": 75,
+      "details": "82 concept nodes, 149 C→C edges, avg degree 1.82, density 2.2433%",
       "issues": [
-        "Very low average degree (0.27) — most nodes are disconnected"
+        "Low Concept→Concept avg degree (1.82) — consider uploading more related documents"
       ]
     },
     {
       "name": "Link Prediction Proxy",
       "passed": true,
-      "score": 62,
-      "details": "31/50 related pairs have ≥1 common neighbor",
+      "score": 72,
+      "details": "36/50 related pairs have ≥1 common neighbor",
       "issues": []
     }
   ]

@@ -6,7 +6,7 @@ import * as path from 'path';
 function loadEnv() {
     const envPath = path.join(__dirname, '..', '.env.local');
     if (!fs.existsSync(envPath)) {
-        console.error('❌ .env.local not found!');
+        console.error('.env.local not found!');
         process.exit(1);
     }
 
@@ -37,13 +37,13 @@ async function testUpload() {
     }
 
     const supabase = createClient(url, key);
-    
+
     const testContent = new Uint8Array(Buffer.from('test pdf content'));
     const userId = '00000000-0000-0000-0000-000000000000';
     const filePath = `uploads/${userId}/${Date.now()}_test.pdf`;
 
     console.log('Testing upload to:', filePath);
-    
+
     try {
         const { data, error } = await supabase.storage
             .from('documents')

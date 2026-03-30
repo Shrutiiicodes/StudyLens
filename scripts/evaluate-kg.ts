@@ -491,7 +491,7 @@ async function checkDensity(session: Session, userId?: string): Promise<CheckRes
     const filter = userId ? `{userId: $userId}` : '';
     const params = userId ? { userId } : {};
 
-    const [stats] = await runQ < { nodes: unknown; rels: unknown } > (
+    const [allStats] = await runQ<{ nodes: unknown; rels: unknown }>(
         session,
         `MATCH (n ${filter})
      OPTIONAL MATCH (n)-[r]->()
@@ -499,44 +499,62 @@ async function checkDensity(session: Session, userId?: string): Promise<CheckRes
         params
     );
 
+    // Scope density to Concept nodes only.
+    // Example/Formula/Misconception sub-nodes are intentional leaf
+    // terminals with out-degree 0 by design; including them makes
+    // the average degree misleadingly low.
+    const [stats] = await runQ<{ nodes: unknown; rels: unknown }>(
+        session,
+        `MATCH (c:Concept ${filter})
+     OPTIONAL MATCH (c)-[r]->(other:Concept)
+     RETURN count(DISTINCT c) AS nodes, count(r) AS rels`,
+        params
+    );
+
+    const allNodes = toNum(allStats?.nodes);
+    const allRels  = toNum(allStats?.rels);
+
     const nodes = toNum(stats?.nodes);
     const rels = toNum(stats?.rels);
     const density = nodes > 1 ? (rels / (nodes * (nodes - 1))) * 100 : 0;
     const avgDeg = nodes > 0 ? rels / nodes : 0;
 
-    // Degree distribution
-    const degDist = await runQ < { degree: unknown; count: unknown } > (
+    // Degree distribution — Concept→Concept only
+    const degDist = await runQ<{ degree: unknown; count: unknown }>(
         session,
-        `MATCH (n ${filter})
-     OPTIONAL MATCH (n)-[r]->()
-     WITH n, count(r) AS degree
-     RETURN degree, count(n) AS count
+        `MATCH (c:Concept ${filter})
+     OPTIONAL MATCH (c)-[r]->(other:Concept)
+     WITH c, count(r) AS degree
+     RETURN degree, count(c) AS count
      ORDER BY degree`,
         params
     );
 
-    log('metric', `Nodes:           ${C.bold}${nodes}${C.reset}`);
-    log('metric', `Relations:       ${C.bold}${rels}${C.reset}`);
-    log('metric', `Avg out-degree:  ${C.bold}${avgDeg.toFixed(2)}${C.reset}`);
-    log('metric', `Graph density:   ${C.bold}${density.toFixed(4)}%${C.reset}`);
+    log('metric', `Total graph nodes:      ${C.bold}${allNodes}${C.reset} ${C.dim}(incl. Example/Formula/Misconception leaves)${C.reset}`);
+    log('metric', `Total graph edges:      ${C.bold}${allRels}${C.reset}`);
+    log('metric', `Concept nodes:          ${C.bold}${nodes}${C.reset}`);
+    log('metric', `Concept→Concept edges:  ${C.bold}${rels}${C.reset}`);
+    log('metric', `Avg Concept out-degree: ${C.bold}${avgDeg.toFixed(2)}${C.reset}`);
+    log('metric', `Concept graph density:  ${C.bold}${density.toFixed(4)}%${C.reset}`);
 
     const degRows: string[][] = degDist.slice(0, 8).map(d => [
         String(toNum(d.degree)), String(toNum(d.count))
     ]);
     if (degRows.length > 0) {
-        log('info', 'Degree distribution (sample):');
-        logTable(['Out-degree', 'Node count'], degRows);
+        log('info', 'Concept out-degree distribution (Concept→Concept edges):');
+        logTable(['Out-degree', 'Concept count'], degRows);
     }
 
     const issues: string[] = [];
-    if (avgDeg < 1) issues.push(`Very low average degree (${avgDeg.toFixed(2)}) — most nodes are disconnected`);
-    if (nodes < 5) issues.push(`Very few nodes (${nodes}) — KG may be incomplete`);
+    // avg C→C degree < 2 is a meaningful warning for domain KGs
+    if (avgDeg < 2) issues.push(`Low Concept→Concept avg degree (${avgDeg.toFixed(2)}) — consider uploading more related documents`);
+    if (nodes < 5) issues.push(`Very few Concept nodes (${nodes}) — KG may be incomplete`);
 
-    // Score: reward moderate density (0.5–10% is healthy for domain KGs)
+    // Density scoring scoped to Concept subgraph (healthy range: 1–20%)
     const densityScore = density === 0 ? 0
-        : density < 0.1 ? 30
-            : density < 1 ? 60
-                : density < 20 ? 90
+        : density < 0.5 ? 30
+            : density < 2   ? 60
+                : density < 20  ? 90
                     : 70; // overly dense = possibly noisy
 
     const score = Math.max(0, densityScore - issues.length * 15);
@@ -544,7 +562,7 @@ async function checkDensity(session: Session, userId?: string): Promise<CheckRes
         name: 'Density & Connectivity',
         passed: score >= 50,
         score,
-        details: `${nodes} nodes, ${rels} rels, avg degree ${avgDeg.toFixed(2)}, density ${density.toFixed(4)}%`,
+        details: `${nodes} concept nodes, ${rels} C→C edges, avg degree ${avgDeg.toFixed(2)}, density ${density.toFixed(4)}%`,
         issues,
     };
 }

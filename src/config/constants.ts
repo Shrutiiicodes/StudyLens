@@ -111,11 +111,6 @@ export const MSS_WEIGHTS = {
     low_confidence_wrong: 1.0,    // confidence < 0.4
 };
 
-// ─── MSS Cap for Summary Completion ───
-// If MSS exceeds this threshold when student passes summary,
-// mastery is capped at MSS_MASTERY_CAP instead of allowing full score
-export const MSS_THRESHOLD = 0.5;
-export const MSS_MASTERY_CAP = 0.85;
 
 // ─── Learn It Priority Weights ───
 export const LEARN_IT_WEIGHTS = {

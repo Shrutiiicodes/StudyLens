@@ -66,7 +66,13 @@ Is this triple directly supported by the passage?`
 
             const result = parseLLMJson<{ verdict: string; confidence: number }>(verifyResponse);
 
-            if (result.verdict === 'a' && result.confidence >= 0.80) {
+            // Allow directly stated (a) OR strongly implied (b) with relaxed threshold
+            // to prevent over-discarding and orphan nodes
+            const isValid =
+                (result.verdict === 'a' && result.confidence >= 0.65) ||
+                (result.verdict === 'b' && result.confidence >= 0.80);
+
+            if (isValid) {
                 verifiedRelationships.push(rel);
             } else {
                 console.log(`[KG Verify] Discarded: (${rel.from}, ${rel.type}, ${rel.to}) — verdict=${result.verdict}, confidence=${result.confidence}`);
@@ -125,20 +131,37 @@ Is this triple directly supported by the passage?`
 
 // ─── Step 2: Merge extracted knowledge ───
 
+/**
+ * Normalizes a concept name to a canonical form for deduplication.
+ * Strips punctuation, collapses whitespace, lowercases, and removes
+ * common trailing noise words that the LLM adds inconsistently.
+ */
+function canonicalizeName(name: string): string {
+    return name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')        // strip punctuation
+        .replace(/\b(the|a|an|of|and|in|on|process|concept|principle|phenomenon|theory|law|effect|method|system|type|form|kind|class|category)\b/g, '')
+        .replace(/\s+/g, ' ')               // collapse whitespace
+        .trim();
+}
+
 function mergeKnowledge(chunks: ExtractedKnowledge[]): ExtractedKnowledge {
+    // Maps canonical key → concept, preserving original name from first occurrence
     const conceptMap = new Map<string, any>();
     const relationships: ExtractedKnowledge['relationships'] = [];
 
     for (const chunk of chunks) {
         for (const concept of chunk.concepts) {
-            const key = concept.name.toLowerCase().trim();
+            const key = canonicalizeName(concept.name);
+            if (!key) continue; // skip empty after normalization
+
             const existing = conceptMap.get(key);
 
             if (existing) {
                 // Generic merge of all properties
                 const allKeys = new Set([...Object.keys(existing), ...Object.keys(concept)]);
                 for (const prop of allKeys) {
-                    if (prop === 'name') continue;
+                    if (prop === 'name') continue; // keep name from first occurrence
 
                     const val1 = (existing as any)[prop];
                     const val2 = (concept as any)[prop];
@@ -155,15 +178,39 @@ function mergeKnowledge(chunks: ExtractedKnowledge[]): ExtractedKnowledge {
         }
 
         // Deduplicate relationships
+        // Fix 1: Filter self-loops (from === to after normalization)
+        // Fix 3: Prevent bidirectional edges of the same type (only keep first direction)
         for (const rel of chunk.relationships) {
-            const exists = relationships.some(
+            const fromNorm = rel.from.toLowerCase().trim();
+            const toNorm = rel.to.toLowerCase().trim();
+            const typeNorm = rel.type.toUpperCase();
+
+            // Fix 1: Drop self-loops
+            if (canonicalizeName(rel.from) === canonicalizeName(rel.to)) {
+                console.log(`[KG Merge] Dropped self-loop: (${rel.from}, ${rel.type}, ${rel.to})`);
+                continue;
+            }
+
+            // Check for exact duplicate (same direction)
+            const exactDuplicate = relationships.some(
                 (r) =>
-                    r.from.toLowerCase() === rel.from.toLowerCase() &&
-                    r.to.toLowerCase() === rel.to.toLowerCase() &&
-                    r.type.toUpperCase() === rel.type.toUpperCase()
+                    r.from.toLowerCase() === fromNorm &&
+                    r.to.toLowerCase() === toNorm &&
+                    r.type.toUpperCase() === typeNorm
             );
-            if (!exists) {
+
+            // Fix 3: Check for bidirectional duplicate of the same type
+            const bidirectionalDuplicate = relationships.some(
+                (r) =>
+                    r.from.toLowerCase() === toNorm &&
+                    r.to.toLowerCase() === fromNorm &&
+                    r.type.toUpperCase() === typeNorm
+            );
+
+            if (!exactDuplicate && !bidirectionalDuplicate) {
                 relationships.push(rel);
+            } else if (bidirectionalDuplicate) {
+                console.log(`[KG Merge] Dropped bidirectional duplicate: (${rel.from}, ${rel.type}, ${rel.to})`);
             }
         }
     }
@@ -248,6 +295,121 @@ async function validatePrerequisiteDAG(
         }
     }
 }
+
+// ─── Step 2b: Cross-chunk linking (Fix 4 — density / orphan nodes) ───
+
+/**
+ * Finds Concept nodes for this document that have zero relationships and
+ * attempts to link them to other concepts via the LLM.
+ *
+ * This resolves the "very low average degree" issue that arises because
+ * the per-chunk extractor only sees one chunk at a time, so cross-chunk
+ * relationships are never found.
+ *
+ * Strategy:
+ *  1. Query Neo4j for orphan Concept nodes (degree = 0) in this document.
+ *  2. Also fetch a sample of well-connected concepts as candidates.
+ *  3. For each orphan, ask the LLM: "given this concept's definition,
+ *     which of these candidates is it related to, and how?"
+ *  4. Write RELATES_TO (or the suggested type) edges for confident pairs.
+ */
+async function linkOrphanConcepts(userId: string, documentId: string): Promise<void> {
+    // 1. Find orphan concept nodes (no inbound or outbound edges in the whole graph for this user)
+    const orphans = await runCypher<{ id: string; name: string; definition: string }>(
+        `MATCH (c:Concept {userId: $userId, documentId: $docId})
+         WHERE NOT (c)--()
+         RETURN c.id AS id, c.name AS name, c.definition AS definition
+         LIMIT 50`,
+        { userId, docId: documentId }
+    );
+
+    if (orphans.length === 0) {
+        console.log('[KG Link] No orphan concepts found — skipping cross-chunk link pass');
+        return;
+    }
+
+    console.log(`[KG Link] Found ${orphans.length} orphan concept(s) — attempting to link`);
+
+    // 2. Fetch candidate concepts (connected ones to link against)
+    const candidates = await runCypher<{ id: string; name: string; definition: string }>(
+        `MATCH (c:Concept {userId: $userId, documentId: $docId})
+         WHERE (c)--()
+         RETURN c.id AS id, c.name AS name, c.definition AS definition
+         LIMIT 30`,
+        { userId, docId: documentId }
+    );
+
+    if (candidates.length === 0) {
+        console.log('[KG Link] No candidate concepts to link orphans against');
+        return;
+    }
+
+    const candidateSummary = candidates
+        .map((c) => `- ${c.name}: ${c.definition || 'no definition'}`)
+        .join('\n');
+
+    // 3. For each orphan, ask the LLM which candidates it relates to
+    for (const orphan of orphans) {
+        try {
+            const response = await chatCompletion(
+                [
+                    {
+                        role: 'system',
+                        content: `You are an educational knowledge graph assistant.
+Given an orphan concept and a list of candidate concepts, identify which candidates
+are meaningfully related to the orphan and emit up to 3 relationships.
+
+Only emit relationships that are clearly meaningful for a CBSE Grade 4–10 student.
+Use relationship types: IS_A | CAUSES | REQUIRES | PART_OF | CONTRASTS_WITH | EXAMPLE_OF | USED_FOR | FEATURE_OF | PRECEDES | EXTENSION_OF | RELATES_TO
+
+Respond ONLY with JSON:
+{
+  "relationships": [
+    { "to": "candidate concept name", "type": "RELATION_TYPE", "confidence": 0.0–1.0 }
+  ]
+}`
+                    },
+                    {
+                        role: 'user',
+                        content: `Orphan concept: "${orphan.name}"
+Definition: "${orphan.definition || 'not available'}"
+
+Candidate concepts:
+${candidateSummary}
+
+Which candidates is "${orphan.name}" related to, and how?`
+                    }
+                ],
+                { jsonMode: true, temperature: 0.2 }
+            );
+
+            const result = parseLLMJson<{ relationships: Array<{ to: string; type: string; confidence: number }> }>(response);
+
+            for (const rel of result.relationships || []) {
+                if (!rel.to || !rel.type || rel.confidence < 0.70) continue;
+
+                // Guard: skip self-loops
+                if (rel.to.toLowerCase().trim() === orphan.name.toLowerCase().trim()) continue;
+
+                const relType = rel.type.toUpperCase().replace(/\s+/g, '_');
+
+                await runCypher(
+                    `MATCH (a:Concept {id: $fromId}), (b:Concept {userId: $userId})
+                     WHERE toLower(b.name) = toLower($toName)
+                     AND a.id <> b.id
+                     AND NOT (a)-[:${relType}]->(b)
+                     MERGE (a)-[:${relType}]->(b)`,
+                    { fromId: orphan.id, userId, toName: rel.to }
+                );
+
+                console.log(`[KG Link] Linked orphan "${orphan.name}" -[${relType}]-> "${rel.to}" (confidence: ${rel.confidence})`);
+            }
+        } catch (err) {
+            console.warn(`[KG Link] Failed to link orphan "${orphan.name}":`, err);
+        }
+    }
+}
+
 // ─── Step 3: Write to Neo4j ───
 
 async function writeToNeo4j(
@@ -328,11 +490,21 @@ async function writeToNeo4j(
 
     // 3. Create Inter-Concept Relationships (Extracted by AI)
     for (const rel of knowledge.relationships) {
+        const fromNorm = rel.from.toLowerCase().trim();
+        const toNorm = rel.to.toLowerCase().trim();
+
+        // Final self-loop guard at write time (belt-and-suspenders)
+        if (fromNorm === toNorm) {
+            console.log(`[KG Write] Skipped self-loop: (${rel.from}, ${rel.type}, ${rel.to})`);
+            continue;
+        }
+
         const dynamicRelType = (rel.type || 'RELATES_TO').toUpperCase().replace(/\s+/g, '_');
 
         await runCypher(
             `MATCH (a:Concept {userId: $userId}), (b:Concept {userId: $userId})
              WHERE toLower(a.name) = toLower($from) AND toLower(b.name) = toLower($to)
+             AND a.id <> b.id
              MERGE (a)-[:${dynamicRelType}]->(b)`,
             {
                 userId,
@@ -384,6 +556,15 @@ export async function buildKnowledgeGraph(
     } catch (dagError) {
         // DAG validation failure should not block the upload
         console.error('[KG Builder] DAG validation error (non-fatal):', dagError);
+    }
+
+    // 6. Cross-chunk linking pass — connect related concepts that were extracted
+    //    in different chunks and therefore have no explicit relationship yet.
+    //    This addresses the low-density / orphan node problem.
+    try {
+        await linkOrphanConcepts(userId, documentId);
+    } catch (linkError) {
+        console.error('[KG Builder] Cross-chunk linking error (non-fatal):', linkError);
     }
 
     return graph;
