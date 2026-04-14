@@ -1,0 +1,5 @@
+supabase
+pymupdf
+pytesseract
+pillow
+neo4j

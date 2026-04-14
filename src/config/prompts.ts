@@ -26,7 +26,7 @@ REQUIRED JSON schema — use EXACTLY these fields, no others:
     {
       "from": "concept name",
       "to": "concept name",
-      "type": "one of: IS_A | DEFINES | CAUSES | REQUIRES | PART_OF | CONTRASTS_WITH | EXAMPLE_OF | USED_FOR | FEATURE_OF | PRECEDES | EXTENSION_OF"
+      "type": "one of: IS_A | DEFINES | CAUSES | REQUIRES | PART_OF | CONTRASTS_WITH | EXAMPLE_OF | USED_FOR | FEATURE_OF | PRECEDES | EXTENSION_OF | FOUND_IN | LOCATED_IN | CONTAINS | CHARACTERIZED_BY | DISCOVERED_BY | BUILT_BY | PRODUCED_BY | SUPPLIED_BY | TRADED_BY | LED_TO | COMPARED_WITH | OCCURS_DURING | VISIBLE_IN | RELATES_TO"
     }
   ]
 }
@@ -43,12 +43,26 @@ USED_FOR        — X is a method or tool used to achieve Y      (e.g. Microscop
 FEATURE_OF      — X is a property or attribute of Y            (e.g. Chlorophyll FEATURE_OF Leaf)
 PRECEDES        — X comes before Y in sequence or time         (e.g. French Revolution PRECEDES Napoleonic Era)
 EXTENSION_OF    — X is a more advanced version of Y            (e.g. Quadratic Equations EXTENSION_OF Linear Equations)
+FOUND_IN        — X is found in location/context Y             (e.g. Fossils FOUND_IN Sedimentary Rock)
+LOCATED_IN      — X is physically located in Y                 (e.g. Great Bath LOCATED_IN Mohenjodaro)
+CONTAINS        — X contains or includes Y                     (e.g. Cell CONTAINS Nucleus)
+CHARACTERIZED_BY — X is characterized by property Y            (e.g. Desert CHARACTERIZED_BY Arid Climate)
+DISCOVERED_BY   — X was discovered or found by Y               (e.g. Penicillin DISCOVERED_BY Fleming)
+BUILT_BY        — X was built or constructed by Y               (e.g. Taj Mahal BUILT_BY Shah Jahan)
+PRODUCED_BY     — X is produced or made by Y                   (e.g. Oxygen PRODUCED_BY Photosynthesis)
+SUPPLIED_BY     — X is supplied or provided by Y               (e.g. Food SUPPLIED_BY Farmers)
+TRADED_BY       — X is traded or exchanged by Y                (e.g. Spices TRADED_BY Merchants)
+LED_TO          — X led to or resulted in Y                    (e.g. Industrialization LED_TO Urbanization)
+COMPARED_WITH   — X is compared or contrasted with Y           (e.g. Democracy COMPARED_WITH Monarchy)
+OCCURS_DURING   — X occurs during time period/event Y          (e.g. Migration OCCURS_DURING Winter)
+VISIBLE_IN      — X is visible or observable in Y              (e.g. Erosion VISIBLE_IN River Valleys)
+RELATES_TO      — X relates to Y (generic fallback)            (e.g. Gravity RELATES_TO Mass)
 
 Rules:
 - Only extract concepts central to understanding the topic
 - Ignore author names, page numbers, chapter references
 - Keep names simple and age-appropriate for Grade 4-10
-- Only use the 11 listed relationship types — no others
+- Only use the 25 listed relationship types — no others
 - Output ONLY valid JSON, no preamble`,
     user: (chunk: string, exemplars: string) => `### Exemplars for Reference (e.g., SciERC/CBSE Patterns):
 ${exemplars}

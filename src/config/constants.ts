@@ -54,6 +54,21 @@ export const RELATION_BLOOM_MAP: Record<string, number> = {
     PRECEDES: 2, // Understand — sequence events
     REQUIRES: 3, // Apply — identify dependencies
     EXTENSION_OF: 4, // Analyze — relate advanced to foundational
+    // ─── IPD-origin relation types ───
+    FOUND_IN: 1, // Remember — locate
+    LOCATED_IN: 1, // Remember — locate
+    CONTAINS: 2, // Understand — composition
+    CHARACTERIZED_BY: 2, // Understand — properties
+    DISCOVERED_BY: 1, // Remember — attribution
+    BUILT_BY: 1, // Remember — creation
+    PRODUCED_BY: 2, // Understand — production
+    SUPPLIED_BY: 2, // Understand — supply/source
+    TRADED_BY: 3, // Apply — commerce
+    LED_TO: 2, // Understand — historical causation
+    RELATES_TO: 2, // Understand — generic relation
+    COMPARED_WITH: 3, // Apply — comparison
+    OCCURS_DURING: 2, // Understand — temporal
+    VISIBLE_IN: 1, // Remember — observation
 };
 
 // ─── Question Count Limits Per Mode ───
@@ -152,3 +167,6 @@ export const FSRS_REVIEW_THRESHOLD = 0.9;
 // Default hours elapsed used when no prior mastery record exists
 // for spaced mode scoring
 export const DEFAULT_HOURS_ELAPSED = 24;
+
+// ─── Backend URL ───
+export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
