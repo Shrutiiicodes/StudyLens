@@ -6,11 +6,12 @@ import { QuestionResult } from '@/types/mastery';
 /**
  * POST /api/diagnostic
  * Generate questions or evaluate results for any assessment mode.
+ * Enhanced: passes rawAnswers to evaluateDiagnostic for misconception enrichment.
  */
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { action, conceptId, conceptTitle, userId, results, mode } = body;
+        const { action, conceptId, conceptTitle, userId, results, mode, rawAnswers } = body;
 
         if (action === 'generate') {
             if (!conceptId || !conceptTitle) {
@@ -21,7 +22,11 @@ export async function POST(request: NextRequest) {
             }
 
             const assessmentMode = mode || 'diagnostic';
-            const questions = await generateQuestionsForMode(conceptId, conceptTitle, assessmentMode, 50, userId);
+            const questions = await generateQuestionsForMode(
+                conceptId,
+                conceptTitle,
+                assessmentMode
+            );
 
             return NextResponse.json({
                 success: true,
@@ -41,7 +46,15 @@ export async function POST(request: NextRequest) {
 
             const assessmentMode = mode || 'diagnostic';
             const questionResults: QuestionResult[] = results;
-            const diagnostic = await evaluateDiagnostic(userId, conceptId, questionResults, assessmentMode);
+
+            // Pass rawAnswers so evaluation-engine can call IPD backend
+            const diagnostic = await evaluateDiagnostic(
+                userId,
+                conceptId,
+                questionResults,
+                assessmentMode,
+                rawAnswers  // may be undefined — evaluateDiagnostic handles that
+            );
 
             return NextResponse.json({
                 success: true,
@@ -49,27 +62,19 @@ export async function POST(request: NextRequest) {
                 recommendedPath: diagnostic.recommendedPath,
                 masteryUpdate: diagnostic.masteryUpdate,
                 nextStage: diagnostic.nextStage,
-                 passed: diagnostic.passed,
-                // * Now included in every evaluate response
-                metrics: {
-                    fas: roundTo(diagnostic.metrics.fas, 4),
-                    wbs: roundTo(diagnostic.metrics.wbs, 4),
-                    ccms: roundTo(diagnostic.metrics.ccms, 4),
-                    mss: roundTo(diagnostic.metrics.mss, 4),
-                    lip: roundTo(diagnostic.metrics.lip, 4),
-                    rci_avg: roundTo(diagnostic.metrics.rci_avg, 4),
-                    calibration_error: roundTo(diagnostic.metrics.calibration_error, 4),
-                    // Human-readable labels for the frontend
-                    labels: {
-                        fas: 'Fractional Assessment Score',
-                        wbs: 'Weighted Bloom Score',
-                        ccms: 'Composite Confidence Mastery Score',
-                        mss: 'Mastery Sensitivity Score',
-                        lip: 'Learning Improvement Priority',
-                        rci_avg: 'Avg Response Confidence Index',
-                        calibration_error: 'Calibration Error',
-                    },
-                },
+                passed: diagnostic.passed,
+                // Only include if the backend returned data
+                ...(diagnostic.misconceptionReport
+                    ? {
+                        misconceptionReport: {
+                            total: diagnostic.misconceptionReport.total,
+                            correctCount: diagnostic.misconceptionReport.correct_count,
+                            severityDistribution:
+                                diagnostic.misconceptionReport.severity_distribution,
+                            criticalGaps: diagnostic.misconceptionReport.critical_gaps,
+                        },
+                    }
+                    : {}),
             });
         }
 
@@ -79,15 +84,11 @@ export async function POST(request: NextRequest) {
         );
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        console.error('Diagnostic error:', message);
+        const stack = error instanceof Error ? error.stack : '';
+        console.error('Diagnostic error:', message, stack);
         return NextResponse.json(
             { error: `Diagnostic failed: ${message}` },
             { status: 500 }
         );
     }
-}
-
-function roundTo(value: number | undefined, decimals: number): number {
-    if (value == null) return 0;
-    return Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
 }

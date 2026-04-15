@@ -6,7 +6,10 @@ export const APP_DESCRIPTION = 'AI-Powered Foundational Concept Mastery Platform
 // ─── Upload Limits ───
 export const MIN_WORD_COUNT = 500;
 export const MAX_FILE_SIZE_MB = 10;
-export const ALLOWED_FILE_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+export const ALLOWED_FILE_TYPES = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
 
 // ─── Chunking ───
 export const CHUNK_MIN_TOKENS = 500;
@@ -26,56 +29,22 @@ export const MASTERY_LOCK_THRESHOLD = 70;
 export const DIAGNOSTIC_QUESTION_COUNT = 5;
 
 // ─── Question Types ───
-export const QUESTION_TYPES = ['recall', 'conceptual', 'application', 'reasoning', 'analytical'] as const;
+export const QUESTION_TYPES = [
+    'recall',
+    'conceptual',
+    'application',
+    'reasoning',
+    'analytical',
+] as const;
 export const DIFFICULTY_LEVELS = [1, 2, 3] as const;
 
 // ─── Cognitive Levels ───
-// Maps question type → Bloom's level (1=Remember, 2=Understand, 3=Apply, 4=Analyze)
 export const COGNITIVE_LEVEL_MAP: Record<string, number> = {
     recall: 1,
     conceptual: 2,
     application: 3,
     reasoning: 3,
     analytical: 4,
-};
-
-// ─── Relation Bloom's Map ───
-// Maps KG relation type → Bloom's cognitive level
-// Used by question generator to select appropriate question template
-export const RELATION_BLOOM_MAP: Record<string, number> = {
-    IS_A: 1, // Remember — classify
-    DEFINES: 1, // Remember — recall definition
-    EXAMPLE_OF: 1, // Remember — identify example
-    PART_OF: 2, // Understand — describe structure
-    FEATURE_OF: 2, // Understand — describe properties
-    CAUSES: 2, // Understand — explain cause-effect
-    CONTRASTS_WITH: 3, // Apply — compare and distinguish
-    USED_FOR: 3, // Apply — use in context
-    PRECEDES: 2, // Understand — sequence events
-    REQUIRES: 3, // Apply — identify dependencies
-    EXTENSION_OF: 4, // Analyze — relate advanced to foundational
-    // ─── IPD-origin relation types ───
-    FOUND_IN: 1, // Remember — locate
-    LOCATED_IN: 1, // Remember — locate
-    CONTAINS: 2, // Understand — composition
-    CHARACTERIZED_BY: 2, // Understand — properties
-    DISCOVERED_BY: 1, // Remember — attribution
-    BUILT_BY: 1, // Remember — creation
-    PRODUCED_BY: 2, // Understand — production
-    SUPPLIED_BY: 2, // Understand — supply/source
-    TRADED_BY: 3, // Apply — commerce
-    LED_TO: 2, // Understand — historical causation
-    RELATES_TO: 2, // Understand — generic relation
-    COMPARED_WITH: 3, // Apply — comparison
-    OCCURS_DURING: 2, // Understand — temporal
-    VISIBLE_IN: 1, // Remember — observation
-};
-
-// ─── Question Count Limits Per Mode ───
-export const QUESTION_LIMITS: Record<string, { min: number; max: number }> = {
-    diagnostic: { min: 3, max: 5 },
-    practice: { min: 3, max: 7 },
-    mastery: { min: 5, max: 8 },
 };
 
 // ─── Assessment Weights ───
@@ -115,34 +84,11 @@ export const SAI_WEIGHTS = {
     calibration: 0.1,
 };
 
-// ─── MSS Weights ───
-// Weights applied to wrong attempts based on confidence level
-// High confidence + wrong = strong misconception signal (weight 2.0)
-// Medium confidence + wrong = mild misconception signal (weight 1.5)
-// Low confidence + wrong = likely unknown, not misconceived (weight 1.0)
-export const MSS_WEIGHTS = {
-    high_confidence_wrong: 2.0,   // confidence > 0.7
-    medium_confidence_wrong: 1.5, // confidence 0.4–0.7
-    low_confidence_wrong: 1.0,    // confidence < 0.4
-};
-
-
-// ─── Learn It Priority Weights ───
-export const LEARN_IT_WEIGHTS = {
-    ccms_deficit: 0.5, // (1 - CCMS) component
-    mss: 0.5,          // MSS component
-};
-
-// ─── DAG Validation ───
-// Minimum confidence for a REQUIRES edge to act as a hard DAG gate
-// Edges below this are kept as soft links but do not block progression
-export const DAG_EDGE_CONFIDENCE_THRESHOLD = 0.65;
-
 // ─── Grade Levels ───
 export const GRADE_LEVELS = Array.from({ length: 7 }, (_, i) => i + 4); // 4-10
 
 // ─── LLM Config ───
-export const GROQ_MODEL = 'qwen/qwen3-32b';
+export const GROQ_MODEL = 'llama-3.3-70b-versatile';
 export const GROQ_TEMPERATURE = 0.3;
 export const GROQ_MAX_TOKENS = 4096;
 
@@ -153,20 +99,123 @@ export const EXPECTED_TIME: Record<number, number> = {
     3: 90,
 };
 
-// ─── Verification Pass ───
-// Minimum confidence for a triple to pass the LLM verification pass
-// Triples below this threshold are discarded as potential hallucinations
-export const VERIFICATION_CONFIDENCE_THRESHOLD = 0.80;
+// ─── Unified Relation Type Ontology ─────────────────────────────────────────
+//
+// Merged from Study-Lens (Groq extraction) and IPD (triple_verifier.py).
+// Used in:
+//   • src/config/prompts.ts     — KG_EXTRACTOR system prompt
+//   • src/lib/kg-builder.ts     — dynamic Cypher relation creation
+//   • backend triple_verifier.py — ALLOWED_PREDICATES
+//
+// Bloom's Taxonomy mapping:
+//   1 = Remember  2 = Understand  3 = Apply  4 = Analyze
 
-// ─── Spaced Repetition ───
-// Retrievability threshold below which a spaced review is triggered
-// R(t) = (1 + t / (9 × S))^(-1) — when R drops below this, review is due
-export const FSRS_REVIEW_THRESHOLD = 0.9;
+export const RELATION_TYPES = [
+    // ── Shared ────────────────────────────────────────────────────────────
+    'IS_A',           // Classification/taxonomy
+    'REQUIRES',       // Prerequisite
+    'PART_OF',        // Composition
+    'USED_FOR',       // Function/purpose
+    'RELATES_TO',     // Fallback/generic
 
-// ─── Forgetting Model ───
-// Default hours elapsed used when no prior mastery record exists
-// for spaced mode scoring
-export const DEFAULT_HOURS_ELAPSED = 24;
+    // ── Study-Lens additions ──────────────────────────────────────────────
+    'CAUSES',         // Cause-effect
+    'DEFINES',        // Definitions
+    'CONTRASTS_WITH', // Comparison
+    'EXAMPLE_OF',     // Exemplification
+    'FEATURE_OF',     // Properties
+    'PRECEDES',       // Temporal sequence
+    'EXTENSION_OF',   // Advanced→basic
 
-// ─── Backend URL ───
-export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+    // ── IPD additions ─────────────────────────────────────────────────────
+    'FOUND_IN',          // Location/discovery
+    'LOCATED_IN',        // Spatial location
+    'CONTAINS',          // Containment
+    'CHARACTERIZED_BY',  // Characterization
+    'DISCOVERED_BY',     // Historical attribution
+    'BUILT_BY',          // Construction/creation
+    'PRODUCED_BY',       // Production
+    'SUPPLIED_BY',       // Supply chains
+    'TRADED_BY',         // Commerce/trade
+    'LED_TO',            // Historical causation
+] as const;
+
+export type RelationType = (typeof RELATION_TYPES)[number];
+
+/** Maps each relation type to a Bloom's Taxonomy cognitive level (1–4). */
+export const RELATION_BLOOM_MAP: Record<RelationType, number> = {
+    // Remember (level 1) — simple retrieval / labelling
+    IS_A: 1,
+    FOUND_IN: 1,
+    LOCATED_IN: 1,
+    DISCOVERED_BY: 1,
+    BUILT_BY: 1,
+    RELATES_TO: 1,
+
+    // Understand (level 2) — explain / describe
+    REQUIRES: 2,
+    PART_OF: 2,
+    DEFINES: 2,
+    EXAMPLE_OF: 2,
+    CONTAINS: 2,
+    CHARACTERIZED_BY: 2,
+    PRECEDES: 2,
+    LED_TO: 2,
+    PRODUCED_BY: 2,
+    SUPPLIED_BY: 2,
+    TRADED_BY: 2, // could be 3 for trade-route analysis
+
+    // Apply (level 3)
+    USED_FOR: 3,
+    FEATURE_OF: 3,
+    CONTRASTS_WITH: 3,
+    EXTENSION_OF: 3,
+
+    // Analyse (level 4)
+    CAUSES: 4,
+};
+
+/** Human-readable labels for UI rendering. */
+export const RELATION_LABELS: Record<RelationType, string> = {
+    IS_A: 'is a type of',
+    REQUIRES: 'requires',
+    PART_OF: 'is part of',
+    USED_FOR: 'is used for',
+    RELATES_TO: 'relates to',
+    CAUSES: 'causes',
+    DEFINES: 'defines',
+    CONTRASTS_WITH: 'contrasts with',
+    EXAMPLE_OF: 'is an example of',
+    FEATURE_OF: 'is a feature of',
+    PRECEDES: 'precedes',
+    EXTENSION_OF: 'is an extension of',
+    FOUND_IN: 'is found in',
+    LOCATED_IN: 'is located in',
+    CONTAINS: 'contains',
+    CHARACTERIZED_BY: 'is characterized by',
+    DISCOVERED_BY: 'was discovered by',
+    BUILT_BY: 'was built by',
+    PRODUCED_BY: 'is produced by',
+    SUPPLIED_BY: 'is supplied by',
+    TRADED_BY: 'is traded by',
+    LED_TO: 'led to',
+};
+
+// ─── Misconception Severity ──────────────────────────────────────────────────
+
+export const SEVERITY_LEVELS = ['CORRECT', 'CLOSE', 'PARTIAL', 'CRITICAL'] as const;
+export type SeverityLevel = (typeof SEVERITY_LEVELS)[number];
+
+export const SEVERITY_COLORS: Record<SeverityLevel, string> = {
+    CORRECT: 'var(--accent-success)',
+    CLOSE: 'var(--accent-primary)',
+    PARTIAL: 'var(--accent-warning)',
+    CRITICAL: 'var(--accent-danger)',
+};
+
+export const SEVERITY_LABELS: Record<SeverityLevel, string> = {
+    CORRECT: 'Correct',
+    CLOSE: 'Close',
+    PARTIAL: 'Partial',
+    CRITICAL: 'Critical gap',
+};

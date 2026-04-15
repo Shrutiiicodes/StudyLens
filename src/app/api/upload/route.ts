@@ -39,39 +39,17 @@ export async function POST(request: NextRequest) {
 
         const supabase = getServiceSupabase();
 
-
-
         // Parse text from file
         const buffer = Buffer.from(await file.arrayBuffer());
         let text = '';
 
         if (file.type === 'application/pdf') {
-            try {
-                const { PDFParse } = await import('pdf-parse');
-                const parser = new PDFParse({ data: buffer });
-                const result = await parser.getText();
-                text = result.text;
-
-                if (!text || text.trim().length < 100) {
-                    return NextResponse.json(
-                        {
-                            error: 'Could not extract text from this PDF. If it is a scanned document, please use a text-based PDF instead.',
-                        },
-                        { status: 422 }
-                    );
-                }
-            } catch (pdfError) {
-                console.error('PDF parsing error:', pdfError);
-                return NextResponse.json(
-                    {
-                        error: 'Failed to parse PDF file.',
-                        details: (pdfError as Error).message,
-                    },
-                    { status: 422 }
-                );
-            }
+            const { PDFParse } = await import('pdf-parse');
+            const parser = new PDFParse({ data: buffer });
+            const pdfData = await parser.getText();
+            text = pdfData.text;
+            await parser.destroy();
         } else {
-            // DOCX parsing
             const mammoth = await import('mammoth');
             const result = await mammoth.extractRawText({ buffer });
             text = result.value;
@@ -114,11 +92,7 @@ export async function POST(request: NextRequest) {
         if (uploadError) {
             console.error('Storage upload error:', uploadError);
             return NextResponse.json(
-                { 
-                    error: 'Failed to store document', 
-                    details: uploadError.message,
-                    code: (uploadError as any).statusCode || (uploadError as any).code
-                },
+                { error: 'Failed to store document' },
                 { status: 500 }
             );
         }
@@ -141,36 +115,96 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Build Knowledge Graph (async but we wait for it)
+        // ── Phase A: Study-Lens KG build (primary, always runs) ──────────────
+        let kgResult = { nodes: [] as unknown[], relations: [] as unknown[] };
         try {
             const kg = await buildKnowledgeGraph(userId, concept.id, text);
-
-            return NextResponse.json({
-                success: true,
-                concept,
-                knowledgeGraph: {
-                    nodeCount: kg.nodes.length,
-                    relationCount: kg.relations.length,
-                },
-                warnings,
-                validation: {
-                    wordCount,
-                    conceptDensity: validation.conceptDensity,
-                    isAcademic: validation.isAcademic,
-                },
-            });
+            kgResult = kg;
         } catch (kgError) {
             console.error('KG building error:', kgError);
-            return NextResponse.json({
-                success: true,
-                concept,
-                warnings: [...warnings, 'Knowledge graph generation is still processing'],
-                validation: {
-                    wordCount,
-                    conceptDensity: validation.conceptDensity,
-                },
-            });
+            warnings.push('Knowledge graph generation encountered an issue.');
         }
+
+        // ── Phase B: IPD backend ingestion (supplementary, non-fatal) ────────
+        let pipelineData: {
+            doc_id?: string;
+            page_count?: number;
+            chunk_count?: number;
+            triple_count?: number;
+            question_count?: number;
+            ocr_applied?: boolean;
+        } = {};
+
+        try {
+            const { ingestDocument } = await import('@/lib/backend-client');
+            const ingestResult = await ingestDocument(filePath, userId, concept.id);
+
+            pipelineData = {
+                doc_id: ingestResult.doc_id,
+                page_count: ingestResult.page_count,
+                chunk_count: ingestResult.chunk_count,
+                triple_count: ingestResult.triple_count,
+                question_count: ingestResult.question_count,
+                ocr_applied: ingestResult.ocr_applied,
+            };
+
+            // Record the pipeline run in Supabase
+            await supabase.from('pipeline_runs').insert({
+                user_id: userId,
+                concept_id: concept.id,
+                doc_id: ingestResult.doc_id,
+                storage_path: filePath,
+                page_count: ingestResult.page_count,
+                chunk_count: ingestResult.chunk_count,
+                triple_count: ingestResult.triple_count,
+                question_count: ingestResult.question_count,
+                quality_score: ingestResult.quality_score ?? 0,
+                ocr_applied: ingestResult.ocr_applied ?? false,
+                status: 'completed',
+                completed_at: new Date().toISOString(),
+            });
+
+            console.log(
+                `[Upload] Backend ingestion complete — doc_id: ${ingestResult.doc_id}, ` +
+                `chunks: ${ingestResult.chunk_count}, questions: ${ingestResult.question_count}`
+            );
+        } catch (backendError) {
+            console.warn('[Upload] Backend ingestion failed (non-fatal):', backendError);
+            warnings.push('OCR pipeline unavailable — using standard text extraction.');
+
+            // Record failed pipeline run
+            await supabase.from('pipeline_runs').insert({
+                user_id: userId,
+                concept_id: concept.id,
+                doc_id: '',
+                storage_path: filePath,
+                status: 'failed',
+                error_message: backendError instanceof Error ? backendError.message : String(backendError),
+            }).catch(() => { /* silently ignore insert failure */ });
+        }
+
+        return NextResponse.json({
+            success: true,
+            concept,
+            knowledgeGraph: {
+                nodeCount: kgResult.nodes.length,
+                relationCount: kgResult.relations.length,
+            },
+            pipeline: pipelineData.doc_id ? {
+                docId: pipelineData.doc_id,
+                pageCount: pipelineData.page_count,
+                chunkCount: pipelineData.chunk_count,
+                tripleCount: pipelineData.triple_count,
+                questionCount: pipelineData.question_count,
+                ocrApplied: pipelineData.ocr_applied,
+            } : null,
+            warnings,
+            validation: {
+                wordCount,
+                conceptDensity: validation.conceptDensity,
+                isAcademic: validation.isAcademic,
+            },
+        });
     } catch (error) {
         console.error('Upload error:', error);
         return NextResponse.json(

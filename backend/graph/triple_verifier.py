@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional, Protocol
 
 
 ALLOWED_PREDICATES = {
-  # ─── Shared / IPD-origin ───
   "REQUIRES",
   "IS_A",
   "CAUSES",
@@ -22,7 +21,6 @@ ALLOWED_PREDICATES = {
   "CONTAINS",
   "LOCATED_IN",
   "COMPARED_WITH",
-  # ─── Study-Lens-origin ───
   "FEATURE_OF",
   "PRECEDES",
   "EXTENSION_OF",
