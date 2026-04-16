@@ -31,6 +31,7 @@ import {
 import { AssessmentMode } from '@/types/student';
 import { QuestionResult, MasteryUpdate } from '@/types/mastery';
 import { Question, AnswerSubmission, AnswerResult } from '@/types/question';
+import { updateIRTState, getInitialDifficultyParam, masteryToTheta } from './irt';
 
 /**
  * Evaluate a student's answer and update mastery.
@@ -52,9 +53,8 @@ export async function evaluateAnswer(
         confidence: submission.confidence,
     };
 
-    await storeAttempt(userId, question, submission, correct);
-
     const currentMastery = await getCurrentMastery(userId, question.concept_id);
+    await storeAttempt(userId, question, submission, correct, currentMastery);
 
     const score = calculateUnifiedScore([questionResult]);
 
@@ -70,7 +70,9 @@ export async function evaluateAnswer(
 }
 
 const STAGES = ['diagnostic', 'practice', 'mastery'] as const;
-const PASS_THRESHOLD = 60;
+// Mastery learning threshold: 80% per Bloom (1984) mastery learning criteria.
+// Bloom, B.S. (1984). The 2 sigma problem. Educational Researcher, 13(6), 4–16.
+const PASS_THRESHOLD = 80;
 
 /**
  * Evaluate a full assessment session.
@@ -354,8 +356,24 @@ async function storeAttempt(
     userId: string,
     question: Question,
     submission: AnswerSubmission,
-    correct: boolean
+    correct: boolean,
+    currentMastery: number = 50
 ): Promise<void> {
+    // ── IRT: fetch current difficulty_param for this question ─────────────
+    const { data: irtRow } = await supabase
+        .from('question_irt')
+        .select('difficulty_param, response_count')
+        .eq('question_id', question.id)
+        .single();
+
+    const currentIRT = irtRow ?? {
+        difficulty_param: getInitialDifficultyParam(question.difficulty),
+        response_count: 0,
+    };
+
+    const theta = masteryToTheta(currentMastery);
+
+    // ── Store attempt with IRT snapshot ───────────────────────────────────
     await supabase.from('attempts').insert({
         user_id: userId,
         concept_id: question.concept_id,
@@ -365,7 +383,21 @@ async function storeAttempt(
         cognitive_level: question.cognitive_level,
         time_taken: submission.time_taken,
         confidence: submission.confidence,
+        difficulty_param: round4(currentIRT.difficulty_param),
+        student_theta: round4(theta),
     });
+
+    // ── IRT online update: update b_i for this question ───────────────────
+    const updatedIRT = updateIRTState(currentIRT, currentMastery, correct);
+
+    await supabase
+        .from('question_irt')
+        .upsert({
+            question_id: question.id,
+            difficulty_param: updatedIRT.difficulty_param,
+            response_count: updatedIRT.response_count,
+            last_updated: new Date().toISOString(),
+        }, { onConflict: 'question_id' });
 }
 
 /** Round to 4 decimal places for DB storage */

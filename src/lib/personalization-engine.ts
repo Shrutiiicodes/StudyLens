@@ -24,7 +24,14 @@ import {
 } from '@/config/constants';
 import { AssessmentMode } from '@/types/student';
 import { QuestionResult, StudentAbilityIndex, MasteryUpdate, DifficultyDistribution } from '@/types/mastery';
-import { bktMasteryUpdateFromResults, DEFAULT_BKT_PARAMS, BKTParams } from './bkt';
+import {
+    bktMasteryUpdateFromResults,
+    bktUpdate,
+    masteryToBKT,
+    bktToMastery,
+    DEFAULT_BKT_PARAMS,
+    BKTParams,
+} from './bkt';
 
 // ─── Core Components ───
 
@@ -114,13 +121,13 @@ export function spacedReinforcementScore(
  * BKT is preferred because it:
  *   - Distinguishes guessing from knowing via slip/guess parameters
  *   - Produces a principled posterior belief over knowledge state
- *   - Is directly comparable to published ITS baselines
+ *   - Is directly comparable to published ITS baselines (DKT, DKVMN, AKT)
  *
  * @param currentMastery - Current mastery score (0–100)
  * @param score          - Session score (0–1)
  * @param mode           - Assessment mode
- * @param results        - Full list of QuestionResults for BKT sequence update
- * @param bktParams      - Per-concept BKT params (default used if not fitted)
+ * @param results        - Full QuestionResult list for per-attempt BKT sequence
+ * @param bktParams      - Per-concept BKT params (default used if not yet fitted)
  */
 export function updateMastery(
     currentMastery: number,
@@ -137,12 +144,11 @@ export function updateMastery(
     } else {
         // Practice & Mastery: use BKT over the session's attempt sequence
         if (results && results.length > 0) {
-            // Preferred: run BKT over all attempts in sequence
+            // Preferred path: run BKT sequentially over all attempts
             newMastery = bktMasteryUpdateFromResults(currentMastery, results, bktParams);
         } else {
-            // Fallback: single BKT update using overall score as a proxy correctness
-            // (score >= 0.5 treated as "correct" for the purpose of the single update)
-            const { bktUpdate, masteryToBKT, bktToMastery } = require('./bkt');
+            // Fallback: single BKT update treating overall score as proxy correctness
+            // (score >= 0.5 treated as "correct" for the single-step update)
             const pKnows = masteryToBKT(currentMastery);
             const updatedPKnows = bktUpdate(pKnows, score >= 0.5, bktParams);
             newMastery = bktToMastery(updatedPKnows);
