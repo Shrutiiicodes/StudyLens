@@ -7,6 +7,7 @@
  * - Group 3: Assessment Metrics (FAS, RCI, WBS, CCMS, MSS, LIP)
  * - Group 4: Student Model Metrics (SAI, Convergence, Calibration)
  * - Group 5: System-level Metrics (Mastery Improvement Rate, TTM)
+ * - Standard ITS Metrics: NLG, Brier Score, ECE, Log-Loss
  */
 
 // ─── Types ───
@@ -21,6 +22,7 @@ export interface AttemptResult {
 }
 
 export interface SessionMetrics {
+    // ── Legacy custom metrics (kept for continuity) ──
     fas: number;              // Fractional Assessment Score
     wbs: number;              // Weighted Bloom Score
     ccms: number;             // Composite Confidence Mastery Score
@@ -28,6 +30,12 @@ export interface SessionMetrics {
     lip: number;              // Learning Improvement Priority
     rci_avg: number;          // Average Response Confidence Index
     calibration_error: number;// Average |correct - confidence|
+
+    // ── Standard ITS metrics (citable, benchmarkable) ──
+    nlg: number;              // Normalized Learning Gain (Hake, 1998)
+    brier_score: number;      // Brier Score — probabilistic penalty for confident-wrong answers
+    ece: number;              // Expected Calibration Error (Guo et al., 2017)
+    log_loss: number;         // Log-Loss — proxy for AUC-ROC on next-answer prediction
 }
 
 export interface StudentModelMetrics {
@@ -55,8 +63,8 @@ export interface SystemMetrics {
  *
  * Weights:
  *   recall       → 1.0
- *   conceptual   → 1.2  (maps to "classification")
- *   application  → 1.5  (maps to "negation" / higher order)
+ *   conceptual   → 1.2
+ *   application  → 1.5
  *   reasoning    → 1.5
  *   analytical   → 2.0
  */
@@ -86,70 +94,39 @@ export function computeFAS(results: AttemptResult[]): number {
 /**
  * RCI — Response Confidence Index
  * How fast was this response relative to the student's average?
- *
- * RCI = actual_time / student_avg_time
- * < 1.0 → faster than average (confident)
- * > 1.0 → slower than average (uncertain)
  */
-export function computeRCI(actualTime: number, studentAvgTime: number): number {
-    if (studentAvgTime <= 0) return 1.0;
-    return actualTime / studentAvgTime;
+export function computeRCI(result: AttemptResult, avgTime: number): number {
+    if (avgTime <= 0) return 1;
+    const timeRatio = Math.min(2, result.time_taken / avgTime);
+    const confidenceAdjusted = result.correct
+        ? result.confidence * (1 / timeRatio)
+        : result.confidence * timeRatio;
+    return Math.max(0, Math.min(1, confidenceAdjusted));
 }
 
-/**
- * Compute average RCI across all results given each result's RCI.
- */
 export function computeAvgRCI(results: AttemptResult[]): number {
-    if (results.length === 0) return 1.0;
-    const avgTime =
-        results.reduce((sum, r) => sum + r.time_taken, 0) / results.length;
-    const rcis = results.map((r) => computeRCI(r.time_taken, avgTime));
-    return rcis.reduce((sum, v) => sum + v, 0) / rcis.length;
+    if (results.length === 0) return 0;
+    const avgTime = results.reduce((s, r) => s + r.time_taken, 0) / results.length;
+    return results.reduce((sum, r) => sum + computeRCI(r, avgTime), 0) / results.length;
 }
 
 /**
  * WBS — Weighted Bloom Score
  * Weights correctness by Bloom's cognitive level.
- *
- * WBS = Σ(bloom_weight × correct) / max_possible
- *
- * Bloom weights:
- *   Level 1 (Remember/recall)     → 1.0
- *   Level 2 (Understand/conceptual) → 1.5
- *   Level 3 (Apply/application)    → 2.0
- *   Level 4 (Analyse/analytical)   → 2.5
  */
 export function computeWBS(results: AttemptResult[]): number {
-    const bloomWeights: Record<number, number> = {
-        1: 1.0,
-        2: 1.5,
-        3: 2.0,
-        4: 2.5,
-    };
-
     if (results.length === 0) return 0;
-
-    const maxPossible = results.reduce(
-        (sum, r) => sum + (bloomWeights[r.cognitive_level] ?? 1.0),
-        0
-    );
+    const maxPossible = results.reduce((sum, r) => sum + r.cognitive_level, 0);
     const scored = results.reduce(
-        (sum, r) =>
-            sum + (r.correct ? (bloomWeights[r.cognitive_level] ?? 1.0) : 0),
+        (sum, r) => sum + (r.correct ? r.cognitive_level : 0),
         0
     );
-
     return maxPossible > 0 ? scored / maxPossible : 0;
 }
 
 /**
  * CCMS — Composite Confidence Mastery Score
- * Combines FAS, WBS, and the raw session score.
- *
  * CCMS = (0.15 × FAS) + (0.25 × WBS) + (0.60 × session_score_normalised)
- *
- * session_score is 0–100; we normalise to 0–1 internally.
- * Returns a value 0–1.
  */
 export function computeCCMS(
     fas: number,
@@ -162,19 +139,12 @@ export function computeCCMS(
 /**
  * MSS — Mastery Sensitivity Score
  * Penalises confident-and-wrong answers more than uncertain-and-wrong.
- *
- * MSS = Σ(confidence_weight × wrong) / total_attempts
- *
- * Confidence weights for wrong answers:
- *   confidence > 0.7  → 2.0  (dangerously overconfident)
- *   confidence 0.4–0.7 → 1.5
- *   confidence < 0.4  → 1.0  (probably guessing)
  */
 export function computeMSS(results: AttemptResult[]): number {
     if (results.length === 0) return 0;
 
     const weightedWrong = results.reduce((sum, r) => {
-        if (r.correct) return sum; // Only penalise wrong answers
+        if (r.correct) return sum;
         let weight = 1.0;
         if (r.confidence > 0.7) weight = 2.0;
         else if (r.confidence >= 0.4) weight = 1.5;
@@ -186,12 +156,7 @@ export function computeMSS(results: AttemptResult[]): number {
 
 /**
  * LIP — Learning Improvement Priority
- * Determines how urgently a student needs to revisit this concept.
- *
  * LIP = (1 - CCMS) × 0.5 + MSS_normalised × 0.5
- *
- * MSS is normalised to 0–1 by dividing by its max possible value (2.0).
- * Returns 0–1 where 1 = highest priority.
  */
 export function computeLIP(ccms: number, mss: number): number {
     const maxMSS = 2.0;
@@ -203,11 +168,7 @@ export function computeLIP(ccms: number, mss: number): number {
 
 /**
  * Calibration Error
- * Measures how well a student knows what they know.
- *
  * CE = avg(|correct - confidence|)
- * 0 → perfectly calibrated
- * 1 → maximally miscalibrated
  */
 export function computeCalibrationError(results: AttemptResult[]): number {
     if (results.length === 0) return 0;
@@ -221,8 +182,6 @@ export function computeCalibrationError(results: AttemptResult[]): number {
 /**
  * Convergence Rate
  * How many questions until mastery stabilises (delta < threshold).
- *
- * Returns the index of first stabilisation, or the full length if never.
  */
 export function computeConvergenceRate(
     masteryHistory: number[],
@@ -240,15 +199,8 @@ export function computeConvergenceRate(
 
 /**
  * SAI — Student Ability Index
- * Holistic score combining mastery, trend, accuracy, calibration.
- *
- * SAI = 0.5 × avg_mastery
- *     + 0.2 × normalised_trend
- *     + 0.2 × global_accuracy × 100
- *     + 0.1 × avg_calibration × 100
- *
- * normalised_trend: slope of last 10 scores, mapped to 0–100 range.
- * Returns 0–100.
+ * SAI = 0.5 × avg_mastery + 0.2 × normalised_trend
+ *     + 0.2 × global_accuracy × 100 + 0.1 × avg_calibration × 100
  */
 export function computeSAI(
     averageMastery: number,
@@ -267,6 +219,101 @@ export function computeSAI(
         0.1 * (avgCalibration * 100);
 
     return Math.round(Math.max(0, Math.min(100, sai)));
+}
+
+// ─── Standard ITS Metrics ───
+
+/**
+ * NLG — Normalized Learning Gain (Hake, 1998)
+ * NLG = (post - pre) / (100 - pre)
+ *
+ * Range: −∞ to 1.0 (negative = regression, 1.0 = perfect gain from pre-score)
+ * Citation: Hake, R.R. (1998). Interactive-engagement versus traditional methods.
+ *           American Journal of Physics, 66(1), 64–74.
+ *
+ * @param preMastery  - Mastery score BEFORE the session (0–100)
+ * @param postMastery - Mastery score AFTER the session (0–100)
+ */
+export function computeNLG(preMastery: number, postMastery: number): number {
+    if (preMastery >= 100) return 0; // Already at ceiling, no gain possible
+    return (postMastery - preMastery) / (100 - preMastery);
+}
+
+/**
+ * Brier Score (Brier, 1950)
+ * BS = (1/N) × Σ(p_predicted − outcome)²
+ *
+ * Range: 0–1. Lower is better.
+ * Penalises confident-wrong answers probabilistically.
+ * Standard replacement for MSS in ITS literature.
+ *
+ * Citation: Brier, G.W. (1950). Verification of forecasts expressed in terms of probability.
+ *           Monthly Weather Review, 78(1), 1–3.
+ */
+export function computeBrierScore(results: AttemptResult[]): number {
+    if (results.length === 0) return 0;
+    const total = results.reduce((sum, r) => {
+        const outcome = r.correct ? 1 : 0;
+        return sum + Math.pow(r.confidence - outcome, 2);
+    }, 0);
+    return total / results.length;
+}
+
+/**
+ * ECE — Expected Calibration Error (Guo et al., 2017)
+ * Bins predictions into M buckets. Computes weighted |accuracy − confidence| per bin.
+ *
+ * Range: 0–1. Lower is better. 0 = perfectly calibrated.
+ * Standard replacement for raw calibration_error in ITS/ML literature.
+ *
+ * Citation: Guo, C., Pleiss, G., Sun, Y., & Weinberger, K.Q. (2017).
+ *           On calibration of modern neural networks. ICML.
+ *
+ * @param M - Number of confidence bins (default: 10)
+ */
+export function computeECE(results: AttemptResult[], M: number = 10): number {
+    if (results.length === 0) return 0;
+
+    const bins: { sumConf: number; sumCorrect: number; count: number }[] =
+        Array.from({ length: M }, () => ({ sumConf: 0, sumCorrect: 0, count: 0 }));
+
+    for (const r of results) {
+        const binIdx = Math.min(M - 1, Math.floor(r.confidence * M));
+        bins[binIdx].sumConf += r.confidence;
+        bins[binIdx].sumCorrect += r.correct ? 1 : 0;
+        bins[binIdx].count += 1;
+    }
+
+    let ece = 0;
+    for (const bin of bins) {
+        if (bin.count === 0) continue;
+        const avgConf = bin.sumConf / bin.count;
+        const avgAcc = bin.sumCorrect / bin.count;
+        ece += (bin.count / results.length) * Math.abs(avgAcc - avgConf);
+    }
+    return ece;
+}
+
+/**
+ * Log-Loss (Cross-Entropy Loss)
+ * LL = −(1/N) × Σ [y·log(p) + (1−y)·log(1−p)]
+ *
+ * Range: 0–∞. Lower is better.
+ * Per-session proxy for AUC-ROC on next-answer prediction.
+ * Used in: DKT (Piech et al., 2015), BKT literature, every knowledge tracing paper.
+ *
+ * For full AUC computation: store raw (confidence, outcome) pairs per attempt
+ * and compute AUC-ROC across all sessions using scikit-learn or equivalent.
+ */
+export function computeLogLoss(results: AttemptResult[]): number {
+    if (results.length === 0) return 0;
+    const eps = 1e-7; // Avoid log(0)
+    const total = results.reduce((sum, r) => {
+        const p = Math.max(eps, Math.min(1 - eps, r.confidence));
+        const y = r.correct ? 1 : 0;
+        return sum + (y * Math.log(p) + (1 - y) * Math.log(1 - p));
+    }, 0);
+    return -total / results.length;
 }
 
 // ─── Group 5: System Metrics ───
@@ -299,7 +346,7 @@ export function computeAvgTimeToMastery(
 }
 
 /**
- * CCMS improvement comparison:
+ * CCMS improvement comparison
  * Did students who used LearnIt perform better on second attempt?
  */
 export function computeCCMSImprovement(
@@ -312,23 +359,25 @@ export function computeCCMSImprovement(
     const wl = avg(withLearnIt);
     const wol = avg(withoutLearnIt);
 
-    return {
-        withLearnIt: wl,
-        withoutLearnIt: wol,
-        delta: wl - wol,
-    };
+    return { withLearnIt: wl, withoutLearnIt: wol, delta: wl - wol };
 }
 
 // ─── Convenience: Compute All Session Metrics ───
 
 /**
  * computeAllSessionMetrics
- * Given a list of attempt results and the current session score (0–100),
- * returns all Group 3 metrics in one call.
+ * Returns all Group 3 + standard ITS metrics for a session.
+ *
+ * @param results       - Per-attempt data
+ * @param sessionScore  - Raw session score 0–100
+ * @param preMastery    - Mastery BEFORE session (0–100) — used for NLG. Pass currentMastery.
+ * @param postMastery   - Mastery AFTER session (0–100) — used for NLG. Pass masteryUpdate.new_score.
  */
 export function computeAllSessionMetrics(
     results: AttemptResult[],
-    sessionScore: number // 0–100
+    sessionScore: number,
+    preMastery: number = 0,
+    postMastery: number = 0,
 ): SessionMetrics {
     const fas = computeFAS(results);
     const wbs = computeWBS(results);
@@ -338,15 +387,20 @@ export function computeAllSessionMetrics(
     const rci_avg = computeAvgRCI(results);
     const calibration_error = computeCalibrationError(results);
 
-    return { fas, wbs, ccms, mss, lip, rci_avg, calibration_error };
+    // Standard ITS metrics
+    const nlg = computeNLG(preMastery, postMastery);
+    const brier_score = computeBrierScore(results);
+    const ece = computeECE(results);
+    const log_loss = computeLogLoss(results);
+
+    return {
+        fas, wbs, ccms, mss, lip, rci_avg, calibration_error,
+        nlg, brier_score, ece, log_loss,
+    };
 }
 
 // ─── Helpers ───
 
-/**
- * Linear regression slope for a series.
- * Used internally by computeSAI for trend calculation.
- */
 function linearRegressionSlope(values: number[]): number {
     const n = values.length;
     if (n < 2) return 0;

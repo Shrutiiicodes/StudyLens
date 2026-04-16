@@ -1,8 +1,14 @@
 /**
  * Personalization Engine
- * 
- * Implements the EXACT mathematical scoring system for Study Lens.
+ *
+ * Implements the mathematical scoring system for Study Lens.
  * All formulas are documented inline.
+ *
+ * Mastery update now uses BKT (Bayesian Knowledge Tracing) for practice
+ * and mastery modes, replacing the EMA (Exponential Moving Average).
+ * Diagnostic mode still uses direct score assignment (unchanged).
+ *
+ * Reference: Corbett & Anderson (1994).
  */
 
 import {
@@ -18,55 +24,38 @@ import {
 } from '@/config/constants';
 import { AssessmentMode } from '@/types/student';
 import { QuestionResult, StudentAbilityIndex, MasteryUpdate, DifficultyDistribution } from '@/types/mastery';
+import { bktMasteryUpdateFromResults, DEFAULT_BKT_PARAMS, BKTParams } from './bkt';
 
 // ─── Core Components ───
 
-/**
- * Accuracy: Acc = A ∈ {0, 1}
- */
+/** Accuracy: Acc = A ∈ {0, 1} */
 export function accuracy(correct: boolean): number {
     return correct ? 1 : 0;
 }
 
-/**
- * Cognitive Depth: CD = CL_q / 2.5
- * Where CL_q ∈ {1, 2, 3, 4}
- */
+/** Cognitive Depth: CD = CL_q / 2.5, where CL_q ∈ {1, 2, 3, 4} */
 export function cognitiveDepth(cognitiveLevel: number): number {
     return Math.min(cognitiveLevel, 4) / 2.5;
 }
 
-/**
- * Difficulty Weight: DW = D_q / 3
- * Where D_q ∈ {1, 2, 3}
- */
+/** Difficulty Weight: DW = D_q / 3, where D_q ∈ {1, 2, 3} */
 export function difficultyWeight(difficulty: number): number {
     return Math.min(difficulty, 3) / 3;
 }
 
-/**
- * Speed Efficiency: SE = min(1, T_exp / T)
- * Where T_exp is expected time, T is actual time
- */
+/** Speed Efficiency: SE = min(1, T_exp / T) */
 export function speedEfficiency(expectedTime: number, actualTime: number): number {
     if (actualTime <= 0) return 1;
     return Math.min(1, expectedTime / actualTime);
 }
 
-/**
- * Confidence Calibration: CC = 1 - |A - C_f|
- * Where A ∈ {0,1} and C_f ∈ [0,1]
- */
+/** Confidence Calibration: CC = 1 - |A - C_f| */
 export function confidenceCalibration(correct: boolean, confidence: number): number {
     const a = correct ? 1 : 0;
     return 1 - Math.abs(a - Math.max(0, Math.min(1, confidence)));
 }
 
-/**
- * Misconception Penalty:
- * MF = misconception_frequency / total_attempts
- * MP = 1 - MF
- */
+/** Misconception Penalty: MP = 1 - (misconception_frequency / total_attempts) */
 export function misconceptionPenalty(
     misconceptionFrequency: number,
     totalAttempts: number
@@ -79,9 +68,8 @@ export function misconceptionPenalty(
 // ─── Scoring Functions ───
 
 /**
- * Unified Score:
- * Simple accuracy-based scoring for all stages.
- * returns value between 0 and 1.
+ * Unified Score — simple accuracy-based scoring for all stages.
+ * Returns 0–1.
  */
 export function calculateUnifiedScore(results: QuestionResult[]): number {
     if (results.length === 0) return 0;
@@ -113,32 +101,52 @@ export function spacedReinforcementScore(
 // ─── Mastery Update ───
 
 /**
- * Mastery Update Formula:
- * M_new = (1 - λ)*M_old + λ*(100 * Score)
- * 
- * λ values:
- * - Practice: 0.2
- * - Mastery: 0.35
- * - Spaced: 0.5
+ * updateMastery
+ *
+ * Mode behaviour:
+ *   diagnostic — Sets mastery directly from score (unchanged).
+ *   practice   — Uses BKT (Corbett & Anderson, 1994) to update P(knows).
+ *   mastery    — Uses BKT with the same parameters.
+ *
+ * BKT replaces the previous EMA formula:
+ *   EMA: M_new = (1−λ)×M_old + λ×(100×Score)
+ *
+ * BKT is preferred because it:
+ *   - Distinguishes guessing from knowing via slip/guess parameters
+ *   - Produces a principled posterior belief over knowledge state
+ *   - Is directly comparable to published ITS baselines
+ *
+ * @param currentMastery - Current mastery score (0–100)
+ * @param score          - Session score (0–1)
+ * @param mode           - Assessment mode
+ * @param results        - Full list of QuestionResults for BKT sequence update
+ * @param bktParams      - Per-concept BKT params (default used if not fitted)
  */
 export function updateMastery(
     currentMastery: number,
     score: number,
-    mode: AssessmentMode
+    mode: AssessmentMode,
+    results?: QuestionResult[],
+    bktParams: BKTParams = DEFAULT_BKT_PARAMS
 ): MasteryUpdate {
-    const lambdaMap: Record<AssessmentMode, number> = {
-        diagnostic: 1.0, // Diagnostic sets initial mastery
-        practice: LAMBDA_PRACTICE,
-        mastery: LAMBDA_MASTERY,
-    };
-
-    const lambda = lambdaMap[mode];
-
     let newMastery: number;
+
     if (mode === 'diagnostic') {
+        // Diagnostic: set mastery directly from score (unchanged)
         newMastery = Math.round(100 * score);
     } else {
-        newMastery = Math.round((1 - lambda) * currentMastery + lambda * (100 * score));
+        // Practice & Mastery: use BKT over the session's attempt sequence
+        if (results && results.length > 0) {
+            // Preferred: run BKT over all attempts in sequence
+            newMastery = bktMasteryUpdateFromResults(currentMastery, results, bktParams);
+        } else {
+            // Fallback: single BKT update using overall score as a proxy correctness
+            // (score >= 0.5 treated as "correct" for the purpose of the single update)
+            const { bktUpdate, masteryToBKT, bktToMastery } = require('./bkt');
+            const pKnows = masteryToBKT(currentMastery);
+            const updatedPKnows = bktUpdate(pKnows, score >= 0.5, bktParams);
+            newMastery = bktToMastery(updatedPKnows);
+        }
     }
 
     // Clamp between 0 and 100
@@ -157,20 +165,16 @@ export function updateMastery(
 
 /**
  * SAI = 0.5*M + 0.2*Trend + 0.2*GlobalAcc + 0.1*Calibration
- * 
- * Trend = slope of last 10 mastery updates
+ * Trend = slope of linear regression on last 10 scores
  */
 export function calculateSAI(
     averageMastery: number,
-    masteryHistory: number[], // Last 10+ mastery scores
-    globalAccuracy: number,   // Overall accuracy 0-1
-    avgCalibration: number    // Average confidence calibration 0-1
+    masteryHistory: number[],
+    globalAccuracy: number,   // 0–1
+    avgCalibration: number    // 0–1
 ): StudentAbilityIndex {
-    // Calculate trend (slope of linear regression on last 10 scores)
     const recentHistory = masteryHistory.slice(-10);
     const trend = calculateTrend(recentHistory);
-
-    // Normalize trend to 0-100 scale
     const normalizedTrend = Math.max(0, Math.min(100, 50 + trend * 10));
 
     const sai =
@@ -188,10 +192,6 @@ export function calculateSAI(
     };
 }
 
-/**
- * Calculate the slope (trend) of a series of values.
- * Uses simple linear regression.
- */
 function calculateTrend(values: number[]): number {
     if (values.length < 2) return 0;
 
@@ -207,14 +207,12 @@ function calculateTrend(values: number[]): number {
 
     const denominator = n * sumX2 - sumX * sumX;
     if (denominator === 0) return 0;
-
     return (n * sumXY - sumX * sumY) / denominator;
 }
 
 // ─── Difficulty Distribution ───
 
 /**
- * Difficulty Distribution Engine
  * E(M) = max(0, 0.7 - 0.006M)
  * Med(M) = 0.3 + 0.002M
  * H(M) = 1 - (E + Med)
@@ -234,9 +232,7 @@ export function getDifficultyDistribution(mastery: number): DifficultyDistributi
     };
 }
 
-/**
- * Sample next question difficulty probabilistically.
- */
+/** Sample next question difficulty probabilistically. */
 export function sampleDifficulty(mastery: number): 1 | 2 | 3 {
     const dist = getDifficultyDistribution(mastery);
     const rand = Math.random();

@@ -13,6 +13,7 @@ import {
 /**
  * GET /api/metrics?userId=xxx
  * Returns all computed metrics for a student's dashboard.
+ * Now surfaces NLG, Brier Score, ECE, and Log-Loss as primary ITS metrics.
  *
  * GET /api/metrics?userId=xxx&conceptId=xxx
  * Returns metrics scoped to a single concept.
@@ -37,7 +38,6 @@ export async function GET(request: NextRequest) {
             const finalScores = (allMastery ?? []).map((m) => m.mastery_score);
             const masteryImprovementRate = computeMasteryImprovementRate(finalScores);
 
-            // Sessions per user (proxy for time-to-mastery)
             const { data: sessionCounts } = await supabase
                 .from('sessions')
                 .select('user_id')
@@ -49,21 +49,36 @@ export async function GET(request: NextRequest) {
             }
             const avgTTM = computeAvgTimeToMastery(Object.values(userSessionMap));
 
-            // CCMS with vs without LearnIt (approximated via learn page visits)
+            // CCMS with vs without LearnIt
             const { data: sessionsWithCCMS } = await supabase
                 .from('sessions')
                 .select('ccms, mode')
                 .not('ccms', 'is', null);
 
-            // Proxy: "learn_it" mode sessions = used LearnIt before re-attempting
             const withLearnIt = (sessionsWithCCMS ?? [])
                 .filter((s) => s.mode === 'practice' && s.ccms != null)
                 .map((s) => s.ccms as number);
             const withoutLearnIt = (sessionsWithCCMS ?? [])
                 .filter((s) => s.mode === 'diagnostic' && s.ccms != null)
                 .map((s) => s.ccms as number);
-
             const ccmsComparison = computeCCMSImprovement(withLearnIt, withoutLearnIt);
+
+            // System-level NLG: average NLG across all sessions with valid nlg values
+            const { data: allSessionsNLG } = await supabase
+                .from('sessions')
+                .select('nlg, brier_score, ece')
+                .not('nlg', 'is', null);
+
+            const nlgValues = (allSessionsNLG ?? []).map((s) => s.nlg as number);
+            const brierValues = (allSessionsNLG ?? [])
+                .filter((s) => s.brier_score != null)
+                .map((s) => s.brier_score as number);
+            const eceValues = (allSessionsNLG ?? [])
+                .filter((s) => s.ece != null)
+                .map((s) => s.ece as number);
+
+            const avg = (arr: number[]) =>
+                arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
 
             return NextResponse.json({
                 success: true,
@@ -71,9 +86,14 @@ export async function GET(request: NextRequest) {
                     total_students: new Set((allMastery ?? []).map((m) => m.user_id)).size,
                     mastery_improvement_rate: Math.round(masteryImprovementRate * 100),
                     avg_time_to_mastery_sessions: Math.round(avgTTM * 10) / 10,
+                    // Legacy
                     ccms_with_learnit: Math.round(ccmsComparison.withLearnIt * 100) / 100,
                     ccms_without_learnit: Math.round(ccmsComparison.withoutLearnIt * 100) / 100,
                     ccms_improvement_delta: Math.round(ccmsComparison.delta * 100) / 100,
+                    // Standard ITS
+                    avg_nlg: avg(nlgValues) !== null ? Math.round(avg(nlgValues)! * 1000) / 1000 : null,
+                    avg_brier_score: avg(brierValues) !== null ? Math.round(avg(brierValues)! * 1000) / 1000 : null,
+                    avg_ece: avg(eceValues) !== null ? Math.round(avg(eceValues)! * 1000) / 1000 : null,
                 },
             });
         }
@@ -84,52 +104,43 @@ export async function GET(request: NextRequest) {
 
         // ── Student-level metrics ─────────────────────────────────────────
 
-        // Fetch all attempts for this user (optionally filtered by concept)
         let attemptsQuery = supabase
             .from('attempts')
             .select('correct, confidence, time_taken, difficulty, cognitive_level, mode, created_at, concept_id')
             .eq('user_id', userId)
             .order('created_at', { ascending: true });
 
-        if (conceptId) {
-            attemptsQuery = attemptsQuery.eq('concept_id', conceptId);
-        }
+        if (conceptId) attemptsQuery = attemptsQuery.eq('concept_id', conceptId);
 
         const { data: attempts } = await attemptsQuery;
 
-        // Fetch sessions for this user
+        // Fetch sessions — now including standard ITS metric columns
         let sessionsQuery = supabase
             .from('sessions')
-            .select('id, concept_id, mode, score, passed, fas, wbs, ccms, mss, lip, calibration_error, created_at')
+            .select('id, concept_id, mode, score, passed, fas, wbs, ccms, mss, lip, calibration_error, nlg, brier_score, ece, log_loss, created_at')
             .eq('user_id', userId)
             .order('created_at', { ascending: true });
 
-        if (conceptId) {
-            sessionsQuery = sessionsQuery.eq('concept_id', conceptId);
-        }
+        if (conceptId) sessionsQuery = sessionsQuery.eq('concept_id', conceptId);
 
         const { data: sessions } = await sessionsQuery;
 
-        // Fetch mastery history
         let masteryQuery = supabase
             .from('mastery')
             .select('mastery_score, concept_id, last_updated')
             .eq('user_id', userId);
 
-        if (conceptId) {
-            masteryQuery = masteryQuery.eq('concept_id', conceptId);
-        }
+        if (conceptId) masteryQuery = masteryQuery.eq('concept_id', conceptId);
 
         const { data: masteryRecords } = await masteryQuery;
 
-        // ── Compute student metrics ──
+        // ── Compute student metrics ───────────────────────────────────────
 
         const allAttempts = attempts ?? [];
         const totalAttempts = allAttempts.length;
         const correctAttempts = allAttempts.filter((a) => a.correct).length;
         const globalAccuracy = totalAttempts > 0 ? correctAttempts / totalAttempts : 0;
 
-        // Build AttemptResult array for metric functions
         const attemptResults: AttemptResult[] = allAttempts.map((a) => ({
             correct: a.correct,
             confidence: a.confidence ?? 0.5,
@@ -141,43 +152,110 @@ export async function GET(request: NextRequest) {
 
         const calibrationError = computeCalibrationError(attemptResults);
 
-        // Mastery history for convergence + SAI
         const masteryScores = (masteryRecords ?? []).map((m) => m.mastery_score);
         const avgMastery =
             masteryScores.length > 0
                 ? masteryScores.reduce((a, b) => a + b, 0) / masteryScores.length
                 : 0;
 
-        // For convergence: use the per-session scores as a proxy history
         const sessionScores = (sessions ?? []).map((s) => s.score ?? 0);
         const convergenceRate = computeConvergenceRate(sessionScores);
 
-        const avgCalibration = 1 - calibrationError; // Flip: higher = better
+        const avgCalibration = 1 - calibrationError;
         const sai = computeSAI(avgMastery, sessionScores, globalAccuracy, avgCalibration);
 
-        // Latest session metrics (for display)
         const latestSession = (sessions ?? []).slice(-1)[0];
 
-        // Per-concept breakdown
+        // ── Standard ITS metric aggregates ────────────────────────────────
+        // Average NLG across all sessions that have it (skip nulls from old sessions)
+        const nlgValues = (sessions ?? [])
+            .filter((s) => s.nlg != null)
+            .map((s) => s.nlg as number);
+        const avgNLG = nlgValues.length > 0
+            ? nlgValues.reduce((a, b) => a + b, 0) / nlgValues.length
+            : null;
+
+        // Latest NLG — most recent session's learning gain
+        const latestNLG = (sessions ?? [])
+            .filter((s) => s.nlg != null)
+            .slice(-1)[0]?.nlg ?? null;
+
+        const brierValues = (sessions ?? [])
+            .filter((s) => s.brier_score != null)
+            .map((s) => s.brier_score as number);
+        const avgBrierScore = brierValues.length > 0
+            ? brierValues.reduce((a, b) => a + b, 0) / brierValues.length
+            : null;
+
+        const eceValues = (sessions ?? [])
+            .filter((s) => s.ece != null)
+            .map((s) => s.ece as number);
+        const avgECE = eceValues.length > 0
+            ? eceValues.reduce((a, b) => a + b, 0) / eceValues.length
+            : null;
+
+        const logLossValues = (sessions ?? [])
+            .filter((s) => s.log_loss != null)
+            .map((s) => s.log_loss as number);
+        const avgLogLoss = logLossValues.length > 0
+            ? logLossValues.reduce((a, b) => a + b, 0) / logLossValues.length
+            : null;
+
+        // NLG trend: last 5 sessions with NLG (for sparkline chart)
+        const nlgHistory = (sessions ?? [])
+            .filter((s) => s.nlg != null)
+            .slice(-5)
+            .map((s) => ({ nlg: s.nlg as number, score: s.score, mode: s.mode, created_at: s.created_at }));
+
+        // ── Per-concept breakdown ─────────────────────────────────────────
         const conceptBreakdown: Record<
             string,
-            { sessions: number; avgScore: number; passed: number; latestCCMS: number | null }
+            {
+                sessions: number;
+                avgScore: number;
+                passed: number;
+                latestCCMS: number | null;
+                latestNLG: number | null;
+                avgBrier: number | null;
+            }
         > = {};
 
         for (const s of sessions ?? []) {
             const cid = s.concept_id;
             if (!conceptBreakdown[cid]) {
-                conceptBreakdown[cid] = { sessions: 0, avgScore: 0, passed: 0, latestCCMS: null };
+                conceptBreakdown[cid] = {
+                    sessions: 0, avgScore: 0, passed: 0,
+                    latestCCMS: null, latestNLG: null, avgBrier: null,
+                };
             }
             conceptBreakdown[cid].sessions += 1;
             conceptBreakdown[cid].avgScore += s.score ?? 0;
             if (s.passed) conceptBreakdown[cid].passed += 1;
             if (s.ccms != null) conceptBreakdown[cid].latestCCMS = s.ccms;
+            if (s.nlg != null) conceptBreakdown[cid].latestNLG = s.nlg;
+        }
+
+        // Compute per-concept avgBrier from brier_score sessions
+        for (const s of sessions ?? []) {
+            if (s.brier_score == null) continue;
+            const cid = s.concept_id;
+            if (!conceptBreakdown[cid]) continue;
+            // Accumulate then divide below
+            conceptBreakdown[cid].avgBrier =
+                (conceptBreakdown[cid].avgBrier ?? 0) + (s.brier_score as number);
         }
 
         for (const cid of Object.keys(conceptBreakdown)) {
             const entry = conceptBreakdown[cid];
             entry.avgScore = Math.round(entry.avgScore / entry.sessions);
+            if (entry.avgBrier !== null) {
+                const brierCount = (sessions ?? []).filter(
+                    (s) => s.concept_id === cid && s.brier_score != null
+                ).length;
+                entry.avgBrier = brierCount > 0
+                    ? Math.round((entry.avgBrier / brierCount) * 1000) / 1000
+                    : null;
+            }
         }
 
         return NextResponse.json({
@@ -189,20 +267,43 @@ export async function GET(request: NextRequest) {
                 avg_mastery: Math.round(avgMastery),
                 sai,
 
-                // Calibration & convergence
+                // Legacy calibration & convergence
                 calibration_error: Math.round(calibrationError * 100) / 100,
                 avg_calibration: Math.round(avgCalibration * 100) / 100,
                 convergence_rate: convergenceRate,
 
-                // Latest session
+                // ── Standard ITS metrics (primary display metrics) ──
+                its_metrics: {
+                    // NLG — Learning Gain (Hake, 1998)
+                    avg_nlg: avgNLG !== null ? Math.round(avgNLG * 1000) / 1000 : null,
+                    latest_nlg: latestNLG !== null ? Math.round(latestNLG * 1000) / 1000 : null,
+                    nlgHistory,
+
+                    // Brier Score — calibration quality (lower = better)
+                    avg_brier_score: avgBrierScore !== null ? Math.round(avgBrierScore * 1000) / 1000 : null,
+
+                    // ECE — Expected Calibration Error (lower = better)
+                    avg_ece: avgECE !== null ? Math.round(avgECE * 1000) / 1000 : null,
+
+                    // Log-Loss — prediction quality proxy for AUC-ROC (lower = better)
+                    avg_log_loss: avgLogLoss !== null ? Math.round(avgLogLoss * 1000) / 1000 : null,
+                },
+
+                // Latest session — now includes standard ITS metrics
                 latest_session: latestSession
                     ? {
+                        // Legacy
                         fas: latestSession.fas,
                         wbs: latestSession.wbs,
                         ccms: latestSession.ccms,
                         mss: latestSession.mss,
                         lip: latestSession.lip,
                         calibration_error: latestSession.calibration_error,
+                        // Standard ITS
+                        nlg: latestSession.nlg,
+                        brier_score: latestSession.brier_score,
+                        ece: latestSession.ece,
+                        log_loss: latestSession.log_loss,
                         mode: latestSession.mode,
                         score: latestSession.score,
                     }
@@ -213,7 +314,7 @@ export async function GET(request: NextRequest) {
                 total_sessions: (sessions ?? []).length,
                 total_passed: (sessions ?? []).filter((s) => s.passed).length,
 
-                // Per-concept
+                // Per-concept (now includes NLG + Brier per concept)
                 concept_breakdown: conceptBreakdown,
             },
         });
