@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Search, 
-  FileEdit, 
-  Trophy, 
-  Clock, 
-  Pencil, 
-  FileText, 
-  CheckCircle, 
-  Book, 
-  Lock 
+import {
+    Search,
+    FileEdit,
+    Trophy,
+    Clock,
+    Pencil,
+    FileText,
+    CheckCircle,
+    Book,
+    Lock
 } from 'lucide-react';
 
 interface ConceptRecord {
@@ -27,6 +27,8 @@ interface ProgressData {
     lastUpdated: string;
 }
 
+// The 3 actionable stages students progress through.
+// 'complete' is a status, not a stage button — handled separately.
 const STAGES = [
     { key: 'diagnostic', label: 'Easy 5', icon: <Search size={14} />, description: 'Initial knowledge check' },
     { key: 'practice', label: 'Practice Test', icon: <FileEdit size={14} />, description: 'Adaptive practice questions' },
@@ -45,7 +47,6 @@ export default function ConceptsPage() {
                 if (!stored) return;
                 const user = JSON.parse(stored);
 
-                // Fetch concepts and progress in parallel
                 const [conceptsRes, progressRes] = await Promise.all([
                     fetch(`/api/concepts?userId=${user.id}`),
                     fetch(`/api/progress?userId=${user.id}`),
@@ -73,17 +74,19 @@ export default function ConceptsPage() {
     function getStageIndex(conceptId: string): number {
         const p = progress[conceptId];
         if (!p) return 0;
+        // 'complete' means all 3 stages done — return STAGES.length so
+        // all stage bars fill green and all buttons show ✓
+        if (p.stage === 'complete') return STAGES.length;
         const idx = STAGES.findIndex((s) => s.key === p.stage);
         return idx >= 0 ? idx : 0;
     }
 
     if (loading) {
         return (
-            <div className="animate-fade-in">
-                <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '24px' }}>Learning Journey</h1>
+            <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {[1, 2].map((i) => (
-                        <div key={i} className="glass-card skeleton" style={{ height: '180px' }} />
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="glass-card" style={{ padding: '24px', height: '160px', opacity: 0.5 }} />
                     ))}
                 </div>
             </div>
@@ -91,31 +94,22 @@ export default function ConceptsPage() {
     }
 
     return (
-        <div className="animate-fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '12px' }}>
-                <div>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
-                        Learning Journey
-                    </h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
-                        {concepts.length} topic{concepts.length !== 1 ? 's' : ''} in your journey
-                    </p>
-                </div>
-                <Link href="/dashboard/upload" className="btn-primary" style={{ textDecoration: 'none' }}>
-                    + Upload New
-                </Link>
+        <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <div style={{ marginBottom: '32px' }}>
+                <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
+                    Your Concepts
+                </h1>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
+                    Track your progress through each concept
+                </p>
             </div>
 
             {concepts.length === 0 ? (
-                <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
-                        <FileText size={48} color="var(--text-muted)" />
-                    </div>
-                    <h2 style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '12px' }}>
-                        No concepts yet
-                    </h2>
+                <div className="glass-card" style={{ padding: '48px', textAlign: 'center' }}>
+                    <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.4 }} />
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '8px' }}>No concepts yet</h3>
                     <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
-                        Upload a PDF or DOCX document to extract concepts and start your learning journey.
+                        Upload a document to get started
                     </p>
                     <Link href="/dashboard/upload" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', margin: '0 auto' }}>
                         <FileText size={18} /> Upload Document
@@ -131,48 +125,58 @@ export default function ConceptsPage() {
                         return (
                             <div key={concept.id} className="glass-card" style={{ padding: '24px' }}>
                                 {/* Concept Header */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', gap: '12px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                                         <div>
                                             <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                                                <FileText size={20} style={{ flexShrink: 0 }} /> <span>{concept.title}</span>
+                                                <FileText size={20} style={{ flexShrink: 0 }} />
+                                                <span>{concept.title}</span>
+                                                {isComplete && (
+                                                    <span style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        color: 'var(--accent-success)',
+                                                        background: 'rgba(34,197,94,0.1)',
+                                                        border: '1px solid rgba(34,197,94,0.3)',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '100px',
+                                                    }}>
+                                                        <CheckCircle size={12} /> Complete
+                                                    </span>
+                                                )}
                                             </h3>
-                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginLeft: '28px' }}>
-                                                Uploaded {new Date(concept.created_at).toLocaleDateString()}
-                                            </p>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '28px' }}>
+                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                                    Uploaded {new Date(concept.created_at).toLocaleDateString()}
+                                                </p>
+                                                {p && !isComplete && (
+                                                    <span style={{
+                                                        fontSize: '0.8rem',
+                                                        color: 'var(--text-muted)',
+                                                        background: 'var(--bg-elevated)',
+                                                        padding: '2px 8px',
+                                                        borderRadius: 'var(--radius-sm)',
+                                                    }}>
+                                                        Score: {Math.round(p.score)}%
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <Link
                                             href={`/dashboard/learn/${concept.id}`}
                                             className="btn-secondary"
-                                            style={{ textDecoration: 'none', fontSize: '0.85rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                            style={{ textDecoration: 'none', fontSize: '0.85rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}
                                         >
                                             <Book size={16} /> Learn It
                                         </Link>
                                     </div>
-                                    {isComplete && (
-                                        <span className="badge badge-success" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <CheckCircle size={14} /> Complete
-                                        </span>
-                                    )}
-                                    {p && !isComplete && (
-                                        <span style={{
-                                            fontSize: '0.8rem',
-                                            color: 'var(--text-muted)',
-                                            background: 'var(--bg-elevated)',
-                                            padding: '4px 10px',
-                                            borderRadius: 'var(--radius-sm)',
-                                        }}>
-                                            Score: {Math.round(p.score)}%
-                                        </span>
-                                    )}
                                 </div>
 
-                                {/* Stage Progress Bar */}
-                                <div style={{
-                                    display: 'flex',
-                                    gap: '4px',
-                                    marginBottom: '16px',
-                                }}>
+                                {/* Stage Progress Bar — 3 segments */}
+                                <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
                                     {STAGES.map((_, idx) => (
                                         <div key={idx} style={{
                                             flex: 1,
@@ -203,22 +207,19 @@ export default function ConceptsPage() {
 
                                         if (isLocked) {
                                             return (
-                                                <div
-                                                    key={stage.key}
-                                                    style={{
-                                                        padding: '10px 14px',
-                                                        borderRadius: 'var(--radius-md)',
-                                                        background: 'var(--bg-elevated)',
-                                                        opacity: 0.5,
-                                                        textAlign: 'center',
-                                                        cursor: 'not-allowed',
-                                                        fontSize: '0.85rem',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        gap: '8px',
-                                                    }}
-                                                >
+                                                <div key={stage.key} style={{
+                                                    padding: '10px 14px',
+                                                    borderRadius: 'var(--radius-md)',
+                                                    background: 'var(--bg-elevated)',
+                                                    opacity: 0.5,
+                                                    textAlign: 'center',
+                                                    cursor: 'not-allowed',
+                                                    fontSize: '0.85rem',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '8px',
+                                                }}>
                                                     <Lock size={14} /> {stage.label}
                                                 </div>
                                             );
@@ -234,7 +235,6 @@ export default function ConceptsPage() {
                                                     fontSize: '0.85rem',
                                                     padding: '10px 14px',
                                                     textAlign: 'center',
-                                                    position: 'relative',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',

@@ -1,22 +1,25 @@
-# 🔬 Study Lens — AI-Powered Foundational Concept Mastery Platform
+# StudyLens — AI-Powered Foundational Concept Mastery Platform
 
 > CBSE Grade 4–10 | Adaptive Learning | Knowledge Graphs | Personalization Engine
 
-Study Lens is a production-grade ed-tech web application that helps students master foundational concepts through AI-powered adaptive learning. Upload your study material, and the system automatically builds a knowledge graph, generates multi-type questions at adaptive difficulty levels, and tracks mastery using a mathematical personalization engine.
+Study Lens is a production-grade ed-tech web application that helps students master foundational concepts through AI-powered adaptive learning. Upload your study material, and the system automatically builds a knowledge graph, generates multi-type questions at adaptive difficulty levels, and tracks mastery using a mathematically principled personalization engine.
 
-## ✨ Features
+## Features
 
-- **📄 Smart Document Upload** — PDF/DOCX upload with AI validation and knowledge extraction
-- **🧠 Knowledge Graph** — Neo4j-powered concept mapping with definitions, examples, formulas, and misconceptions
-- **🎯 5 Question Types** — Recall, Conceptual, Application, Reasoning, Analytical
-- **📊 3 Difficulty Levels** — Easy, Medium, Hard with probabilistic adaptive sampling
-- **🔍 4 Assessment Modes** — Diagnostic, Practice, Mastery, Spaced Reinforcement
-- **⚡ Mathematical Personalization** — Exact formulas for scoring, mastery updates, and forgetting model
-- **📈 Student Ability Index (SAI)** — Holistic score combining mastery, trend, accuracy, and calibration
-- **⏰ Forgetting Model** — Exponential decay with optimal review time calculation
-- **📋 Rich Dashboard** — Radar charts, timelines, misconception alerts, progress tracking
+- **Smart Document Upload** — PDF/DOCX upload with AI validation and knowledge extraction
+- **Knowledge Graph** — Neo4j-powered concept mapping with definitions, examples, formulas, and misconceptions
+- **5 Question Types** — Recall, Conceptual, Application, Reasoning, Analytical
+- **3 Difficulty Levels** — Easy, Medium, Hard with probabilistic adaptive sampling (Rasch-calibrated)
+- **3 Assessment Modes** — Diagnostic (Easy 5), Practice, Mastery
+- **Silent Spaced Review** — Questions from older concepts are silently injected into practice/mastery sessions using FSRS retrievability (Ye, 2022)
+- **BKT Mastery Tracking** — Bayesian Knowledge Tracing (Corbett & Anderson, 1994) replaces EMA for principled posterior beliefs
+- **Student Ability Index (SAI)** — Holistic score combining mastery, trend, accuracy, and calibration
+- **Standard ITS Metrics** — NLG (Hake, 1998), Brier Score, ECE (Guo et al., 2017), Log-Loss reported per session
+- **IRT Difficulty Calibration** — Rasch model (1960) calibrates question difficulty from response data
+- **Rich Dashboard** — Radar charts, timelines, misconception alerts, progress tracking
+- **Research Export** — CSV export of all attempt-level data in ASSISTments-compatible format
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -29,57 +32,63 @@ Study Lens is a production-grade ed-tech web application that helps students mas
 | Embeddings | OpenAI-compatible API |
 | Deployment | Vercel |
 
-## 📁 Project Structure
+## Assessment Flow
+
+```
+Upload Document
+     ↓
+Diagnostic (Easy 5) ──pass 80%──→ Practice ──pass 80%──→ Mastery ──pass 80%──→ ✓ Complete
+     ↓ fail                           ↓ fail                  ↓ fail
+  Learn It                          Learn It               Learn It
+```
+
+Spaced review questions from previously completed concepts are silently injected into Practice and Mastery sessions — students see them blended into the test without a separate mode.
+
+## Project Structure
 
 ```
 src/
 ├── app/
 │   ├── api/
-│   │   ├── upload/route.ts       # Document upload & KG building
-│   │   ├── diagnostic/route.ts   # Diagnostic test generation/evaluation
-│   │   ├── assessment/route.ts   # Practice/Mastery/Spaced assessment
-│   │   └── mastery/route.ts      # Mastery dashboard data
+│   │   ├── upload/route.ts        # Document upload & KG building
+│   │   ├── diagnostic/route.ts    # Assessment generation/evaluation
+│   │   ├── assessment/route.ts    # Practice/Mastery assessment
+│   │   ├── mastery/route.ts       # Mastery dashboard data
+│   │   ├── irt/route.ts           # IRT difficulty params per question
+│   │   ├── irt/fit/route.ts       # BKT EM parameter fitting
+│   │   ├── export/route.ts        # Research CSV export
+│   │   └── progress/route.ts      # Stage progression
 │   ├── dashboard/
-│   │   ├── layout.tsx            # Dashboard sidebar layout
-│   │   ├── page.tsx              # Main dashboard
-│   │   ├── upload/page.tsx       # Upload page
-│   │   ├── concepts/page.tsx     # All concepts
-│   │   ├── concept/[id]/page.tsx # Concept detail
-│   │   ├── test/[id]/page.tsx    # Test/Assessment page
-│   │   ├── learn/[id]/page.tsx   # Learn mode
-│   │   └── history/page.tsx      # Test history
-│   ├── login/page.tsx            # Auth page
-│   ├── layout.tsx                # Root layout
-│   ├── page.tsx                  # Landing page
-│   └── globals.css               # Design system
-├── components/
-│   ├── UploadZone.tsx            # Drag & drop upload
-│   ├── ProgressCard.tsx          # Concept progress card
-│   ├── QuestionCard.tsx          # MCQ with confidence slider
-│   ├── MasteryGraph.tsx          # Radar & timeline charts
-│   └── ConceptMap.tsx            # Canvas-based KG visualization
+│   │   ├── layout.tsx             # Dashboard sidebar layout
+│   │   ├── page.tsx               # Main dashboard
+│   │   ├── upload/page.tsx        # Upload page
+│   │   ├── concepts/page.tsx      # All concepts with stage progress
+│   │   ├── concept/[id]/page.tsx  # Concept detail
+│   │   ├── test/[id]/page.tsx     # Test/Assessment page
+│   │   ├── learn/[id]/page.tsx    # Learn mode
+│   │   └── history/page.tsx       # Test history (real sessions)
+│   ├── login/page.tsx             # Auth page
+│   ├── layout.tsx                 # Root layout
+│   └── page.tsx                   # Landing page
 ├── lib/
-│   ├── supabase.ts               # Supabase client
-│   ├── neo4j.ts                  # Neo4j driver
-│   ├── groq.ts                   # Groq LLM client
-│   ├── embeddings.ts             # Text chunking & embeddings
-│   ├── kg-builder.ts             # Knowledge Graph builder
-│   ├── question-generator.ts     # Question generation from KG
-│   ├── personalization-engine.ts # Full math formulas
-│   ├── forgetting-model.ts       # Exponential decay model
-│   ├── evaluation-engine.ts      # Answer evaluation & mastery update
-│   └── utils.ts                  # Utilities
+│   ├── bkt.ts                     # Bayesian Knowledge Tracing
+│   ├── irt.ts                     # Rasch IRT model
+│   ├── eval-metrics.ts            # NLG, Brier, ECE, Log-Loss + legacy metrics
+│   ├── evaluation-engine.ts       # Answer evaluation & mastery update
+│   ├── forgetting-model.ts        # Exponential decay + FSRS
+│   ├── personalization-engine.ts  # Scoring, SAI, difficulty distribution
+│   ├── question-generator.ts      # Question generation from KG
+│   ├── kg-builder.ts              # Knowledge Graph builder
+│   └── supabase.ts / neo4j.ts     # DB clients
 ├── config/
-│   ├── constants.ts              # All configuration constants
-│   └── difficulty-engine.ts      # Difficulty distribution
+│   └── constants.ts               # PASS_THRESHOLD=80, all config
 └── types/
-    ├── student.ts                # Student/Profile types
-    ├── concept.ts                # Concept/KG types
-    ├── question.ts               # Question types
-    └── mastery.ts                # Mastery/Assessment types
+    ├── student.ts                  # AssessmentMode type
+    ├── mastery.ts                  # QuestionResult, MasteryUpdate
+    └── question.ts                 # Question types
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -97,180 +106,52 @@ cd study-lens
 npm install
 ```
 
-### 2. Setup Supabase
+### 2. Run Supabase Migrations
 
-1. Go to [supabase.com](https://supabase.com) and create a new project
-2. In the SQL Editor, run the following to create tables:
+Run these SQL files in order in your Supabase SQL Editor:
 
-```sql
--- Profiles table
-CREATE TABLE profiles (
-  id UUID REFERENCES auth.users PRIMARY KEY,
-  full_name TEXT,
-  grade INTEGER,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-);
-
--- Concepts table
-CREATE TABLE concepts (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users NOT NULL,
-  title TEXT NOT NULL,
-  source_document TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-);
-
--- Mastery table
-CREATE TABLE mastery (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users NOT NULL,
-  concept_id UUID REFERENCES concepts NOT NULL,
-  mastery_score FLOAT DEFAULT 0,
-  last_updated TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
-  UNIQUE(user_id, concept_id)
-);
-
--- Attempts table
-CREATE TABLE attempts (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users NOT NULL,
-  concept_id UUID REFERENCES concepts NOT NULL,
-  question_id TEXT NOT NULL,
-  correct BOOLEAN NOT NULL,
-  difficulty INTEGER NOT NULL,
-  cognitive_level INTEGER NOT NULL,
-  time_taken INTEGER NOT NULL,
-  confidence FLOAT DEFAULT 0.5,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-);
-
--- Create storage bucket for documents
-INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false);
-
--- RLS Policies (enable RLS on all tables first)
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE concepts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mastery ENABLE ROW LEVEL SECURITY;
-ALTER TABLE attempts ENABLE ROW LEVEL SECURITY;
-
--- Profiles: users can read/update their own
-CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
-
--- Concepts: users can CRUD their own
-CREATE POLICY "Users can view own concepts" ON concepts FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create concepts" ON concepts FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Mastery: users can view/update their own
-CREATE POLICY "Users can view own mastery" ON mastery FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can update own mastery" ON mastery FOR ALL USING (auth.uid() = user_id);
-
--- Attempts: users can view/create their own
-CREATE POLICY "Users can view own attempts" ON attempts FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create attempts" ON attempts FOR INSERT WITH CHECK (auth.uid() = user_id);
+```
+migrations/001_standard_its_metrics.sql   # NLG, Brier, ECE, Log-Loss columns
+migrations/002_irt_difficulty_calibration.sql  # question_irt table + IRT columns
+migrations/003_bkt_fitting_spaced_flag.sql     # concept_bkt_params + is_spaced_review
 ```
 
-3. Copy your project URL and keys from Settings > API
-
-### 3. Setup Neo4j AuraDB
-
-1. Go to [neo4j.com/aura](https://neo4j.com/aura/) and create a free instance
-2. Copy the connection URI, username, and password
-3. No schema setup needed — the app creates nodes dynamically
-
-### 4. Get API Keys
-
-- **Groq**: Sign up at [console.groq.com](https://console.groq.com) and create an API key
-- **Embeddings** (optional): Use an OpenAI API key for text-embedding-3-small, or leave blank for fallback
-
-### 5. Configure Environment
-
-Copy `.env.example` to `.env.local`:
+### 3. Environment Variables
 
 ```bash
-cp .env.example .env.local
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEO4J_URI=
+NEO4J_USER=
+NEO4J_PASSWORD=
+GROQ_API_KEY=
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 ```
 
-Fill in all values:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-NEO4J_URI=neo4j+s://xxxx.databases.neo4j.io
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=your-password
-GROQ_API_KEY=gsk_xxxxx
-EMBEDDING_API_KEY=sk-xxxxx
-```
-
-### 6. Run Locally
+### 4. Run
 
 ```bash
 npm run dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000)
+## API Reference
 
-### 7. Deploy to Vercel
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/diagnostic` | POST | Generate or evaluate assessment sessions |
+| `/api/metrics` | GET | Student-level ITS metrics (NLG, Brier, ECE, etc.) |
+| `/api/irt` | GET | IRT difficulty params per question/concept |
+| `/api/irt/fit` | POST | EM fitting of BKT params per concept |
+| `/api/export` | GET | Research CSV export (ASSISTments-compatible) |
+| `/api/progress` | GET | Stage progression per concept |
 
-```bash
-npx vercel
-```
+## Key Citations
 
-Or connect your GitHub repo to Vercel and set environment variables in the dashboard.
-
-## 🧮 Personalization Engine
-
-### Core Formulas
-
-| Component | Formula |
-|-----------|---------|
-| Accuracy | `Acc = A ∈ {0, 1}` |
-| Cognitive Depth | `CD = CL_q / 2.5` |
-| Difficulty Weight | `DW = D_q / 3` |
-| Speed Efficiency | `SE = min(1, T_exp / T)` |
-| Confidence Calibration | `CC = 1 - \|A - C_f\|` |
-| Misconception Penalty | `MP = 1 - (misconception_freq / total_attempts)` |
-
-### Scoring by Mode
-
-| Mode | Formula |
-|------|---------|
-| Diagnostic | `DS = 0.5·Acc + 0.3·CD + 0.2·CC` |
-| Practice | `PS = 0.4·Acc̄ + 0.2·CD̄ + 0.15·SĒ + 0.15·CC̄ + 0.1·MP` |
-| Mastery | `MS = 0.35·Acc̄ + 0.30·CD̄ + 0.15·MP + 0.10·SĒ + 0.10·CC̄` |
-| Spaced | `RS = 0.5·Acc + 0.3·TW + 0.2·SE` |
-
-### Mastery Update
-
-```
-M_new = (1 - λ)·M_old + λ·(100 × Score)
-```
-
-| Mode | λ |
-|------|---|
-| Practice | 0.2 |
-| Mastery | 0.35 |
-| Spaced | 0.5 |
-
-### Forgetting Model
-
-```
-M_decayed = M × e^(-γ·Δt)
-γ = 0.05
-```
-
-### Student Ability Index
-
-```
-SAI = 0.5·M + 0.2·Trend + 0.2·GlobalAcc + 0.1·Calibration
-```
-
-## 📝 License
-
-MIT
-
-## 🤝 Contributing
-
-Contributions are welcome! Please open an issue first to discuss changes.
+- Corbett & Anderson (1994) — Bayesian Knowledge Tracing
+- Hake (1998) — Normalized Learning Gain
+- Rasch (1960) — Item Response Theory
+- Baker et al. (2008) — BKT parameter calibration for MCQ
+- Bloom (1984) — 80% mastery learning threshold
+- Guo et al. (2017) — Expected Calibration Error
+- Ye (2022) — FSRS spaced repetition scheduler

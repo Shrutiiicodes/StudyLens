@@ -6,12 +6,11 @@ import { QuestionResult } from '@/types/mastery';
 /**
  * POST /api/diagnostic
  * Generate questions or evaluate results for any assessment mode.
- * Enhanced: passes rawAnswers to evaluateDiagnostic for misconception enrichment.
  */
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { action, conceptId, conceptTitle, userId, results, mode, rawAnswers } = body;
+        const { action, conceptId, conceptTitle, userId, results, mode } = body;
 
         if (action === 'generate') {
             if (!conceptId || !conceptTitle) {
@@ -22,11 +21,7 @@ export async function POST(request: NextRequest) {
             }
 
             const assessmentMode = mode || 'diagnostic';
-            const questions = await generateQuestionsForMode(
-                conceptId,
-                conceptTitle,
-                assessmentMode
-            );
+            const questions = await generateQuestionsForMode(conceptId, conceptTitle, assessmentMode, 50, userId);
 
             return NextResponse.json({
                 success: true,
@@ -46,15 +41,7 @@ export async function POST(request: NextRequest) {
 
             const assessmentMode = mode || 'diagnostic';
             const questionResults: QuestionResult[] = results;
-
-            // Pass rawAnswers so evaluation-engine can call IPD backend
-            const diagnostic = await evaluateDiagnostic(
-                userId,
-                conceptId,
-                questionResults,
-                assessmentMode,
-                rawAnswers  // may be undefined — evaluateDiagnostic handles that
-            );
+            const diagnostic = await evaluateDiagnostic(userId, conceptId, questionResults, assessmentMode);
 
             return NextResponse.json({
                 success: true,
@@ -63,18 +50,21 @@ export async function POST(request: NextRequest) {
                 masteryUpdate: diagnostic.masteryUpdate,
                 nextStage: diagnostic.nextStage,
                 passed: diagnostic.passed,
-                // Only include if the backend returned data
-                ...(diagnostic.misconceptionReport
-                    ? {
-                        misconceptionReport: {
-                            total: diagnostic.misconceptionReport.total,
-                            correctCount: diagnostic.misconceptionReport.correct_count,
-                            severityDistribution:
-                                diagnostic.misconceptionReport.severity_distribution,
-                            criticalGaps: diagnostic.misconceptionReport.critical_gaps,
-                        },
-                    }
-                    : {}),
+                metrics: {
+                    // ── Legacy custom metrics ──────────────────────────────
+                    fas: r4(diagnostic.metrics.fas),
+                    wbs: r4(diagnostic.metrics.wbs),
+                    ccms: r4(diagnostic.metrics.ccms),
+                    mss: r4(diagnostic.metrics.mss),
+                    lip: r4(diagnostic.metrics.lip),
+                    rci_avg: r4(diagnostic.metrics.rci_avg),
+                    calibration_error: r4(diagnostic.metrics.calibration_error),
+                    // ── Standard ITS metrics ───────────────────────────────
+                    nlg: r4(diagnostic.metrics.nlg),
+                    brier_score: r4(diagnostic.metrics.brier_score),
+                    ece: r4(diagnostic.metrics.ece),
+                    log_loss: r4(diagnostic.metrics.log_loss),
+                },
             });
         }
 
@@ -84,11 +74,15 @@ export async function POST(request: NextRequest) {
         );
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        const stack = error instanceof Error ? error.stack : '';
-        console.error('Diagnostic error:', message, stack);
+        console.error('Diagnostic error:', message);
         return NextResponse.json(
             { error: `Diagnostic failed: ${message}` },
             { status: 500 }
         );
     }
+}
+
+function r4(value: number | undefined): number {
+    if (value == null) return 0;
+    return Math.round(value * 10000) / 10000;
 }

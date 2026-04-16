@@ -98,13 +98,24 @@ export async function evaluateDiagnostic(
     //      Must happen BEFORE the mastery update so we capture the true pre-score.
     const preMastery = await getCurrentMastery(userId, conceptId);
 
-    // ── 3. Mastery update ─────────────────────────────────────────────────
-    const masteryUpdate = updateMastery(preMastery, score / 100, mode as AssessmentMode);
+    // ── 3. Load fitted BKT params for this concept (fall back to defaults) ─
+    const { data: fittedParams } = await supabase
+        .from('concept_bkt_params')
+        .select('p_l0, p_t, p_s, p_g')
+        .eq('concept_id', conceptId)
+        .single();
+
+    const bktParams = fittedParams
+        ? { p_l0: fittedParams.p_l0, p_t: fittedParams.p_t, p_s: fittedParams.p_s, p_g: fittedParams.p_g }
+        : undefined; // undefined → updateMastery uses DEFAULT_BKT_PARAMS
+
+    // ── 4. Mastery update using fitted (or default) BKT params ───────────
+    const masteryUpdate = updateMastery(preMastery, score / 100, mode as AssessmentMode, results, bktParams);
     const postMastery = masteryUpdate.new_score;
 
     const passed = score >= PASS_THRESHOLD;
 
-    // ── 4. Build AttemptResult array for metric functions ─────────────────
+    // ── 5. Build AttemptResult array for metric functions ─────────────────
     const attemptResults: AttemptResult[] = results.map((r) => ({
         correct: r.correct,
         confidence: r.confidence,
@@ -114,7 +125,7 @@ export async function evaluateDiagnostic(
         difficulty: r.difficulty,
     }));
 
-    // ── 5. Compute all metrics (legacy + standard ITS) ────────────────────
+    // ── 6. Compute all metrics (legacy + standard ITS) ────────────────────
     //      Pass preMastery and postMastery so NLG is correctly computed.
     const sessionMetrics = computeAllSessionMetrics(
         attemptResults,
@@ -123,7 +134,7 @@ export async function evaluateDiagnostic(
         postMastery,  // ← post-session mastery for NLG
     );
 
-    // ── 6. Create session record with all metrics ─────────────────────────
+    // ── 7. Create session record with all metrics ─────────────────────────
     const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
         .insert({
@@ -159,7 +170,7 @@ export async function evaluateDiagnostic(
 
     const sessionId = sessionData?.id;
 
-    // ── 7. Determine next stage ───────────────────────────────────────────
+    // ── 8. Determine next stage ───────────────────────────────────────────
     const { data: masteryRecord } = await supabase
         .from('mastery')
         .select('current_stage')
@@ -183,10 +194,10 @@ export async function evaluateDiagnostic(
         }
     }
 
-    // ── 8. Save mastery with updated stage ────────────────────────────────
+    // ── 9. Save mastery with updated stage ────────────────────────────────
     await saveMasteryWithStage(userId, conceptId, postMastery, nextStage);
 
-    // ── 9. Persist each attempt with session_id and mode ─────────────────
+    // ── 10. Persist each attempt with session_id and mode ────────────────
     for (const result of results) {
         await supabase.from('attempts').insert({
             user_id: userId,
@@ -202,7 +213,7 @@ export async function evaluateDiagnostic(
         });
     }
 
-    // ── 10. Compute convergence and persist to session ────────────────────
+    // ── 11. Compute convergence and persist to session ───────────────────
     const { data: allSessionScores } = await supabase
         .from('sessions')
         .select('score')
