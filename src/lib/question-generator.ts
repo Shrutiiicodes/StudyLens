@@ -1,13 +1,16 @@
 import { chatCompletion, parseLLMJson } from './groq';
 import { runCypher } from './neo4j';
 import { Question, QuestionType, DifficultyLevel, QuestionGenerationRequest } from '@/types/question';
-import { COGNITIVE_LEVEL_MAP } from '@/config/constants';
+import { AssessmentMode } from '@/types/student'; // Fix 4: use canonical type, no local duplicate
+import { COGNITIVE_LEVEL_MAP, QUESTION_LIMITS } from '@/config/constants';
 import { v4 as uuid } from 'uuid';
 import { supabase } from './supabase';
 import { needsSpacedReinforcement } from './forgetting-model';
+import { PROMPTS } from '@/config/prompts';
+
 /**
  * Question Generator
- * 
+ *
  * Generates questions from the Knowledge Graph using LLM.
  * 5 Question Types × 3 Difficulty Levels
  */
@@ -16,7 +19,6 @@ import { needsSpacedReinforcement } from './forgetting-model';
 
 export async function getConceptContext(conceptId: string): Promise<string> {
     try {
-        // conceptId here is the Supabase concept UUID which is stored as documentId in Neo4j
         const results = await runCypher(
             `MATCH (c:Concept {documentId: $docId})
          OPTIONAL MATCH (c)-[:EXPLAINS]->(d:Definition)
@@ -33,7 +35,6 @@ export async function getConceptContext(conceptId: string): Promise<string> {
 
         if (results.length === 0) return '';
 
-        // Combine context from all concept nodes in this document
         const allContext = results.map((r) => {
             const rec = r as Record<string, unknown>;
             return {
@@ -53,18 +54,58 @@ export async function getConceptContext(conceptId: string): Promise<string> {
     }
 }
 
-import { PROMPTS } from '@/config/prompts';
+// ─── Groq with retry (Fix 7) ───
+
+/**
+ * chatCompletionWithRetry
+ * Wraps chatCompletion with exponential backoff retry.
+ * Retries up to 3 times on rate-limit (429) or transient errors.
+ */
+async function chatCompletionWithRetry(
+    messages: Parameters<typeof chatCompletion>[0],
+    options?: Parameters<typeof chatCompletion>[1],
+    maxRetries = 3
+): Promise<string> {
+    let lastError: Error = new Error('Unknown error');
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await chatCompletion(messages, options);
+        } catch (err) {
+            lastError = err as Error;
+            const msg = lastError.message.toLowerCase();
+            const isRateLimit = msg.includes('429') || msg.includes('rate') || msg.includes('limit');
+            const isTransient = msg.includes('timeout') || msg.includes('network') || msg.includes('503');
+
+            if (attempt === maxRetries) break;
+
+            if (isRateLimit || isTransient) {
+                // Exponential backoff: 2s, 4s, 8s
+                const delay = Math.pow(2, attempt) * 1000;
+                console.warn(`[QGen] Groq ${isRateLimit ? 'rate limit' : 'transient error'} (attempt ${attempt}/${maxRetries}). Retrying in ${delay}ms...`);
+                await new Promise(r => setTimeout(r, delay));
+            } else {
+                // Non-retryable error (bad request, auth, etc.)
+                break;
+            }
+        }
+    }
+
+    throw lastError;
+}
 
 // ─── Generate a single question ───
 
 export async function generateQuestion(request: QuestionGenerationRequest): Promise<Question> {
-    // Get concept context from KG (support empty strings when Neo4j fails)
-    const context = request.context !== undefined ? request.context : (await getConceptContext(request.concept_id));
+    const context = request.context !== undefined
+        ? request.context
+        : (await getConceptContext(request.concept_id));
 
     const difficultyLabel = { 1: 'Easy', 2: 'Medium', 3: 'Hard' }[request.difficulty];
     const typeDescription = request.type.toUpperCase();
 
-    const response = await chatCompletion(
+    // Fix 7: use retry wrapper instead of bare chatCompletion
+    const response = await chatCompletionWithRetry(
         [
             {
                 role: 'system',
@@ -78,7 +119,6 @@ export async function generateQuestion(request: QuestionGenerationRequest): Prom
         { jsonMode: true, temperature: 0.4 }
     );
 
-
     const parsed = parseLLMJson<{
         text: string;
         options: string[];
@@ -88,7 +128,6 @@ export async function generateQuestion(request: QuestionGenerationRequest): Prom
         bloom_level?: string;
     }>(response);
 
-    // Use LLM-provided cognitive_level if valid, otherwise fall back to map
     const cognitiveLevelFromLLM = parsed.cognitive_level;
     const cognitiveLevelFromMap = COGNITIVE_LEVEL_MAP[request.type] || 1;
     const finalCognitiveLevel = (
@@ -111,25 +150,11 @@ export async function generateQuestion(request: QuestionGenerationRequest): Prom
     };
 }
 
-// ─── Generate questions based on mode ───
-
-type AssessmentMode = 'diagnostic' | 'practice' | 'mastery';
-
-/**
- * Determine question count based on concept context richness.
- * More concepts in the knowledge graph = more questions.
- */
-// Question count limits per mode — matches architecture spec
-const QUESTION_LIMITS: Record<AssessmentMode, { min: number; max: number }> = {
-    diagnostic: { min: 3, max: 5 },
-    practice: { min: 3, max: 7 },
-    mastery: { min: 5, max: 8 },
-};
+// ─── Question count based on context richness ───
 
 function getQuestionCount(context: string, mode: AssessmentMode): number {
-    const limits = QUESTION_LIMITS[mode] ?? { min: 5, max: 10 };
+    const limits = QUESTION_LIMITS[mode as string] ?? { min: 5, max: 10 };
 
-    // Count concept nodes from structured context
     let conceptCount = 1;
     try {
         const parsed = JSON.parse(context);
@@ -137,22 +162,19 @@ function getQuestionCount(context: string, mode: AssessmentMode): number {
             conceptCount = Math.max(1, parsed.length);
         }
     } catch {
-        // Context is not structured JSON — use minimum
+        // Not structured JSON — use minimum
     }
 
-    // 2 questions per concept node, clamped to mode limits
     const raw = conceptCount * 2;
     return Math.max(limits.min, Math.min(raw, limits.max));
 }
 
-/**
- * Get question configs for each mode.
- * Each mode emphasizes different question types and difficulty levels.
- */
+// ─── Question configs per mode ───
+
 function getConfigsForMode(
     mode: AssessmentMode,
     count: number,
-    currentMastery: number = 50  // ADD THIS PARAMETER
+    currentMastery: number = 50
 ): Array<{ type: QuestionType; difficulty: DifficultyLevel }> {
     const types: QuestionType[] = ['recall', 'conceptual', 'application', 'reasoning', 'analytical'];
     const configs: Array<{ type: QuestionType; difficulty: DifficultyLevel }> = [];
@@ -163,35 +185,23 @@ function getConfigsForMode(
 
         switch (mode) {
             case 'diagnostic':
-                // Progressive difficulty regardless of mastery —
-                // diagnostic purpose is to find the ceiling, not adapt to it
                 difficulty = (i < count / 3 ? 1 : i < (count * 2) / 3 ? 2 : 3) as DifficultyLevel;
                 break;
 
             case 'practice':
             case 'mastery': {
-                // Use mastery-adaptive probability distribution
-                // E(M) = max(0, 0.7 - 0.006M)
-                // Med(M) = 0.3 + 0.002M
-                // H(M) = 1 - (E + Med)
                 const m = Math.max(0, Math.min(100, currentMastery));
                 const easy = Math.max(0, 0.7 - 0.006 * m);
                 const medium = 0.3 + 0.002 * m;
                 const hard = Math.max(0, 1 - (easy + medium));
                 const total = easy + medium + hard;
-
                 const rand = Math.random();
-                const easyProb = easy / total;
-                const mediumProb = (easy + medium) / total;
 
-                if (rand < easyProb) difficulty = 1;
-                else if (rand < mediumProb) difficulty = 2;
+                if (rand < easy / total) difficulty = 1;
+                else if (rand < (easy + medium) / total) difficulty = 2;
                 else difficulty = 3;
 
-                // Mastery mode: enforce at least 60% medium/hard
-                if (mode === 'mastery' && difficulty === 1 && Math.random() > 0.4) {
-                    difficulty = 2;
-                }
+                if (mode === 'mastery' && difficulty === 1 && Math.random() > 0.4) difficulty = 2;
                 break;
             }
 
@@ -205,6 +215,8 @@ function getConfigsForMode(
     return configs;
 }
 
+// ─── Main: Generate questions for a mode ───
+
 export async function generateQuestionsForMode(
     conceptId: string,
     conceptTitle: string,
@@ -216,43 +228,74 @@ export async function generateQuestionsForMode(
     let count = getQuestionCount(context, mode);
     const questions: Question[] = [];
 
-    // -- SPACED REPETITION INJECTION (SILENT) --
+    // ── SPACED REPETITION INJECTION (SILENT) ──────────────────────────────
+    // Fix 6: scope to same source_document as current concept
     if (userId && (mode === 'practice' || mode === 'mastery')) {
         try {
-            const { data: records } = await supabase
+            // Get the source_document of the current concept
+            const { data: currentConcept } = await supabase
+                .from('concepts')
+                .select('source_document')
+                .eq('id', conceptId)
+                .single();
+
+            const sourceDoc = currentConcept?.source_document;
+
+            // Fetch sibling concepts from the same document that need review
+            let siblingQuery = supabase
                 .from('mastery')
-                .select('concept_id, mastery_score, last_updated, concepts(title)')
+                .select('concept_id, mastery_score, last_updated, concepts(title, source_document)')
                 .eq('user_id', userId)
                 .neq('concept_id', conceptId);
-            
+
+            const { data: records } = await siblingQuery;
+
             if (records && records.length > 0) {
-                // Find concepts mathematically due for Spaced Revision
-                const spacedConcepts = records.filter(r => needsSpacedReinforcement(r.mastery_score, r.last_updated));
-                
+                // Fix 6: only inject from same document if sourceDoc is known
+                const sameDocRecords = sourceDoc
+                    ? records.filter(r => {
+                        const c = r.concepts as unknown as { source_document?: string } | null;
+                        return c?.source_document === sourceDoc;
+                    })
+                    : records; // fallback: allow all if source unknown
+
+                const spacedConcepts = sameDocRecords.filter(r =>
+                    needsSpacedReinforcement(r.mastery_score, r.last_updated)
+                );
+
                 if (spacedConcepts.length > 0) {
                     const maxSpaced = mode === 'mastery' ? 2 : 1;
-                    const toSpace = spacedConcepts.sort(() => 0.5 - Math.random()).slice(0, Math.min(maxSpaced, Math.floor(count / 2)));
-                    
+                    const toSpace = spacedConcepts
+                        .sort(() => 0.5 - Math.random())
+                        .slice(0, Math.min(maxSpaced, Math.floor(count / 2)));
+
                     for (const sc of toSpace) {
                         const sContext = await getConceptContext(sc.concept_id);
                         const sTitle = (sc.concepts as any)?.title || 'Review Concept';
-                        const sq = await generateQuestion({
-                            concept_id: sc.concept_id,
-                            concept_title: sTitle,
-                            type: 'recall',
-                            difficulty: 2,
-                            context: sContext
-                        });
-                        questions.push(sq);
-                        count--; // Trade a standard token generation slot for this spaced review slot
+                        try {
+                            const sq = await generateQuestion({
+                                concept_id: sc.concept_id,
+                                concept_title: sTitle,
+                                type: 'recall',
+                                difficulty: 2,
+                                context: sContext,
+                            });
+                            // Tag as spaced — evaluation-engine reads this to set is_spaced_review
+                            (sq as any)._is_spaced = true;
+                            questions.push(sq);
+                            count--;
+                        } catch (e) {
+                            console.warn('[QGen] Spaced question failed, skipping:', e);
+                        }
                     }
                 }
             }
         } catch (e) {
-            console.error('[QGen] Spaced Injection Failed', e);
+            console.error('[QGen] Spaced Injection Failed:', e);
         }
     }
 
+    // ── Generate main session questions ───────────────────────────────────
     const configs = getConfigsForMode(mode, count, currentMastery);
 
     for (let i = 0; i < configs.length; i++) {
@@ -266,11 +309,13 @@ export async function generateQuestionsForMode(
             });
             questions.push(q);
         } catch (error) {
-            console.error(`[QGen] Failed to generate question ${i + 1}:`, error);
+            // Fix 7: error is already handled inside generateQuestion via retry
+            // Log and continue — partial question sets are better than a full failure
+            console.error(`[QGen] Failed to generate question ${i + 1} after retries:`, (error as Error).message);
         }
     }
 
-    // Return the dynamically assembled test completely shuffled so spaced concepts blend in natively
+    // Shuffle so spaced concepts blend in natively
     return questions.sort(() => Math.random() - 0.5);
 }
 
@@ -282,8 +327,6 @@ export async function generateDiagnosticQuestions(
 ): Promise<Question[]> {
     return generateQuestionsForMode(conceptId, conceptTitle, 'diagnostic');
 }
-
-// ─── Generate questions for practice/mastery ───
 
 export async function generateAssessmentQuestions(
     conceptId: string,
@@ -306,7 +349,7 @@ export async function generateAssessmentQuestions(
             });
             questions.push(q);
         } catch (error) {
-            console.error(`[QGen] Failed to generate assessment question:`, error);
+            console.error(`[QGen] Failed to generate assessment question:`, (error as Error).message);
         }
     }
 

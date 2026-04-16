@@ -7,6 +7,7 @@ import {
     computeCalibrationError,
     computeConvergenceRate,
     computeSAI,
+    computeAUCROC,
     type AttemptResult,
 } from '@/lib/eval-metrics';
 
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
                     ccms_without_learnit: Math.round(ccmsComparison.withoutLearnIt * 100) / 100,
                     ccms_improvement_delta: Math.round(ccmsComparison.delta * 100) / 100,
                     // Standard ITS
-                    avg_nlg: avg(nlgValues) !== null ? Math.round(avg(nlgValues)! * 1000) / 1000 : null,
+                    avg_nlg: avg(nlgValues) !== null ? Math.round(avg(nlgValues as number[])! * 1000) / 1000 : null,
                     avg_brier_score: avg(brierValues) !== null ? Math.round(avg(brierValues)! * 1000) / 1000 : null,
                     avg_ece: avg(eceValues) !== null ? Math.round(avg(eceValues)! * 1000) / 1000 : null,
                 },
@@ -274,10 +275,16 @@ export async function GET(request: NextRequest) {
 
                 // ── Standard ITS metrics (primary display metrics) ──
                 its_metrics: {
+                    // AUC-ROC — computed across all attempts (Piech et al., 2015)
+                    auc_roc: (() => {
+                        const pairs = allAttempts.map(a => ({ confidence: a.confidence ?? 0.5, correct: a.correct }));
+                        const auc = computeAUCROC(pairs);
+                        return pairs.length >= 10 ? auc : null; // only report if enough data
+                    })(),
                     // NLG — Learning Gain (Hake, 1998)
                     avg_nlg: avgNLG !== null ? Math.round(avgNLG * 1000) / 1000 : null,
                     latest_nlg: latestNLG !== null ? Math.round(latestNLG * 1000) / 1000 : null,
-                    nlgHistory,
+                    nlg_history: nlgHistory,
 
                     // Brier Score — calibration quality (lower = better)
                     avg_brier_score: avgBrierScore !== null ? Math.round(avgBrierScore * 1000) / 1000 : null,

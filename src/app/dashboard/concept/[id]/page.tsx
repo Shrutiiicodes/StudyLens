@@ -63,6 +63,7 @@ export default function ConceptDetailPage() {
     const [graphNodes, setGraphNodes] = useState<GraphNode[]>([]);
     const [graphEdges, setGraphEdges] = useState<GraphEdge[]>([]);
     const [activeTab, setActiveTab] = useState<'overview' | 'graph' | 'history'>('overview');
+    const [sessions, setSessions] = useState<Array<{ id: string; mode: string; score: number; passed: boolean; nlg: number | null; created_at: string }>>([]);
 
     const titleFromUrl = searchParams.get('title');
     const conceptTitle = concept?.title || titleFromUrl || 'Concept';
@@ -277,12 +278,45 @@ export default function ConceptDetailPage() {
                     )
             )}
 
-            {/* History Tab */}
+            {/* History Tab — Fix 13: real session data */}
             {activeTab === 'history' && (
-                <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
-                    <BarChart2 size={48} style={{ opacity: 0.3, margin: '0 auto 20px' }} />
-                    <p style={{ color: 'var(--text-secondary)' }}>Take some tests first to see your mastery progress over time.</p>
-                </div>
+                sessions.length === 0 ? (
+                    <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
+                        <BarChart2 size={48} style={{ opacity: 0.3, margin: '0 auto 20px' }} />
+                        <p style={{ color: 'var(--text-secondary)' }}>Take some tests first to see your progress over time.</p>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '4px' }}>{sessions.length} session{sessions.length !== 1 ? 's' : ''} for this concept</p>
+                        {sessions.map(s => {
+                            const modeLabel: Record<string, string> = { diagnostic: 'Easy 5', practice: 'Practice', mastery: 'Mastery' };
+                            const modeColor: Record<string, string> = { diagnostic: '#06b6d4', practice: '#6c5ce7', mastery: '#22c55e' };
+                            const c = modeColor[s.mode] ?? 'var(--accent-primary)';
+                            return (
+                                <div key={s.id} className="glass-card" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: c, flexShrink: 0 }} />
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.9rem', color: c }}>{modeLabel[s.mode] ?? s.mode}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(s.created_at).toLocaleDateString()}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                        {s.nlg !== null && (
+                                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: s.nlg >= 0 ? '#22c55e' : '#ef4444' }}>
+                                                {s.nlg >= 0 ? '+' : ''}{Math.round(s.nlg * 100)}% NLG
+                                            </span>
+                                        )}
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontWeight: 700, fontSize: '1.1rem', color: s.score >= 80 ? '#22c55e' : s.score >= 60 ? 'var(--accent-primary)' : '#f59e0b' }}>{s.score}%</div>
+                                            <div style={{ fontSize: '0.7rem', color: s.passed ? '#22c55e' : 'var(--text-muted)' }}>{s.passed ? '✓ Passed' : 'Not passed'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )
             )}
         </div>
     );

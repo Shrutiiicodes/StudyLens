@@ -431,3 +431,52 @@ export function inferCognitiveLevel(questionType: string): number {
     };
     return map[questionType] ?? 1;
 }
+
+/**
+ * computeAUCROC
+ * Computes AUC-ROC from a set of (confidence, correct) pairs.
+ *
+ * Uses the trapezoidal rule over the ROC curve.
+ * Treats confidence as the predicted probability and correct as the binary label.
+ *
+ * Range: 0.5 (random) to 1.0 (perfect). Below 0.5 = worse than random.
+ *
+ * This is the standard system-level metric used in all knowledge tracing papers
+ * (DKT: Piech et al. 2015, DKVMN, AKT, SAINT+).
+ * Per-session proxy was log-loss; this is the true AUC across many sessions.
+ *
+ * @param pairs - Array of {confidence: number, correct: boolean} from attempts
+ */
+export function computeAUCROC(pairs: { confidence: number; correct: boolean }[]): number {
+    if (pairs.length < 2) return 0.5; // insufficient data
+
+    // Sort by confidence descending
+    const sorted = [...pairs].sort((a, b) => b.confidence - a.confidence);
+
+    const totalPos = pairs.filter(p => p.correct).length;
+    const totalNeg = pairs.length - totalPos;
+
+    if (totalPos === 0 || totalNeg === 0) return 0.5; // degenerate case
+
+    let tp = 0, fp = 0;
+    let prevTp = 0, prevFp = 0;
+    let auc = 0;
+
+    for (const p of sorted) {
+        if (p.correct) tp++;
+        else fp++;
+
+        // Trapezoidal rule: area under curve segment
+        const tpr = tp / totalPos; // true positive rate
+        const fpr = fp / totalNeg; // false positive rate
+        const prevTpr = prevTp / totalPos;
+        const prevFpr = prevFp / totalNeg;
+
+        auc += (fpr - prevFpr) * (tpr + prevTpr) / 2;
+
+        prevTp = tp;
+        prevFp = fp;
+    }
+
+    return Math.max(0, Math.min(1, Math.round(auc * 10000) / 10000));
+}

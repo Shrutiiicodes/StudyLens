@@ -88,11 +88,11 @@ const C = {
 function log(icon: string, color: string, msg: string) {
     console.log(`${color}${icon}${C.reset}  ${msg}`);
 }
-const info    = (m: string) => log('ℹ', C.cyan,    m);
-const success = (m: string) => log('✔', C.green,   m);
-const warn    = (m: string) => log('⚠', C.yellow,  m);
-const errorL  = (m: string) => log('✘', C.red,     m);
-const header  = (m: string) => {
+const info = (m: string) => log('ℹ', C.cyan, m);
+const success = (m: string) => log('✔', C.green, m);
+const warn = (m: string) => log('⚠', C.yellow, m);
+const errorL = (m: string) => log('✘', C.red, m);
+const header = (m: string) => {
     const line = '─'.repeat(55);
     console.log(`\n${C.bold}${C.magenta}${line}${C.reset}`);
     console.log(`${C.bold}${C.magenta}  ${m}${C.reset}`);
@@ -422,7 +422,7 @@ async function main() {
     if (dryRun) warn('DRY RUN mode — no changes will be written to Neo4j');
     if (userId) info(`Scoped to userId: ${userId}`);
 
-    const uri      = process.env.NEO4J_URI!;
+    const uri = process.env.NEO4J_URI!;
     const username = process.env.NEO4J_USER || process.env.NEO4J_USERNAME!;
     const password = process.env.NEO4J_PASSWORD!;
 
@@ -446,9 +446,9 @@ async function main() {
     const startMs = Date.now();
 
     try {
-        const selfLoops  = await fixSelfLoops(session, dryRun);
+        const selfLoops = await fixSelfLoops(session, dryRun);
         const duplicates = await fixDuplicateConcepts(session, dryRun, userId);
-        const bidir      = await fixBidirectionalRelations(session, dryRun);
+        const bidir = await fixBidirectionalRelations(session, dryRun);
         const orphanEdges = await fixOrphanConcepts(session, dryRun, userId);
 
         header('Cleanup Summary');

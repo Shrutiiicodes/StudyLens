@@ -25,6 +25,7 @@ interface ProgressData {
     score: number;
     stage: string;
     lastUpdated: string;
+    needsReview?: boolean; // Fix 15: FSRS-triggered review indicator
 }
 
 // The 3 actionable stages students progress through.
@@ -70,6 +71,14 @@ export default function ConceptsPage() {
 
         fetchData();
     }, []);
+
+    function needsReview(conceptId: string): boolean {
+        const p = progress[conceptId];
+        if (!p?.lastUpdated) return false;
+        if (p.stage === 'complete') return false;
+        const hoursElapsed = (Date.now() - new Date(p.lastUpdated).getTime()) / (1000 * 60 * 60);
+        return hoursElapsed > 72 && p.score > 0; // 3+ days since last activity
+    }
 
     function getStageIndex(conceptId: string): number {
         const p = progress[conceptId];
@@ -161,6 +170,23 @@ export default function ConceptsPage() {
                                                         borderRadius: 'var(--radius-sm)',
                                                     }}>
                                                         Score: {Math.round(p.score)}%
+                                                    </span>
+                                                )}
+                                                {/* Fix 15: needs review badge */}
+                                                {needsReview(concept.id) && (
+                                                    <span style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '3px',
+                                                        fontSize: '0.72rem',
+                                                        fontWeight: 600,
+                                                        color: '#f59e0b',
+                                                        background: 'rgba(245,158,11,0.1)',
+                                                        border: '1px solid rgba(245,158,11,0.3)',
+                                                        padding: '2px 7px',
+                                                        borderRadius: '100px',
+                                                    }}>
+                                                        <Clock size={10} /> Review due
                                                     </span>
                                                 )}
                                             </div>
