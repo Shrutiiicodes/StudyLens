@@ -173,8 +173,14 @@ export async function evaluateDiagnostic(
 
     let nextStage = currentStage;
     if (passed && modeIndex >= 0 && modeIndex <= currentStageIndex + 1) {
-        const nextIndex = Math.min(modeIndex + 1, STAGES.length - 1);
-        nextStage = STAGES[nextIndex];
+        if (mode === 'mastery') {
+            // Passing the mastery test marks the concept complete.
+            // Summary assessment removed — mastery test is the terminal stage.
+            nextStage = 'complete';
+        } else {
+            const nextIndex = Math.min(modeIndex + 1, STAGES.length - 1);
+            nextStage = STAGES[nextIndex];
+        }
     }
 
     // ── 8. Save mastery with updated stage ────────────────────────────────
