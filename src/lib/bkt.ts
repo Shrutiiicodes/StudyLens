@@ -34,11 +34,33 @@ export interface BKTState {
 // Calibrated from Corbett & Anderson (1994) and common BKT literature.
 // For production: these should be fitted per-concept from student response data
 // using EM (Expectation-Maximisation) via pyBKT or equivalent.
+/**
+ * Production BKT parameters for CBSE factual/conceptual MCQ content.
+ *
+ * Calibrated from Baker, R.S.J.d., Corbett, A.T., & Aleven, V. (2008).
+ * More accurate student modeling through contextual estimation of slip
+ * and guess probabilities in Bayesian Knowledge Tracing.
+ * Proceedings of ITS 2008, pp. 406–415.
+ *
+ * Domain mapping rationale:
+ *   p_l0 = 0.25 — lower than algebra default; CBSE students start each
+ *                 new topic with near-zero prior knowledge
+ *   p_t  = 0.12 — higher than algebra; declarative/factual recall learns
+ *                 faster per attempt than procedural algebra skills
+ *   p_s  = 0.08 — lower than algebra; 4-option MCQ reduces careless errors
+ *                 compared to open-ended problem solving
+ *   p_g  = 0.25 — 4-option MCQ has a 25% theoretical guess floor
+ *                 (matches information-theoretic lower bound for 1/k options)
+ *
+ * These are default priors. Per-concept parameters should be fitted
+ * using Expectation-Maximisation (EM) via POST /api/irt/fit once
+ * sufficient response data has been collected (≥30 attempts per concept).
+ */
 export const DEFAULT_BKT_PARAMS: BKTParams = {
-    p_l0: 0.30,  // 30% prior chance student already knows it
-    p_t: 0.09,  // 9% chance of learning on each attempt
-    p_s: 0.10,  // 10% slip rate
-    p_g: 0.20,  // 20% guess rate
+    p_l0: 0.25,  // Prior: 25% chance student already knows a new CBSE topic
+    p_t: 0.12,  // Learning: 12% chance of learning per attempt (declarative content)
+    p_s: 0.08,  // Slip: 8% chance of wrong despite knowing (MCQ careless error)
+    p_g: 0.25,  // Guess: 25% floor for 4-option MCQ (1/k theoretical minimum)
 };
 
 // ─── Core BKT Update ───

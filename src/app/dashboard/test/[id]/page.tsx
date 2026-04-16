@@ -1,4 +1,5 @@
 'use client';
+import { PASS_THRESHOLD } from '@/config/constants';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -480,18 +481,18 @@ export default function TestPage() {
 
                     {/* Header */}
                     <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center', color: scorePercent >= 85 ? 'var(--accent-success)' : scorePercent >= 60 ? 'var(--accent-primary)' : 'var(--accent-tertiary)' }}>
-                            {scorePercent >= 85 ? <Trophy size={56} /> : scorePercent >= 60 ? <Target size={56} /> : <Library size={56} />}
+                        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center', color: scorePercent >= 85 ? 'var(--accent-success)' : scorePercent >= PASS_THRESHOLD ? 'var(--accent-primary)' : 'var(--accent-tertiary)' }}>
+                            {scorePercent >= 85 ? <Trophy size={56} /> : scorePercent >= PASS_THRESHOLD ? <Target size={56} /> : <Library size={56} />}
                         </div>
 
                         <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
-                            {scorePercent >= 85 ? 'Excellent!' : scorePercent >= 60 ? 'Good job!' : 'Keep practising!'}
+                            {scorePercent >= 85 ? 'Excellent!' : scorePercent >= PASS_THRESHOLD ? 'Good job!' : 'Keep practising!'}
                         </h1>
 
                         <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', marginBottom: '16px' }}>
                             {passed
                                 ? nextStage ? `Stage unlocked: ${nextStage}` : 'Great work!'
-                                : 'You need 60% to pass. Try again to advance.'}
+                                : `You need ${PASS_THRESHOLD}% to pass. Try again to advance.`}
                         </p>
 
                         {/* NLG Badge — most prominent display of learning gain */}
@@ -508,7 +509,7 @@ export default function TestPage() {
                             height: '120px',
                             borderRadius: '50%',
                             background: `conic-gradient(
-                                ${scorePercent >= 85 ? 'var(--accent-success)' : scorePercent >= 60 ? 'var(--accent-primary)' : '#f59e0b'} ${scorePercent * 3.6}deg,
+                                ${scorePercent >= 85 ? 'var(--accent-success)' : scorePercent >= PASS_THRESHOLD ? 'var(--accent-primary)' : '#f59e0b'} ${scorePercent * 3.6}deg,
                                 var(--bg-elevated) 0deg
                             )`,
                             position: 'relative',

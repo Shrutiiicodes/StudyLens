@@ -35,4 +35,15 @@ export interface StrengthWeakness {
   analytical: number;
 }
 
+/**
+ * The three real assessment modes in Study Lens.
+ *
+ * 'spaced' is intentionally NOT a mode here.
+ * Spaced review questions are injected silently into 'practice' and
+ * 'mastery' sessions from older same-document concepts. They are
+ * tracked via the `is_spaced_review` boolean on the attempts row,
+ * not via a separate mode. This keeps session logic clean and
+ * prevents spaced questions from being treated as a different
+ * assessment pipeline.
+ */
 export type AssessmentMode = 'diagnostic' | 'practice' | 'mastery';

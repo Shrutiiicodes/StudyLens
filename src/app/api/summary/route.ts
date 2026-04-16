@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConceptContext } from '@/lib/question-generator';
 import { getServiceSupabase } from '@/lib/supabase';
-
+import { PASS_THRESHOLD } from '@/config/constants';
 
 /**
  * POST /api/summary
  * Evaluate a student's written summary of a concept.
+ * Pass threshold: PASS_THRESHOLD (80%) per Bloom (1984) mastery learning.
  */
 export async function POST(request: NextRequest) {
     try {
@@ -47,7 +48,6 @@ export async function POST(request: NextRequest) {
 
                     if (!downloadError && fileData) {
                         const fullText = await fileData.text();
-                        // Use first 3000 chars — enough context without overwhelming the LLM
                         context = fullText.substring(0, 3000);
                         console.log('[Summary] Neo4j context empty — fell back to source document');
                     }
@@ -57,7 +57,6 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Last resort — at least give the LLM the concept title as context
         const evaluationContext = (context && context.length > 50)
             ? context
             : `This summary is about the concept: ${conceptTitle}`;
@@ -72,7 +71,7 @@ export async function POST(request: NextRequest) {
             user_id: userId,
             concept_id: conceptId,
             question_id: `summary_${Date.now()}`,
-            correct: result.score >= 60,
+            correct: result.score >= PASS_THRESHOLD,
             difficulty: 3,
             cognitive_level: 5,
             time_taken: 0,
@@ -81,7 +80,7 @@ export async function POST(request: NextRequest) {
         });
 
         // If passed, mark concept as complete
-        if (result.score >= 60) {
+        if (result.score >= PASS_THRESHOLD) {
             const { data: existing } = await supabase
                 .from('mastery')
                 .select('id, mastery_score')
@@ -90,15 +89,11 @@ export async function POST(request: NextRequest) {
                 .single();
 
             if (existing) {
-                // If student has high MSS, cap mastery gain — misconceptions
-                // need more reinforcement before marking fully complete
+                // High MSS (>0.5) = misconceptions still present.
+                // Cap mastery at 85 so the system continues surfacing the concept for review.
                 let mss = 0;
-
-                // High MSS (>0.5) = misconceptions still present
-                // Cap mastery at 85 instead of allowing full 100
-                // so the system continues to surface this concept for review
                 const mssPenalty = mss > 0.5 ? 0.85 : 1.0;
-                const finalScore = Math.min(100, Math.max(result.score, 80) * mssPenalty);
+                const finalScore = Math.min(100, Math.max(result.score, PASS_THRESHOLD) * mssPenalty);
 
                 await supabase
                     .from('mastery')
@@ -116,7 +111,8 @@ export async function POST(request: NextRequest) {
             score: result.score,
             feedback: result.feedback,
             rubric: result.rubric,
-            passed: result.score >= 60,
+            passed: result.score >= PASS_THRESHOLD,
+            pass_threshold: PASS_THRESHOLD,
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -126,4 +122,69 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
+}
+
+// ─── LLM Summary Evaluator ────────────────────────────────────────────────────
+
+async function evaluateSummary(
+    conceptTitle: string,
+    context: string,
+    summary: string
+): Promise<{ score: number; feedback: string; rubric: Record<string, number> }> {
+    const { chatCompletion, parseLLMJson } = await import('@/lib/groq');
+
+    const response = await chatCompletion(
+        [
+            {
+                role: 'system',
+                content: `You are an educational assessment expert evaluating student summaries of CBSE concepts.
+Evaluate the summary on 4 criteria (0–25 points each, total 0–100):
+1. Accuracy — factual correctness against the concept context
+2. Completeness — covers key points without major omissions  
+3. Clarity — clearly expressed in the student's own words
+4. Depth — demonstrates understanding beyond surface recall
+
+Respond ONLY with JSON:
+{
+  "accuracy": <0-25>,
+  "completeness": <0-25>,
+  "clarity": <0-25>,
+  "depth": <0-25>,
+  "total": <0-100>,
+  "feedback": "<2-3 sentence constructive feedback>"
+}`,
+            },
+            {
+                role: 'user',
+                content: `Concept: ${conceptTitle}
+
+Reference context:
+${context.substring(0, 2000)}
+
+Student summary:
+${summary}`,
+            },
+        ],
+        { jsonMode: true, temperature: 0.2 }
+    );
+
+    const parsed = parseLLMJson<{
+        accuracy: number;
+        completeness: number;
+        clarity: number;
+        depth: number;
+        total: number;
+        feedback: string;
+    }>(response);
+
+    return {
+        score: Math.min(100, Math.max(0, parsed.total ?? 0)),
+        feedback: parsed.feedback ?? 'No feedback provided.',
+        rubric: {
+            accuracy: parsed.accuracy ?? 0,
+            completeness: parsed.completeness ?? 0,
+            clarity: parsed.clarity ?? 0,
+            depth: parsed.depth ?? 0,
+        },
+    };
 }

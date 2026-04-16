@@ -183,18 +183,18 @@ async function checkStructuralIntegrity(session: Session, userId?: string): Prom
     const filter = userId ? `{userId: $userId}` : '';
     const params = userId ? { userId } : {};
 
-    const [totalNodes] = await runQ < { count: unknown } > (
+    const [totalNodes] = await runQ<{ count: unknown }>(
         session, `MATCH (n ${filter}) RETURN count(n) AS count`, params
     );
-    const [totalRels] = await runQ < { count: unknown } > (
+    const [totalRels] = await runQ<{ count: unknown }>(
         session, `MATCH (a ${filter})-[r]->(b) RETURN count(r) AS count`, params
     );
-    const [conceptNodes] = await runQ < { count: unknown } > (
+    const [conceptNodes] = await runQ<{ count: unknown }>(
         session, `MATCH (c:Concept ${filter}) RETURN count(c) AS count`, params
     );
 
     // Orphan nodes (no relationships at all)
-    const orphans = await runQ < { id: unknown; name: unknown } > (
+    const orphans = await runQ<{ id: unknown; name: unknown }>(
         session,
         `MATCH (n ${filter}) WHERE NOT (n)--() RETURN n.id AS id, n.name AS name LIMIT 20`,
         params
@@ -247,7 +247,7 @@ async function checkSchemaCompliance(session: Session, userId?: string): Promise
     const rows: string[][] = [];
 
     for (const prop of requiredProps) {
-        const [res] = await runQ < { missing: unknown; total: unknown } > (
+        const [res] = await runQ<{ missing: unknown; total: unknown }>(
             session,
             `MATCH (c:Concept ${filter})
        RETURN count(CASE WHEN c.${prop} IS NULL OR c.${prop} = '' THEN 1 END) AS missing,
@@ -293,14 +293,14 @@ async function checkRelationValidity(session: Session, userId?: string): Promise
     ]);
 
     // Get all relation types in the graph
-    const relTypes = await runQ < { type: string; count: unknown } > (
+    const relTypes = await runQ<{ type: string; count: unknown }>(
         session,
         `MATCH ()-[r]->() RETURN type(r) AS type, count(r) AS count ORDER BY count DESC`,
         params
     );
 
     // Self-loops
-    const [selfLoops] = await runQ < { count: unknown } > (
+    const [selfLoops] = await runQ<{ count: unknown }>(
         session,
         `MATCH (n)-[r]->(n) RETURN count(r) AS count`,
         params
@@ -383,8 +383,8 @@ async function checkCompleteness(session: Session, userId?: string): Promise<Che
     let totalScore = 0;
 
     for (const m of metrics) {
-        const [hasRes] = await runQ < { n: unknown } > (session, m.hasQ, params);
-        const [totRes] = await runQ < { n: unknown } > (session, m.totalQ, params);
+        const [hasRes] = await runQ<{ n: unknown }>(session, m.hasQ, params);
+        const [totRes] = await runQ<{ n: unknown }>(session, m.totalQ, params);
         const has = toNum(hasRes?.n);
         const total = toNum(totRes?.n);
         const pct = total > 0 ? (has / total) * 100 : 0;
@@ -426,7 +426,7 @@ async function checkConsistency(session: Session, userId?: string): Promise<Chec
     const issues: string[] = [];
 
     // Duplicate concept names (same userId)
-    const dupNames = await runQ < { name: string; count: unknown } > (
+    const dupNames = await runQ<{ name: string; count: unknown }>(
         session,
         `MATCH (c:Concept ${filter})
      WITH toLower(c.name) AS name, count(c) AS cnt
@@ -445,7 +445,7 @@ async function checkConsistency(session: Session, userId?: string): Promise<Chec
     }
 
     // Bidirectional relations (A→B and B→A with same type — possible contradiction)
-    const [bidir] = await runQ < { count: unknown } > (
+    const [bidir] = await runQ<{ count: unknown }>(
         session,
         `MATCH (a)-[r1]->(b), (b)-[r2]->(a)
      WHERE type(r1) = type(r2) AND a <> b
@@ -461,7 +461,7 @@ async function checkConsistency(session: Session, userId?: string): Promise<Chec
     }
 
     // Concepts with no documentId (unlinked)
-    const [unlinked] = await runQ < { count: unknown } > (
+    const [unlinked] = await runQ<{ count: unknown }>(
         session,
         `MATCH (c:Concept ${filter}) WHERE c.documentId IS NULL RETURN count(c) AS count`,
         params
@@ -512,7 +512,7 @@ async function checkDensity(session: Session, userId?: string): Promise<CheckRes
     );
 
     const allNodes = toNum(allStats?.nodes);
-    const allRels  = toNum(allStats?.rels);
+    const allRels = toNum(allStats?.rels);
 
     const nodes = toNum(stats?.nodes);
     const rels = toNum(stats?.rels);
@@ -553,8 +553,8 @@ async function checkDensity(session: Session, userId?: string): Promise<CheckRes
     // Density scoring scoped to Concept subgraph (healthy range: 1–20%)
     const densityScore = density === 0 ? 0
         : density < 0.5 ? 30
-            : density < 2   ? 60
-                : density < 20  ? 90
+            : density < 2 ? 60
+                : density < 20 ? 90
                     : 70; // overly dense = possibly noisy
 
     const score = Math.max(0, densityScore - issues.length * 15);
@@ -582,7 +582,7 @@ async function checkLinkPrediction(session: Session, userId?: string): Promise<C
      * Precision = fraction of related pairs with ≥1 common neighbor.
      */
 
-    const relatedPairs = await runQ < { a: string; b: string } > (
+    const relatedPairs = await runQ<{ a: string; b: string }>(
         session,
         `MATCH (a:Concept ${filter})-[r]->(b:Concept ${filter})
      WHERE a <> b
@@ -604,7 +604,7 @@ async function checkLinkPrediction(session: Session, userId?: string): Promise<C
 
     let recoverable = 0;
     for (const pair of relatedPairs) {
-        const [common] = await runQ < { count: unknown } > (
+        const [common] = await runQ<{ count: unknown }>(
             session,
             `MATCH (a:Concept {id: $aId})-[]-(x)-[]-(b:Concept {id: $bId})
        WHERE a <> b
