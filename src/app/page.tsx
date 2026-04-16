@@ -181,7 +181,7 @@ export default function HomePage() {
           {[
             { value: '5', label: 'Question Types' },
             { value: '3', label: 'Difficulty Levels' },
-            { value: '4', label: 'Assessment Modes' },
+            { value: '3', label: 'Assessment Modes' },
             { value: <Infinity size={24} />, label: 'Adaptive Paths' },
           ].map((stat, idx) => (
             <div key={idx} style={{ textAlign: 'center' }}>

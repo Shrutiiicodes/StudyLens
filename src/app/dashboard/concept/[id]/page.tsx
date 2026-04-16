@@ -15,7 +15,7 @@ import {
     Search,
     FileEdit,
     Trophy,
-    Clock
+    CheckCircle,
 } from 'lucide-react';
 
 interface ConceptDetail {
@@ -38,6 +38,19 @@ interface GraphEdge {
     type: string;
 }
 
+interface ConceptProgress {
+    mastery_score: number;
+    current_stage: string;
+    is_complete: boolean;
+}
+
+// Derive ProgressCard status from stage
+function stageToStatus(stage: string): 'locked' | 'unlocked' | 'mastered' {
+    if (stage === 'complete') return 'mastered';
+    if (stage === 'mastery' || stage === 'practice') return 'unlocked';
+    return 'unlocked'; // diagnostic = just started
+}
+
 export default function ConceptDetailPage() {
     const params = useParams();
     const router = useRouter();
@@ -45,82 +58,112 @@ export default function ConceptDetailPage() {
     const conceptId = params.id as string;
 
     const [concept, setConcept] = useState<ConceptDetail | null>(null);
+    const [progress, setProgress] = useState<ConceptProgress | null>(null);
     const [loading, setLoading] = useState(true);
     const [graphNodes, setGraphNodes] = useState<GraphNode[]>([]);
     const [graphEdges, setGraphEdges] = useState<GraphEdge[]>([]);
     const [activeTab, setActiveTab] = useState<'overview' | 'graph' | 'history'>('overview');
 
-    // Get concept title from URL params or fetch from API
     const titleFromUrl = searchParams.get('title');
+    const conceptTitle = concept?.title || titleFromUrl || 'Concept';
 
     useEffect(() => {
-        async function fetchConcept() {
+        async function fetchData() {
             try {
                 const stored = localStorage.getItem('study-lens-user');
                 if (!stored) return;
                 const user = JSON.parse(stored);
 
-                // Fetch concept details
-                const res = await fetch(`/api/concepts?userId=${user.id}`);
-                const data = await res.json();
+                // Fetch concept details + progress in parallel
+                const [conceptsRes, progressRes, graphRes] = await Promise.all([
+                    fetch(`/api/concepts?userId=${user.id}`),
+                    fetch(`/api/progress?userId=${user.id}&conceptId=${conceptId}`),
+                    fetch(`/api/graph?conceptId=${conceptId}&userId=${user.id}`),
+                ]);
 
-                if (data.success && data.concepts) {
-                    const found = data.concepts.find((c: ConceptDetail) => c.id === conceptId);
-                    if (found) {
-                        setConcept(found);
-                    } else if (titleFromUrl) {
-                        setConcept({ id: conceptId, title: titleFromUrl, source_document: '', created_at: '' });
-                    }
+                const conceptsData = await conceptsRes.json();
+                if (conceptsData.success && conceptsData.concepts) {
+                    const found = conceptsData.concepts.find((c: ConceptDetail) => c.id === conceptId);
+                    if (found) setConcept(found);
+                    else if (titleFromUrl) setConcept({ id: conceptId, title: titleFromUrl, source_document: '', created_at: '' });
                 }
 
-                // Fetch knowledge graph
-                const graphRes = await fetch(`/api/graph?conceptId=${conceptId}&userId=${user.id}`);
-                const graphData = await graphRes.json();
+                // Real mastery + stage from progress API
+                const progressData = await progressRes.json();
+                if (progressData.success) {
+                    setProgress({
+                        mastery_score: progressData.masteryScore ?? 0,
+                        current_stage: progressData.currentStage ?? 'diagnostic',
+                        is_complete: progressData.isComplete ?? false,
+                    });
+                }
 
+                // Knowledge graph
+                const graphData = await graphRes.json();
                 if (graphData.success) {
                     setGraphNodes(graphData.nodes || []);
                     setGraphEdges(graphData.edges || []);
                 }
             } catch (err) {
-                console.error('Failed to fetch concept:', err);
-                if (titleFromUrl) {
-                    setConcept({ id: conceptId, title: titleFromUrl, source_document: '', created_at: '' });
-                }
+                console.error('Failed to fetch concept data:', err);
             } finally {
                 setLoading(false);
             }
         }
 
-        fetchConcept();
+        fetchData();
     }, [conceptId, titleFromUrl]);
 
-    const conceptTitle = concept?.title || titleFromUrl || 'Concept';
+    const mastery = progress?.mastery_score ?? 0;
+    const stage = progress?.current_stage ?? 'diagnostic';
+    const isComplete = progress?.is_complete ?? false;
+    const cardStatus = stageToStatus(stage);
+
+    // Which test mode button to show as primary CTA
+    const nextMode = stage === 'diagnostic' ? 'diagnostic'
+        : stage === 'practice' ? 'practice'
+            : stage === 'mastery' ? 'mastery'
+                : 'mastery'; // complete → still allow re-testing mastery
 
     if (loading) {
         return (
-            <div className="animate-fade-in">
-                <div className="glass-card skeleton" style={{ height: '200px', marginBottom: '24px' }} />
-                <div className="glass-card skeleton" style={{ height: '300px' }} />
+            <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div className="glass-card" style={{ padding: '32px', height: '120px', opacity: 0.4 }} />
+                    <div className="glass-card" style={{ padding: '32px', height: '200px', opacity: 0.4 }} />
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="animate-fade-in">
+        <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
+            {/* Back */}
+            <button
+                className="btn-ghost"
+                onClick={() => router.back()}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}
+            >
+                <ArrowLeft size={16} /> Back
+            </button>
+
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                    <button
-                        className="btn-ghost"
-                        onClick={() => router.back()}
-                        style={{ marginBottom: '12px', padding: '6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}
-                    >
-                        <ArrowLeft size={18} /> Back
-                    </button>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         {conceptTitle}
+                        {isComplete && (
+                            <span style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-success)',
+                                background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+                                padding: '3px 10px', borderRadius: '100px',
+                            }}>
+                                <CheckCircle size={13} /> Complete
+                            </span>
+                        )}
                     </h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '600px' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                         Concept extracted from your uploaded document
                     </p>
                 </div>
@@ -128,7 +171,7 @@ export default function ConceptDetailPage() {
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <button
                         className="btn-primary"
-                        onClick={() => router.push(`/dashboard/test/${conceptId}?mode=diagnostic&title=${encodeURIComponent(conceptTitle)}`)}
+                        onClick={() => router.push(`/dashboard/test/${conceptId}?mode=${nextMode}&title=${encodeURIComponent(conceptTitle)}`)}
                         style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                         <Target size={18} /> Test It
@@ -143,139 +186,102 @@ export default function ConceptDetailPage() {
                 </div>
             </div>
 
-            {/* Mastery Card */}
+            {/* Mastery Card — now shows real data */}
             <div style={{ maxWidth: '400px', marginBottom: '32px' }}>
                 <ProgressCard
                     title={conceptTitle}
-                    mastery={0}
-                    status="unlocked"
+                    mastery={mastery}
+                    status={cardStatus}
+                    lastUpdated={concept?.created_at}
                 />
             </div>
 
             {/* Tab Navigation */}
             <div style={{
-                display: 'flex',
-                gap: '4px',
-                marginBottom: '24px',
-                background: 'var(--bg-secondary)',
-                padding: '4px',
-                borderRadius: 'var(--radius-md)',
-                width: 'fit-content',
+                display: 'flex', gap: '4px', marginBottom: '24px',
+                background: 'var(--bg-secondary)', padding: '4px',
+                borderRadius: 'var(--radius-md)', width: 'fit-content',
             }}>
                 {(['overview', 'graph', 'history'] as const).map((tab) => (
                     <button
                         key={tab}
                         className={tab === activeTab ? 'btn-primary' : 'btn-ghost'}
                         onClick={() => setActiveTab(tab)}
-                        style={{
-                            padding: '10px 20px',
-                            fontSize: '0.9rem',
-                            borderRadius: 'var(--radius-sm)',
-                            textTransform: 'capitalize',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                        }}
+                        style={{ padding: '10px 20px', fontSize: '0.9rem', borderRadius: 'var(--radius-sm)', textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
-                        {tab === 'overview' ? <ClipboardList size={16} /> : tab === 'graph' ? <Share2 size={16} /> : <BarChart2 size={16} />} {tab}
+                        {tab === 'overview' ? <ClipboardList size={16} /> : tab === 'graph' ? <Share2 size={16} /> : <BarChart2 size={16} />}
+                        {tab}
                     </button>
                 ))}
             </div>
 
-            {/* Tab Content */}
+            {/* Overview Tab */}
             {activeTab === 'overview' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
                     {/* Assessment Options */}
                     <div className="glass-card" style={{ padding: '24px' }}>
                         <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '20px' }}>Assessment Modes</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <button
-                                className="btn-secondary"
-                                onClick={() => router.push(`/dashboard/test/${conceptId}?mode=diagnostic&title=${encodeURIComponent(conceptTitle)}`)}
-                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}
-                            >
-                                <Search size={18} color="var(--accent-primary)" />
-                                <div>
-                                    <div style={{ fontWeight: 600 }}>Easy 5</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>5 questions to gauge understanding</div>
-                                </div>
-                            </button>
-                            <button
-                                className="btn-secondary"
-                                onClick={() => router.push(`/dashboard/test/${conceptId}?mode=practice&title=${encodeURIComponent(conceptTitle)}`)}
-                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}
-                            >
-                                <FileEdit size={18} color="var(--accent-tertiary)" />
-                                <div>
-                                    <div style={{ fontWeight: 600 }}>Practice Test</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Adaptive difficulty, instant feedback</div>
-                                </div>
-                            </button>
-                            <button
-                                className="btn-secondary"
-                                onClick={() => router.push(`/dashboard/test/${conceptId}?mode=mastery&title=${encodeURIComponent(conceptTitle)}`)}
-                                style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px' }}
-                            >
-                                <Trophy size={18} color="var(--accent-success)" />
-                                <div>
-                                    <div style={{ fontWeight: 600 }}>Mastery Test</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Prove complete understanding</div>
-                                </div>
-                            </button>
-
+                            {[
+                                { mode: 'diagnostic', label: 'Easy 5', desc: '5 questions to gauge understanding', icon: <Search size={18} color="var(--accent-primary)" />, alwaysEnabled: true },
+                                { mode: 'practice', label: 'Practice Test', desc: 'Adaptive difficulty, instant feedback', icon: <FileEdit size={18} color="var(--accent-tertiary)" />, alwaysEnabled: stage !== 'diagnostic' || isComplete },
+                                { mode: 'mastery', label: 'Mastery Test', desc: 'Prove complete understanding', icon: <Trophy size={18} color="var(--accent-success)" />, alwaysEnabled: stage === 'mastery' || isComplete },
+                            ].map(({ mode, label, desc, icon, alwaysEnabled }) => (
+                                <button
+                                    key={mode}
+                                    className="btn-secondary"
+                                    onClick={() => router.push(`/dashboard/test/${conceptId}?mode=${mode}&title=${encodeURIComponent(conceptTitle)}`)}
+                                    disabled={!alwaysEnabled}
+                                    style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px', opacity: alwaysEnabled ? 1 : 0.45 }}
+                                >
+                                    {icon}
+                                    <div>
+                                        <div style={{ fontWeight: 600 }}>{label}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{desc}</div>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Info */}
+                    {/* Concept Info */}
                     <div className="glass-card" style={{ padding: '24px' }}>
                         <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '20px' }}>Concept Info</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Source Document</span>
-                                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--accent-primary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {concept?.source_document?.split('/').pop() || 'N/A'}
-                                </span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Graph Nodes</span>
-                                <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-tertiary)' }}>
-                                    {graphNodes.length}
-                                </span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Created</span>
-                                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                                    {concept?.created_at ? new Date(concept.created_at).toLocaleDateString() : 'N/A'}
-                                </span>
-                            </div>
+                            {[
+                                { label: 'Current Stage', value: isComplete ? 'Complete ✓' : stage.charAt(0).toUpperCase() + stage.slice(1), color: isComplete ? 'var(--accent-success)' : 'var(--accent-primary)' },
+                                { label: 'Mastery Score', value: `${Math.round(mastery)}%`, color: mastery >= 80 ? 'var(--accent-success)' : mastery >= 50 ? 'var(--accent-primary)' : 'var(--accent-warning)' },
+                                { label: 'Graph Nodes', value: String(graphNodes.length), color: 'var(--accent-tertiary)' },
+                                { label: 'Source', value: concept?.source_document?.split('/').pop() || 'N/A', color: 'var(--text-primary)' },
+                                { label: 'Created', value: concept?.created_at ? new Date(concept.created_at).toLocaleDateString() : 'N/A', color: 'var(--text-primary)' },
+                            ].map(({ label, value, color }) => (
+                                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{label}</span>
+                                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
             )}
 
+            {/* Graph Tab */}
             {activeTab === 'graph' && (
-                graphNodes.length > 0 ? (
-                    <ConceptMap nodes={graphNodes} edges={graphEdges} />
-                ) : (
-                    <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                            <Share2 size={48} style={{ opacity: 0.3 }} />
+                graphNodes.length > 0
+                    ? <ConceptMap nodes={graphNodes} edges={graphEdges} />
+                    : (
+                        <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
+                            <Share2 size={48} style={{ opacity: 0.3, margin: '0 auto 20px' }} />
+                            <p style={{ color: 'var(--text-secondary)' }}>Knowledge graph not available. The graph is built during document upload using Neo4j.</p>
                         </div>
-                        <p style={{ color: 'var(--text-secondary)' }}>
-                            Knowledge graph not available. The graph is built during document upload using Neo4j.
-                        </p>
-                    </div>
-                )
+                    )
             )}
 
+            {/* History Tab */}
             {activeTab === 'history' && (
                 <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                        <BarChart2 size={48} style={{ opacity: 0.3 }} />
-                    </div>
-                    <p style={{ color: 'var(--text-secondary)' }}>
-                        Take some tests first to see your mastery progress over time.
-                    </p>
+                    <BarChart2 size={48} style={{ opacity: 0.3, margin: '0 auto 20px' }} />
+                    <p style={{ color: 'var(--text-secondary)' }}>Take some tests first to see your mastery progress over time.</p>
                 </div>
             )}
         </div>

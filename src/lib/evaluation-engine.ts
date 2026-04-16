@@ -208,7 +208,8 @@ export async function evaluateDiagnostic(
             cognitive_level: result.cognitive_level,
             time_taken: result.time_taken,
             confidence: result.confidence,
-            mode,
+            mode: mode === 'spaced' ? 'practice' : mode, // normalise spaced → practice for AssessmentMode compat
+            is_spaced_review: mode === 'spaced' || (result.concept_id != null && result.concept_id !== conceptId),
             session_id: sessionId,
         });
     }
