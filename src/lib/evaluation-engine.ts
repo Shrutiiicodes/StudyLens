@@ -51,6 +51,7 @@ export async function evaluateAnswer(
         cognitive_level: question.cognitive_level,
         time_taken: submission.time_taken,
         confidence: submission.confidence,
+        question_type: question.type,
     };
 
     const currentMastery = await getCurrentMastery(userId, question.concept_id);

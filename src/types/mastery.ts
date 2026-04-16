@@ -1,5 +1,5 @@
 import { AssessmentMode } from './student';
-
+import { QuestionType } from './question';
 export interface MasteryRecord {
     id: string;
     user_id: string;
@@ -44,6 +44,7 @@ export interface QuestionResult {
     time_taken: number;
     confidence: number;
     concept_id?: string;
+    question_type?: QuestionType;
 }
 
 export interface DifficultyDistribution {

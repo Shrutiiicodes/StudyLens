@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
                 storage_path: filePath,
                 status: 'failed',
                 error_message: backendError instanceof Error ? backendError.message : String(backendError),
-            }).catch(() => { /* silently ignore insert failure */ });
+            });
         }
 
         return NextResponse.json({
