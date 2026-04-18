@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ReviewQueue from '@/components/ReviewQueue';
 import Link from 'next/link';
 import {
     FileText,
@@ -211,6 +212,7 @@ export default function DashboardPage() {
                     </div>
                 )}
             </div>
+            {user && <ReviewQueue userId={user.id} />}
         </div>
     );
 }

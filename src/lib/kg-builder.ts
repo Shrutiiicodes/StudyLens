@@ -86,6 +86,7 @@ Is this triple directly supported by the passage?`
     return {
         ...raw,
         relationships: verifiedRelationships,
+        _sourceChunk: chunk,
     };
 }
 
@@ -145,7 +146,7 @@ function canonicalizeName(name: string): string {
         .trim();
 }
 
-function mergeKnowledge(chunks: ExtractedKnowledge[]): ExtractedKnowledge {
+function mergeKnowledge(chunks: Array<ExtractedKnowledge & { _sourceChunk?: string }>): ExtractedKnowledge & { _sourceChunk: string } {
     // Maps canonical key → concept, preserving original name from first occurrence
     const conceptMap = new Map<string, any>();
     const relationships: ExtractedKnowledge['relationships'] = [];
@@ -218,6 +219,7 @@ function mergeKnowledge(chunks: ExtractedKnowledge[]): ExtractedKnowledge {
     return {
         concepts: Array.from(conceptMap.values()),
         relationships,
+        _sourceChunk: chunks[0]?._sourceChunk || '',
     };
 }
 
@@ -335,7 +337,7 @@ async function linkOrphanConcepts(userId: string, documentId: string): Promise<v
         `MATCH (c:Concept {userId: $userId, documentId: $docId})
          WHERE (c)--()
          RETURN c.id AS id, c.name AS name, c.definition AS definition
-         LIMIT 30`,
+         LIMIT 50`,
         { userId, docId: documentId }
     );
 
@@ -386,7 +388,7 @@ Which candidates is "${orphan.name}" related to, and how?`
             const result = parseLLMJson<{ relationships: Array<{ to: string; type: string; confidence: number }> }>(response);
 
             for (const rel of result.relationships || []) {
-                if (!rel.to || !rel.type || rel.confidence < 0.70) continue;
+                if (!rel.to || !rel.type || rel.confidence < 0.55) continue;
 
                 // Guard: skip self-loops
                 if (rel.to.toLowerCase().trim() === orphan.name.toLowerCase().trim()) continue;
@@ -410,12 +412,174 @@ Which candidates is "${orphan.name}" related to, and how?`
     }
 }
 
+async function linkOrphansAcrossDocuments(
+    userId: string,
+    documentId: string
+): Promise<void> {
+    // Re-check: are there still orphans in this document?
+    const orphans = await runCypher<{ id: string; name: string; definition: string }>(
+        `MATCH (c:Concept {userId: $userId, documentId: $docId})
+         WHERE NOT (c)--()
+         RETURN c.id AS id, c.name AS name, c.definition AS definition
+         LIMIT 40`,
+        { userId, docId: documentId }
+    );
+
+    if (orphans.length === 0) {
+        console.log('[KG CrossLink] No orphans remain after per-document pass — skipping');
+        return;
+    }
+
+    // Fetch well-connected concepts from OTHER documents by this user
+    const candidates = await runCypher<{ id: string; name: string; definition: string }>(
+        `MATCH (c:Concept {userId: $userId})
+         WHERE c.documentId <> $docId AND (c)--()
+         RETURN c.id AS id, c.name AS name, c.definition AS definition
+         LIMIT 50`,
+        { userId, docId: documentId }
+    );
+
+    if (candidates.length === 0) {
+        console.log('[KG CrossLink] No inter-document candidates found — user has only 1 document');
+        return;
+    }
+
+    console.log(
+        `[KG CrossLink] Linking ${orphans.length} orphan(s) against ${candidates.length} cross-document candidate(s)`
+    );
+
+    const candidateSummary = candidates
+        .map((c) => `- ${c.name}: ${(c.definition || '').substring(0, 100)}`)
+        .join('\n');
+
+    for (const orphan of orphans) {
+        try {
+            const response = await chatCompletion(
+                [
+                    {
+                        role: 'system',
+                        content: `You are an educational knowledge graph assistant for CBSE Grade 4–10.
+Given an orphan concept and a list of candidate concepts from related study documents,
+identify which candidates are meaningfully related to the orphan and suggest up to 3 relationships.
+ 
+Only emit relationships that are clearly meaningful for a CBSE student.
+Use types: IS_A | CAUSES | REQUIRES | PART_OF | CONTRASTS_WITH | EXAMPLE_OF | USED_FOR | FEATURE_OF | PRECEDES | EXTENSION_OF | RELATES_TO
+ 
+Respond ONLY with JSON: { "relationships": [{ "to": "name", "type": "TYPE", "confidence": 0.0-1.0 }] }`,
+                    },
+                    {
+                        role: 'user',
+                        content: `Orphan concept: "${orphan.name}"
+Definition: "${orphan.definition || 'not available'}"
+ 
+Cross-document candidates:
+${candidateSummary}
+ 
+Which candidates is "${orphan.name}" related to?`,
+                    },
+                ],
+                { jsonMode: true, temperature: 0.2 }
+            );
+
+            const result = parseLLMJson<{
+                relationships: Array<{ to: string; type: string; confidence: number }>;
+            }>(response);
+
+            for (const rel of result.relationships || []) {
+                if (!rel.to || !rel.type || rel.confidence < 0.55) continue;
+                if (rel.to.toLowerCase().trim() === orphan.name.toLowerCase().trim()) continue;
+
+                const relType = rel.type.toUpperCase().replace(/\s+/g, '_');
+
+                await runCypher(
+                    `MATCH (a:Concept {id: $fromId}), (b:Concept {userId: $userId})
+                     WHERE toLower(b.name) = toLower($toName)
+                     AND a.id <> b.id
+                     AND NOT (a)-[:${relType}]->(b)
+                     MERGE (a)-[:${relType}]->(b)`,
+                    { fromId: orphan.id, userId, toName: rel.to }
+                );
+
+                console.log(
+                    `[KG CrossLink] ${orphan.name} -[${relType}]-> ${rel.to} (conf: ${rel.confidence})`
+                );
+            }
+        } catch (err) {
+            console.warn(`[KG CrossLink] Failed for orphan "${orphan.name}":`, err);
+        }
+    }
+}
+
+// ─── CBSE subject domains used as anchor nodes ───
+const CBSE_DOMAINS = [
+    { name: 'Mathematics', keywords: ['equation', 'number', 'geometry', 'algebra', 'fraction', 'ratio', 'area', 'volume', 'angle', 'polygon', 'prime', 'integer', 'decimal', 'percentage'] },
+    { name: 'Science', keywords: ['force', 'motion', 'energy', 'matter', 'cell', 'organism', 'chemical', 'element', 'atom', 'molecule', 'magnet', 'light', 'sound', 'heat', 'electricity', 'gravity', 'photosynthesis', 'ecosystem'] },
+    { name: 'Social Studies', keywords: ['history', 'geography', 'civics', 'government', 'constitution', 'trade', 'culture', 'river', 'mountain', 'continent', 'empire', 'dynasty', 'democracy', 'resources', 'climate', 'map', 'soil'] },
+    { name: 'English', keywords: ['grammar', 'verb', 'noun', 'adjective', 'adverb', 'tense', 'sentence', 'paragraph', 'comprehension', 'vocabulary', 'synonym', 'antonym', 'pronoun', 'preposition'] },
+    { name: 'Hindi', keywords: ['संज्ञा', 'क्रिया', 'विशेषण', 'वाक्य', 'व्याकरण', 'काल'] },
+    { name: 'Computer Science', keywords: ['algorithm', 'program', 'variable', 'loop', 'function', 'data', 'network', 'internet', 'software', 'hardware', 'binary', 'database'] },
+];
+
+/**
+ * Anchors still-orphan concepts to the most relevant CBSE subject-domain
+ * :SubjectDomain node.  This is a last-resort pass that guarantees every
+ * concept has at least one edge, eliminating the "orphan node" metric.
+ *
+ * SubjectDomain nodes are shared (no userId) so they act as a common
+ * vocabulary across all students.
+ */
+async function anchorOrphansToSubjectDomain(
+    userId: string,
+    documentId: string
+): Promise<void> {
+    const orphans = await runCypher<{ id: string; name: string; definition: string }>(
+        `MATCH (c:Concept {userId: $userId, documentId: $docId})
+         WHERE NOT (c)--()
+         RETURN c.id AS id, c.name AS name, c.definition AS definition`,
+        { userId, docId: documentId }
+    );
+
+    if (orphans.length === 0) return;
+
+    console.log(`[KG Anchor] ${orphans.length} orphan(s) remaining — anchoring to subject domains`);
+
+    for (const orphan of orphans) {
+        const text = `${orphan.name} ${orphan.definition || ''}`.toLowerCase();
+
+        // Score each domain by keyword hits
+        let bestDomain = 'General Knowledge';
+        let bestScore = 0;
+
+        for (const domain of CBSE_DOMAINS) {
+            const score = domain.keywords.filter((kw) => text.includes(kw)).length;
+            if (score > bestScore) {
+                bestScore = score;
+                bestDomain = domain.name;
+            }
+        }
+
+        try {
+            // Upsert the SubjectDomain node (no userId — shared across students)
+            await runCypher(
+                `MERGE (d:SubjectDomain {name: $domain})
+                 WITH d
+                 MATCH (c:Concept {id: $conceptId})
+                 MERGE (c)-[:PART_OF]->(d)`,
+                { domain: bestDomain, conceptId: orphan.id }
+            );
+            console.log(`[KG Anchor] "${orphan.name}" -[PART_OF]-> "${bestDomain}"`);
+        } catch (err) {
+            console.warn(`[KG Anchor] Failed to anchor "${orphan.name}":`, err);
+        }
+    }
+}
+
 // ─── Step 3: Write to Neo4j ───
 
 async function writeToNeo4j(
     userId: string,
     documentId: string,
-    knowledge: ExtractedKnowledge
+    knowledge: ExtractedKnowledge & { _sourceChunk?: string }
 ): Promise<KnowledgeGraph> {
     const nodes: ConceptNode[] = [];
     const relations: ConceptRelation[] = [];
@@ -429,7 +593,8 @@ async function writeToNeo4j(
             name: concept.name,
             definition: concept.definition || '',
             userId,
-            documentId
+            documentId,
+            sourceChunk: (knowledge._sourceChunk || '').substring(0, 500),
         };
 
         // 1. Create Main Concept Node
@@ -566,7 +731,16 @@ export async function buildKnowledgeGraph(
     } catch (linkError) {
         console.error('[KG Builder] Cross-chunk linking error (non-fatal):', linkError);
     }
-
+    try {
+        await linkOrphansAcrossDocuments(userId, documentId);
+    } catch (crossLinkError) {
+        console.error('[KG Builder] Cross-document linking error (non-fatal):', crossLinkError);
+    }
+    try {
+        await anchorOrphansToSubjectDomain(userId, documentId);
+    } catch (anchorError) {
+        console.error('[KG Builder] Subject-domain anchoring error (non-fatal):', anchorError);
+    }
     return graph;
 }
 

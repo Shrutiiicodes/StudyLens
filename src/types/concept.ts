@@ -43,6 +43,7 @@ export interface ExtractedKnowledge {
         to: string;
         type: string;
     }>;
+    _sourceChunk?: string;
 }
 
 export interface DocumentValidation {
