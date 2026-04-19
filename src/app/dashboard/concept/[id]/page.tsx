@@ -42,6 +42,7 @@ interface ConceptProgress {
     mastery_score: number;
     current_stage: string;
     is_complete: boolean;
+    last_updated: string;
 }
 
 // Derive ProgressCard status from stage
@@ -96,6 +97,7 @@ export default function ConceptDetailPage() {
                         mastery_score: progressData.masteryScore ?? 0,
                         current_stage: progressData.currentStage ?? 'diagnostic',
                         is_complete: progressData.isComplete ?? false,
+                        last_updated: progressData.lastUpdated ?? undefined,
                     });
                 }
 
@@ -193,7 +195,7 @@ export default function ConceptDetailPage() {
                     title={conceptTitle}
                     mastery={mastery}
                     status={cardStatus}
-                    lastUpdated={concept?.created_at}
+                    lastUpdated={progress?.last_updated ?? concept?.created_at}
                 />
             </div>
 
