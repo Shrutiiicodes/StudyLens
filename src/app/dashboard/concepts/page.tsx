@@ -72,12 +72,15 @@ export default function ConceptsPage() {
         fetchData();
     }, []);
 
-    function needsReview(conceptId: string): boolean {
+    function getUrgency(conceptId: string): 'critical' | 'soon' | 'ok' | 'none' {
         const p = progress[conceptId];
-        if (!p?.lastUpdated) return false;
-        if (p.stage === 'complete') return false;
+        if (!p || p.score === 0 || !p.lastUpdated) return 'none';
+        if (p.stage === 'complete') return 'ok'; // completed concepts still decay but aren't urgent
         const hoursElapsed = (Date.now() - new Date(p.lastUpdated).getTime()) / (1000 * 60 * 60);
-        return hoursElapsed > 72 && p.score > 0; // 3+ days since last activity
+        const decayed = p.score * Math.exp(-0.05 * (hoursElapsed / 24));
+        if (decayed < 50) return 'critical';
+        if (decayed < 70) return 'soon';
+        return 'ok';
     }
 
     function getStageIndex(conceptId: string): number {
@@ -101,6 +104,11 @@ export default function ConceptsPage() {
             </div>
         );
     }
+
+    const urgencyOrder = { critical: 0, soon: 1, ok: 2, none: 3 };
+    const sortedConcepts = [...concepts].sort(
+        (a, b) => urgencyOrder[getUrgency(a.id)] - urgencyOrder[getUrgency(b.id)]
+    );
 
     return (
         <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
@@ -126,7 +134,7 @@ export default function ConceptsPage() {
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {concepts.map((concept) => {
+                    {sortedConcepts.map((concept) => {
                         const currentStageIdx = getStageIndex(concept.id);
                         const p = progress[concept.id];
                         const isComplete = p?.stage === 'complete';
@@ -173,20 +181,21 @@ export default function ConceptsPage() {
                                                     </span>
                                                 )}
                                                 {/* Fix 15: needs review badge */}
-                                                {needsReview(concept.id) && (
+                                                {(getUrgency(concept.id) === 'critical' || getUrgency(concept.id) === 'soon') && (
                                                     <span style={{
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
                                                         gap: '3px',
                                                         fontSize: '0.72rem',
                                                         fontWeight: 600,
-                                                        color: '#f59e0b',
-                                                        background: 'rgba(245,158,11,0.1)',
-                                                        border: '1px solid rgba(245,158,11,0.3)',
+                                                        color: getUrgency(concept.id) === 'critical' ? '#ef4444' : '#f59e0b',
+                                                        background: getUrgency(concept.id) === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                                                        border: `1px solid ${getUrgency(concept.id) === 'critical' ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
                                                         padding: '2px 7px',
                                                         borderRadius: '100px',
                                                     }}>
-                                                        <Clock size={10} /> Review due
+                                                        <Clock size={10} />
+                                                        {getUrgency(concept.id) === 'critical' ? 'Review now' : 'Review soon'}
                                                     </span>
                                                 )}
                                             </div>

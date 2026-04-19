@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import ReviewQueue from '@/components/ReviewQueue';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -12,6 +11,7 @@ import {
     ClipboardList,
     Rocket,
     Brain,
+    Clock,
 } from 'lucide-react';
 
 interface ConceptRecord {
@@ -26,6 +26,14 @@ export default function DashboardPage() {
     const [concepts, setConcepts] = useState<ConceptRecord[]>([]);
     const [stats, setStats] = useState<{ testsTaken: number; } | null>(null);
     const [loading, setLoading] = useState(true);
+    const [masteryMap, setMasteryMap] = useState<Array<{
+        concept_id: string;
+        concept_title: string;
+        current_mastery: number;
+        needs_review: boolean;
+        last_updated: string;
+        hours_since_update: number;
+    }>>([]);
     const router = useRouter();
 
     useEffect(() => {
@@ -36,11 +44,12 @@ export default function DashboardPage() {
 
             const fetchConcepts = fetch(`/api/concepts?userId=${parsed.id}`, { cache: 'no-store' }).then((res) => res.json());
             const fetchStats = fetch(`/api/user/stats?userId=${parsed.id}`, { cache: 'no-store' }).then((res) => res.json());
-
-            Promise.all([fetchConcepts, fetchStats])
-                .then(([conceptsData, statsData]) => {
+            const fetchMastery = fetch(`/api/mastery?userId=${parsed.id}`, { cache: 'no-store' }).then((res) => res.json());
+            Promise.all([fetchConcepts, fetchStats, fetchMastery])
+                .then(([conceptsData, statsData, masteryData]) => {
                     if (conceptsData.success && conceptsData.concepts) setConcepts(conceptsData.concepts);
                     if (statsData.success && statsData.stats) setStats(statsData.stats);
+                    if (masteryData.success && masteryData.conceptMastery) setMasteryMap(masteryData.conceptMastery);
                 })
                 .catch(console.error)
                 .finally(() => setLoading(false));
@@ -48,6 +57,9 @@ export default function DashboardPage() {
             setLoading(false);
         }
     }, []);
+    const reviewDue = masteryMap
+        .filter(m => m.needs_review && m.current_mastery > 0)
+        .sort((a, b) => b.hours_since_update - a.hours_since_update); // most overdue first
 
     return (
         <div className="animate-fade-in">
@@ -60,7 +72,53 @@ export default function DashboardPage() {
                     Here&apos;s your learning progress overview
                 </p>
             </div>
-
+            {reviewDue.length > 0 && (
+                <div style={{
+                    marginBottom: '24px',
+                    padding: '16px 20px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(245,158,11,0.08)',
+                    border: '1px solid rgba(245,158,11,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                    flexWrap: 'wrap',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Clock size={20} color="#f59e0b" style={{ flexShrink: 0 }} />
+                        <div>
+                            <p style={{ fontWeight: 600, margin: 0, fontSize: '0.95rem' }}>
+                                {reviewDue.length} concept{reviewDue.length > 1 ? 's' : ''} need review
+                            </p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '2px 0 0' }}>
+                                Your mastery is decaying — reinforce before it drops further
+                            </p>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {reviewDue.slice(0, 3).map(m => (
+                            <Link
+                                key={m.concept_id}
+                                href={`/dashboard/test/${m.concept_id}?mode=practice&title=${encodeURIComponent(m.concept_title)}`}
+                                style={{
+                                    textDecoration: 'none',
+                                    padding: '6px 14px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    background: 'rgba(245,158,11,0.15)',
+                                    border: '1px solid rgba(245,158,11,0.3)',
+                                    color: '#f59e0b',
+                                    fontSize: '0.82rem',
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {m.concept_title}
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
             {/* Stats Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
                 {/* Documents */}
@@ -164,7 +222,6 @@ export default function DashboardPage() {
                     </div>
                 )}
             </div>
-            {user && <ReviewQueue userId={user.id} />}
         </div>
     );
 }
