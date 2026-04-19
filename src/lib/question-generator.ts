@@ -279,7 +279,7 @@ export async function generateQuestionsForMode(
     currentMastery: number = 50,
     userId?: string
 ): Promise<Question[]> {
-    const context = await getConceptContext(conceptId);
+    let context = await getConceptContext(conceptId);
     let count = getQuestionCount(context, mode);
     const questions: Question[] = [];
 
@@ -345,6 +345,28 @@ export async function generateQuestionsForMode(
 
     // ── Generate main session questions ───────────────────────────────────
     const configs = getConfigsForMode(mode, count, currentMastery);
+
+    if (mode === 'mastery' && userId) {
+        // Fetch up to 3 of this user's past incorrect answers for this concept
+        const { data: weakSpots } = await supabase
+            .from('attempts')
+            .select('question_text, correct_answer')
+            .eq('user_id', userId)
+            .eq('concept_id', conceptId)
+            .eq('correct', false)
+            .not('question_text', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(3);
+
+        if (weakSpots && weakSpots.length > 0) {
+            // Add them as additional context to the first question's prompt
+            // by appending to the context string
+            const weakSpotContext = weakSpots
+                .map(w => `Previously missed: "${w.question_text}" — correct answer: "${w.correct_answer}"`)
+                .join('\n');
+            context = context + '\n\n[REINFORCE THESE GAPS]\n' + weakSpotContext;
+        }
+    }
 
     for (let i = 0; i < configs.length; i++) {
         try {

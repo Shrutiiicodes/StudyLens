@@ -288,7 +288,7 @@ export default function TestPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [results, setResults] = useState<Array<{ correct: boolean; timeTaken: number; confidence: number }>>([]);
+    const [results, setResults] = useState<Array<{ correct: boolean; timeTaken: number; confidence: number; selectedAnswer: string }>>([]);
     const [showResult, setShowResult] = useState(false);
     const [testComplete, setTestComplete] = useState(false);
     const [conceptTitle, setConceptTitle] = useState('');
@@ -353,7 +353,7 @@ export default function TestPage() {
         // QuestionCard passes the selected answer string; derive correctness here
         const currentQuestion = questions[currentIndex];
         const correct = answer === currentQuestion?.correct_answer;
-        setResults((prev) => [...prev, { correct, timeTaken, confidence }]);
+        setResults((prev) => [...prev, { correct, timeTaken, confidence, selectedAnswer: answer }]);
         setShowResult(true);
     };
 
@@ -378,6 +378,10 @@ export default function TestPage() {
                         time_taken: results[i]?.timeTaken ?? 0,
                         confidence: results[i]?.confidence ?? 0.5,
                         concept_id: q.concept_id,
+                        question_text: q.text,
+                        selected_answer: results[i]?.selectedAnswer ?? '',
+                        correct_answer: q.correct_answer,
+                        explanation: q.explanation,
                     }));
 
                     const evalRes = await fetch('/api/diagnostic', {

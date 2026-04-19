@@ -45,6 +45,10 @@ export interface QuestionResult {
     confidence: number;
     concept_id?: string;
     question_type?: QuestionType;
+    question_text?: string;
+    selected_answer?: string;
+    correct_answer?: string;
+    explanation?: string;
 }
 
 export interface DifficultyDistribution {

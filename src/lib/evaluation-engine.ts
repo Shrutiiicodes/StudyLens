@@ -162,12 +162,7 @@ export async function evaluateDiagnostic(
     }));
 
     // ── 6. Compute all metrics ────────────────────────────────────────────
-    const sessionMetrics = computeAllSessionMetrics(
-        attemptResults,
-        score,
-        preMastery,
-        postMastery,
-    );
+    const sessionMetrics = computeAllSessionMetrics(attemptResults, score, preMastery, postMastery);
 
     // ── 7. Create session record ──────────────────────────────────────────
     const { data: sessionData, error: sessionError } = await supabase
@@ -248,6 +243,10 @@ export async function evaluateDiagnostic(
             mode: mode === 'spaced' ? 'practice' : mode,
             is_spaced_review: mode === 'spaced' || (result.concept_id != null && result.concept_id !== conceptId),
             session_id: sessionId,
+            question_text: result.question_text,
+            selected_answer: result.selected_answer,
+            correct_answer: result.correct_answer,
+            explanation: result.explanation,
         });
     }
 
@@ -425,6 +424,10 @@ async function storeAttempt(
         confidence: submission.confidence,
         difficulty_param: round4(currentIRT.difficulty_param),
         student_theta: round4(theta),
+        question_text: question.text,
+        selected_answer: submission.selected_answer,
+        correct_answer: question.correct_answer,
+        explanation: question.explanation,
     });
 
     const updatedIRT = updateIRTState(currentIRT, currentMastery, correct);
