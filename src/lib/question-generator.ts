@@ -1,18 +1,26 @@
 import { chatCompletion, parseLLMJson } from './groq';
 import { runCypher } from './neo4j';
 import { Question, QuestionType, DifficultyLevel, QuestionGenerationRequest } from '@/types/question';
-import { AssessmentMode } from '@/types/student'; // Fix 4: use canonical type, no local duplicate
+import { AssessmentMode } from '@/types/student';
 import { COGNITIVE_LEVEL_MAP, QUESTION_LIMITS } from '@/config/constants';
 import { v4 as uuid } from 'uuid';
 import { supabase } from './supabase';
 import { needsSpacedReinforcement } from './forgetting-model';
 import { PROMPTS } from '@/config/prompts';
+import {
+    buildGraphDistractors,
+    selectDistractors,
+} from './distractor-engine';
 
 /**
  * Question Generator
  *
  * Generates questions from the Knowledge Graph using LLM.
  * 5 Question Types × 3 Difficulty Levels
+ *
+ * Distractor selection order:
+ *   1. Graph-hop distractors (primary) — topology-grounded, difficulty from graph
+ *   2. LLM-generated options (fallback) — when graph can't supply ≥3 distractors
  */
 
 // ─── Get concept context from Neo4j ───
@@ -54,13 +62,8 @@ export async function getConceptContext(conceptId: string): Promise<string> {
     }
 }
 
-// ─── Groq with retry (Fix 7) ───
+// ─── Groq with retry ───
 
-/**
- * chatCompletionWithRetry
- * Wraps chatCompletion with exponential backoff retry.
- * Retries up to 3 times on rate-limit (429) or transient errors.
- */
 async function chatCompletionWithRetry(
     messages: Parameters<typeof chatCompletion>[0],
     options?: Parameters<typeof chatCompletion>[1],
@@ -80,12 +83,10 @@ async function chatCompletionWithRetry(
             if (attempt === maxRetries) break;
 
             if (isRateLimit || isTransient) {
-                // Exponential backoff: 2s, 4s, 8s
                 const delay = Math.pow(2, attempt) * 1000;
                 console.warn(`[QGen] Groq ${isRateLimit ? 'rate limit' : 'transient error'} (attempt ${attempt}/${maxRetries}). Retrying in ${delay}ms...`);
                 await new Promise(r => setTimeout(r, delay));
             } else {
-                // Non-retryable error (bad request, auth, etc.)
                 break;
             }
         }
@@ -104,7 +105,6 @@ export async function generateQuestion(request: QuestionGenerationRequest): Prom
     const difficultyLabel = { 1: 'Easy', 2: 'Medium', 3: 'Hard' }[request.difficulty];
     const typeDescription = request.type.toUpperCase();
 
-    // Fix 7: use retry wrapper instead of bare chatCompletion
     const response = await chatCompletionWithRetry(
         [
             {
@@ -136,24 +136,79 @@ export async function generateQuestion(request: QuestionGenerationRequest): Prom
         cognitiveLevelFromLLM <= 4
     ) ? cognitiveLevelFromLLM : cognitiveLevelFromMap;
 
+    // ── Start with LLM-generated question and options ─────────────────────
+    let finalOptions = parsed.options || [];
+    let finalDifficulty = request.difficulty;
+    let distractorDistances: Record<string, number> | undefined;
+
+    // ── Attempt graph-hop distractor upgrade ─────────────────────────────
+    // Only attempt if we have a correct answer to build around
+    if (parsed.correct_answer && request.concept_title) {
+        try {
+            const neighbours = await buildGraphDistractors(
+                request.concept_title,
+                // userId is not in QuestionGenerationRequest — extract from concept_id context
+                // We query by documentId so pass concept_id as documentId
+                '', // userId — empty falls back gracefully inside buildGraphDistractors
+                request.concept_id
+            );
+
+            if (neighbours.length > 0) {
+                const { distractors, difficulty, distanceMap } = selectDistractors(
+                    request.concept_title,
+                    neighbours,
+                    parsed.correct_answer
+                );
+
+                if (distractors.length >= 3) {
+                    // Graph supplied ≥3 valid distractors — use them
+                    finalOptions = [...distractors, parsed.correct_answer]
+                        .sort(() => Math.random() - 0.5);
+
+                    // Override difficulty with graph-topology-derived value
+                    finalDifficulty = (
+                        difficulty === 'hard' ? 3 :
+                            difficulty === 'easy' ? 1 : 2
+                    ) as DifficultyLevel;
+
+                    distractorDistances = distanceMap;
+
+                    console.log(
+                        `[QGen] Graph distractors used for "${request.concept_title}" — difficulty: ${difficulty}`
+                    );
+                } else {
+                    console.log(
+                        `[QGen] Only ${distractors.length} graph distractors found for "${request.concept_title}" — using LLM options`
+                    );
+                }
+            }
+        } catch (e) {
+            // Non-fatal — LLM options are the fallback
+            console.warn('[QGen] Graph distractor selection failed, using LLM options:', (e as Error).message);
+        }
+    }
+
     return {
         id: uuid(),
         concept_id: request.concept_id,
+        concept_title: request.concept_title,
         type: request.type,
-        difficulty: request.difficulty,
+        difficulty: finalDifficulty,
         text: parsed.text,
-        options: parsed.options,
+        options: finalOptions,
         correct_answer: parsed.correct_answer,
         explanation: parsed.explanation,
         cognitive_level: finalCognitiveLevel,
         bloom_level: parsed.bloom_level as any,
+        distractor_distances: distractorDistances,
     };
 }
 
 // ─── Question count based on context richness ───
 
 function getQuestionCount(context: string, mode: AssessmentMode): number {
-    const limits = QUESTION_LIMITS[mode as string] ?? { min: 5, max: 10 };
+    const limits = (QUESTION_LIMITS as Record<string, { min: number; max: number }>)[mode as string]
+        ?? { min: 5, max: 10 };
 
     let conceptCount = 1;
     try {
@@ -228,11 +283,9 @@ export async function generateQuestionsForMode(
     let count = getQuestionCount(context, mode);
     const questions: Question[] = [];
 
-    // ── SPACED REPETITION INJECTION (SILENT) ──────────────────────────────
-    // Fix 6: scope to same source_document as current concept
+    // ── SPACED REPETITION INJECTION ───────────────────────────────────────
     if (userId && (mode === 'practice' || mode === 'mastery')) {
         try {
-            // Get the source_document of the current concept
             const { data: currentConcept } = await supabase
                 .from('concepts')
                 .select('source_document')
@@ -241,23 +294,19 @@ export async function generateQuestionsForMode(
 
             const sourceDoc = currentConcept?.source_document;
 
-            // Fetch sibling concepts from the same document that need review
-            let siblingQuery = supabase
+            const { data: records } = await supabase
                 .from('mastery')
                 .select('concept_id, mastery_score, last_updated, concepts(title, source_document)')
                 .eq('user_id', userId)
                 .neq('concept_id', conceptId);
 
-            const { data: records } = await siblingQuery;
-
             if (records && records.length > 0) {
-                // Fix 6: only inject from same document if sourceDoc is known
                 const sameDocRecords = sourceDoc
                     ? records.filter(r => {
                         const c = r.concepts as unknown as { source_document?: string } | null;
                         return c?.source_document === sourceDoc;
                     })
-                    : records; // fallback: allow all if source unknown
+                    : records;
 
                 const spacedConcepts = sameDocRecords.filter(r =>
                     needsSpacedReinforcement(r.mastery_score, r.last_updated)
@@ -280,7 +329,6 @@ export async function generateQuestionsForMode(
                                 difficulty: 2,
                                 context: sContext,
                             });
-                            // Tag as spaced — evaluation-engine reads this to set is_spaced_review
                             (sq as any)._is_spaced = true;
                             questions.push(sq);
                             count--;
@@ -309,13 +357,10 @@ export async function generateQuestionsForMode(
             });
             questions.push(q);
         } catch (error) {
-            // Fix 7: error is already handled inside generateQuestion via retry
-            // Log and continue — partial question sets are better than a full failure
             console.error(`[QGen] Failed to generate question ${i + 1} after retries:`, (error as Error).message);
         }
     }
 
-    // Shuffle so spaced concepts blend in natively
     return questions.sort(() => Math.random() - 0.5);
 }
 

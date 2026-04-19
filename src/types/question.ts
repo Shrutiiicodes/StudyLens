@@ -1,6 +1,7 @@
 export type QuestionType = 'recall' | 'conceptual' | 'application' | 'reasoning' | 'analytical';
 export type DifficultyLevel = 1 | 2 | 3;
 export type BloomLevel = 'Remember' | 'Understand' | 'Apply' | 'Analyze';
+
 export interface Question {
     id: string;
     concept_id: string;
@@ -12,6 +13,9 @@ export interface Question {
     explanation: string;
     cognitive_level: number; // 1-4
     bloom_level: BloomLevel;
+    // ── Graph-distractor fields (set when graph distractors are used) ──
+    distractor_distances?: Record<string, number>; // { optionText: hopDistance }
+    concept_title?: string;                        // used by misconception analysis
 }
 
 export interface QuestionGenerationRequest {
@@ -45,4 +49,13 @@ export interface AnswerResult {
     explanation: string;
     mastery_delta: number;
     new_mastery: number;
+    // ── Misconception analysis (present when graph analysis ran) ──
+    misconception?: {
+        severity: 'CORRECT' | 'CLOSE' | 'PARTIAL' | 'CRITICAL';
+        misconceptionLabel: string;
+        gapDescription: string;
+        correctExplanation: string;
+        hint: string;
+        kgPath: string[];
+    };
 }

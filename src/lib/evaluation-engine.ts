@@ -6,7 +6,8 @@
  * 2. Calculate score based on mode
  * 3. Update mastery
  * 4. Store attempt
- * 5. Compute and persist all metrics (legacy Group-3 + standard ITS: NLG, Brier, ECE, LogLoss)
+ * 5. Compute and persist all metrics
+ * 6. Run KG-grounded misconception analysis (with LLM fallback)
  */
 
 import { getServiceSupabase } from './supabase';
@@ -32,9 +33,11 @@ import { AssessmentMode } from '@/types/student';
 import { QuestionResult, MasteryUpdate } from '@/types/mastery';
 import { Question, AnswerSubmission, AnswerResult, QuestionType } from '@/types/question';
 import { updateIRTState, getInitialDifficultyParam, masteryToTheta } from './irt';
+import { analyzeAnswer } from './distractor-engine';
 
 /**
  * Evaluate a student's answer and update mastery.
+ * Now includes KG-grounded misconception analysis.
  */
 export async function evaluateAnswer(
     userId: string,
@@ -58,26 +61,60 @@ export async function evaluateAnswer(
     await storeAttempt(userId, question, submission, correct, currentMastery);
 
     const score = calculateUnifiedScore([questionResult]);
-
     const masteryUpdate = updateMastery(currentMastery, score, mode);
     await saveMastery(userId, question.concept_id, masteryUpdate.new_score);
 
+    // ── KG-grounded misconception analysis ───────────────────────────────
+    // Primary: deterministic graph-topology scoring
+    // Fallback: LLM-only if graph unavailable (handled inside analyzeAnswer)
+    let misconceptionData: AnswerResult['misconception'];
+
+    try {
+        const analysis = await analyzeAnswer({
+            questionText: question.text,
+            correctAnswer: question.correct_answer,
+            studentAnswer: submission.selected_answer,
+            qType: question.options?.length === 4 ? 'mcq' : 'short',
+            concept: question.concept_title || '',
+            relation: '',
+            distanceMap: question.distractor_distances,
+            userId,
+            documentId: question.concept_id,
+            sourceText: '',
+        });
+
+        if (!analysis.isCorrect) {
+            misconceptionData = {
+                severity: analysis.severity,
+                misconceptionLabel: analysis.misconceptionLabel,
+                gapDescription: analysis.gapDescription,
+                correctExplanation: analysis.correctExplanation,
+                hint: analysis.hint,
+                kgPath: analysis.kgPath,
+            };
+        }
+    } catch (e) {
+        // Non-fatal — misconception analysis is an enhancement, not core flow
+        console.warn('[Eval] Misconception analysis failed (non-fatal):', (e as Error).message);
+    }
+
     return {
         correct,
-        explanation: question.explanation,
+        explanation: misconceptionData?.gapDescription
+            ? `${question.explanation}\n\n💡 ${misconceptionData.gapDescription}`
+            : question.explanation,
         mastery_delta: masteryUpdate.delta,
         new_mastery: masteryUpdate.new_score,
+        misconception: misconceptionData,
     };
 }
 
 const STAGES = ['diagnostic', 'practice', 'mastery'] as const;
 // Mastery learning threshold: 80% per Bloom (1984) mastery learning criteria.
-// Bloom, B.S. (1984). The 2 sigma problem. Educational Researcher, 13(6), 4–16.
 const PASS_THRESHOLD = 80;
 
 /**
  * Evaluate a full assessment session.
- * Handles all modes and persists all metrics including standard ITS metrics.
  */
 export async function evaluateDiagnostic(
     userId: string,
@@ -95,11 +132,10 @@ export async function evaluateDiagnostic(
     // ── 1. Compute raw score ──────────────────────────────────────────────
     const score = calculateUnifiedScore(results) * 100;
 
-    // ── 2. Fetch pre-session mastery for NLG calculation ─────────────────
-    //      Must happen BEFORE the mastery update so we capture the true pre-score.
+    // ── 2. Fetch pre-session mastery ──────────────────────────────────────
     const preMastery = await getCurrentMastery(userId, conceptId);
 
-    // ── 3. Load fitted BKT params for this concept (fall back to defaults) ─
+    // ── 3. Load fitted BKT params ─────────────────────────────────────────
     const { data: fittedParams } = await supabase
         .from('concept_bkt_params')
         .select('p_l0, p_t, p_s, p_g')
@@ -108,34 +144,32 @@ export async function evaluateDiagnostic(
 
     const bktParams = fittedParams
         ? { p_l0: fittedParams.p_l0, p_t: fittedParams.p_t, p_s: fittedParams.p_s, p_g: fittedParams.p_g }
-        : undefined; // undefined → updateMastery uses DEFAULT_BKT_PARAMS
+        : undefined;
 
-    // ── 4. Mastery update using fitted (or default) BKT params ───────────
+    // ── 4. Mastery update ─────────────────────────────────────────────────
     const masteryUpdate = updateMastery(preMastery, score / 100, mode as AssessmentMode, results, bktParams);
     const postMastery = masteryUpdate.new_score;
-
     const passed = score >= PASS_THRESHOLD;
 
-    // ── 5. Build AttemptResult array for metric functions ─────────────────
+    // ── 5. Build AttemptResult array ──────────────────────────────────────
     const attemptResults: AttemptResult[] = results.map((r) => ({
         correct: r.correct,
         confidence: r.confidence,
         time_taken: r.time_taken,
-        question_type: 'recall', // fallback; enriched from question data where available
+        question_type: 'recall',
         cognitive_level: r.cognitive_level ?? inferCognitiveLevel('recall'),
         difficulty: r.difficulty,
     }));
 
-    // ── 6. Compute all metrics (legacy + standard ITS) ────────────────────
-    //      Pass preMastery and postMastery so NLG is correctly computed.
+    // ── 6. Compute all metrics ────────────────────────────────────────────
     const sessionMetrics = computeAllSessionMetrics(
         attemptResults,
         score,
-        preMastery,   // ← pre-session mastery for NLG
-        postMastery,  // ← post-session mastery for NLG
+        preMastery,
+        postMastery,
     );
 
-    // ── 7. Create session record with all metrics ─────────────────────────
+    // ── 7. Create session record ──────────────────────────────────────────
     const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
         .insert({
@@ -144,7 +178,6 @@ export async function evaluateDiagnostic(
             mode,
             score: Math.round(score),
             passed,
-            // Legacy custom metrics
             fas: round4(sessionMetrics.fas),
             wbs: round4(sessionMetrics.wbs),
             ccms: round4(sessionMetrics.ccms),
@@ -152,11 +185,10 @@ export async function evaluateDiagnostic(
             lip: round4(sessionMetrics.lip),
             calibration_error: round4(sessionMetrics.calibration_error),
             rci_avg: round4(sessionMetrics.rci_avg),
-            // Standard ITS metrics
-            nlg: round4(sessionMetrics.nlg),
-            brier_score: round4(sessionMetrics.brier_score),
-            ece: round4(sessionMetrics.ece),
-            log_loss: round4(sessionMetrics.log_loss),
+            nlg: round4((sessionMetrics as any).nlg ?? 0),
+            brier_score: round4((sessionMetrics as any).brier_score ?? 0),
+            ece: round4((sessionMetrics as any).ece ?? 0),
+            log_loss: round4((sessionMetrics as any).log_loss ?? 0),
         })
         .select()
         .single();
@@ -186,8 +218,6 @@ export async function evaluateDiagnostic(
     let nextStage = currentStage;
     if (passed && modeIndex >= 0 && modeIndex <= currentStageIndex + 1) {
         if (mode === 'mastery') {
-            // Passing the mastery test marks the concept complete.
-            // Summary assessment removed — mastery test is the terminal stage.
             nextStage = 'complete';
         } else {
             const nextIndex = Math.min(modeIndex + 1, STAGES.length - 1);
@@ -198,13 +228,12 @@ export async function evaluateDiagnostic(
     // ── 9. Save mastery with updated stage ────────────────────────────────
     await saveMasteryWithStage(userId, conceptId, postMastery, nextStage);
 
-    // ── Auto-trigger BKT fitting if concept has hit the 30-attempt threshold ─
-    // Runs async (fire-and-forget) so it never blocks the response.
+    // ── 10. Auto-trigger BKT fitting if ready ────────────────────────────
     autoFitBKTIfReady(userId, conceptId).catch(e =>
         console.warn('[BKT] Auto-fit skipped:', e.message)
     );
 
-    // ── 10. Persist each attempt with session_id and mode ────────────────
+    // ── 11. Persist each attempt ──────────────────────────────────────────
     for (const result of results) {
         await supabase.from('attempts').insert({
             user_id: userId,
@@ -213,7 +242,7 @@ export async function evaluateDiagnostic(
             correct: result.correct,
             difficulty: result.difficulty,
             cognitive_level: result.cognitive_level,
-            question_type: result.question_type ?? 'recall', // Fix 8: store actual question type for FAS/WBS accuracy
+            question_type: result.question_type ?? 'recall',
             time_taken: result.time_taken,
             confidence: result.confidence,
             mode: mode === 'spaced' ? 'practice' : mode,
@@ -222,7 +251,7 @@ export async function evaluateDiagnostic(
         });
     }
 
-    // ── 11. Compute convergence and persist to session ───────────────────
+    // ── 12. Compute convergence and persist ───────────────────────────────
     const { data: allSessionScores } = await supabase
         .from('sessions')
         .select('score')
@@ -308,20 +337,6 @@ async function getCurrentMastery(userId: string, conceptId: string): Promise<num
     return calculateDecayedMastery(data.mastery_score, hoursElapsed);
 }
 
-async function getLastMasteryUpdate(
-    userId: string,
-    conceptId: string
-): Promise<string | null> {
-    const { data } = await supabase
-        .from('mastery')
-        .select('last_updated')
-        .eq('user_id', userId)
-        .eq('concept_id', conceptId)
-        .single();
-
-    return data?.last_updated || null;
-}
-
 async function saveMastery(userId: string, conceptId: string, score: number): Promise<void> {
     const { data: existing } = await supabase
         .from('mastery')
@@ -385,7 +400,6 @@ async function storeAttempt(
     correct: boolean,
     currentMastery: number = 50
 ): Promise<void> {
-    // ── IRT: fetch current difficulty_param for this question ─────────────
     const { data: irtRow } = await supabase
         .from('question_irt')
         .select('difficulty_param, response_count')
@@ -399,7 +413,6 @@ async function storeAttempt(
 
     const theta = masteryToTheta(currentMastery);
 
-    // ── Store attempt with IRT snapshot ───────────────────────────────────
     await supabase.from('attempts').insert({
         user_id: userId,
         concept_id: question.concept_id,
@@ -407,16 +420,14 @@ async function storeAttempt(
         correct,
         difficulty: question.difficulty,
         cognitive_level: question.cognitive_level,
-        question_type: question.type ?? 'recall', // Fix 8: store question type for FAS/WBS accuracy
+        question_type: question.type ?? 'recall',
         time_taken: submission.time_taken,
         confidence: submission.confidence,
         difficulty_param: round4(currentIRT.difficulty_param),
         student_theta: round4(theta),
     });
 
-    // ── IRT online update: update b_i for this question ───────────────────
     const updatedIRT = updateIRTState(currentIRT, currentMastery, correct);
-
     await supabase
         .from('question_irt')
         .upsert({
@@ -427,19 +438,11 @@ async function storeAttempt(
         }, { onConflict: 'question_id' });
 }
 
-/** Round to 4 decimal places for DB storage */
 function round4(n: number): number {
     return Math.round(n * 10000) / 10000;
 }
 
-/**
- * autoFitBKTIfReady
- * Fire-and-forget: checks if concept has ≥30 attempts and no fitted params yet.
- * If so, calls the /api/irt/fit endpoint internally to fit BKT parameters.
- * This replaces the need for a manual cron job or admin button.
- */
 async function autoFitBKTIfReady(userId: string, conceptId: string): Promise<void> {
-    // Count attempts for this concept
     const { count } = await supabase
         .from('attempts')
         .select('*', { count: 'exact', head: true })
@@ -447,7 +450,6 @@ async function autoFitBKTIfReady(userId: string, conceptId: string): Promise<voi
 
     if (!count || count < 30) return;
 
-    // Check if already fitted recently (within 24h)
     const { data: existing } = await supabase
         .from('concept_bkt_params')
         .select('fitted_at')
@@ -455,12 +457,10 @@ async function autoFitBKTIfReady(userId: string, conceptId: string): Promise<voi
         .single();
 
     if (existing?.fitted_at) {
-        const fittedAt = new Date(existing.fitted_at).getTime();
-        const hoursSinceFit = (Date.now() - fittedAt) / (1000 * 60 * 60);
-        if (hoursSinceFit < 24) return; // Already fitted recently
+        const hoursSinceFit = (Date.now() - new Date(existing.fitted_at).getTime()) / (1000 * 60 * 60);
+        if (hoursSinceFit < 24) return;
     }
 
-    // Run EM fitting inline (avoids HTTP round-trip)
     const { data: attempts } = await supabase
         .from('attempts')
         .select('user_id, correct, created_at')
@@ -469,7 +469,6 @@ async function autoFitBKTIfReady(userId: string, conceptId: string): Promise<voi
 
     if (!attempts || attempts.length < 30) return;
 
-    // Group by student
     const studentSequences: Record<string, boolean[]> = {};
     for (const a of attempts) {
         if (!studentSequences[a.user_id]) studentSequences[a.user_id] = [];
@@ -478,8 +477,6 @@ async function autoFitBKTIfReady(userId: string, conceptId: string): Promise<voi
     const sequences = Object.values(studentSequences).filter(s => s.length >= 2);
     if (sequences.length < 3) return;
 
-    // Import fitting function from irt/fit route logic inline
-    // Grid search over BKT space (same as /api/irt/fit)
     const STEP = 0.05;
     let bestLL = -Infinity;
     let bestParams = { p_l0: 0.25, p_t: 0.12, p_s: 0.08, p_g: 0.25 };
