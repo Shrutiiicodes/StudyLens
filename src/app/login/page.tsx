@@ -314,7 +314,7 @@ export default function LoginPage() {
                         className="btn-secondary"
                         onClick={() => {
                             const demoUser = {
-                                id: '00000000-0000-0000-0000-000000000001',
+                                id: 'bb3317b9-3b9c-4928-ab47-4376f5cd9112',
                                 email: 'demo@studylens.com',
                                 full_name: 'Demo Student',
                                 grade: 7,

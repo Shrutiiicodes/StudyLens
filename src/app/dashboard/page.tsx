@@ -3,19 +3,15 @@
 import { useState, useEffect } from 'react';
 import ReviewQueue from '@/components/ReviewQueue';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
     FileText,
     Target,
-    BarChart,
     BookOpen,
     Book,
     ClipboardList,
     Rocket,
     Brain,
-    Search,
-    TrendingUp,
-    TrendingDown,
-    Minus,
 } from 'lucide-react';
 
 interface ConceptRecord {
@@ -25,20 +21,12 @@ interface ConceptRecord {
     created_at: string;
 }
 
-// SAI tier thresholds and labels for Fix 14
-function getSAIContext(sai: number): { label: string; color: string; description: string } {
-    if (sai >= 80) return { label: 'Expert', color: 'var(--accent-success)', description: 'Exceptional mastery across concepts' };
-    if (sai >= 65) return { label: 'Proficient', color: '#06b6d4', description: 'Strong understanding with good retention' };
-    if (sai >= 45) return { label: 'Developing', color: 'var(--accent-primary)', description: 'Building solid foundations' };
-    if (sai >= 25) return { label: 'Beginner', color: '#f59e0b', description: 'Early stages of mastery' };
-    return { label: 'Starting', color: 'var(--text-muted)', description: 'Complete more tests to build your index' };
-}
-
 export default function DashboardPage() {
     const [user, setUser] = useState<{ id: string; full_name: string; grade: number } | null>(null);
     const [concepts, setConcepts] = useState<ConceptRecord[]>([]);
-    const [stats, setStats] = useState<{ testsTaken: number; abilityIndex: number } | null>(null);
+    const [stats, setStats] = useState<{ testsTaken: number; } | null>(null);
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         const stored = localStorage.getItem('study-lens-user');
@@ -60,9 +48,6 @@ export default function DashboardPage() {
             setLoading(false);
         }
     }, []);
-
-    const sai = stats?.abilityIndex ?? 0;
-    const saiCtx = getSAIContext(sai);
 
     return (
         <div className="animate-fade-in">
@@ -101,39 +86,6 @@ export default function DashboardPage() {
                         <Target size={24} />
                     </div>
                 </div>
-
-                {/* SAI — Fix 14: with tier label + description */}
-                <div className="stat-card" style={{ position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'var(--gradient-secondary)' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ flex: 1 }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '4px' }}>
-                                Student Ability Index
-                            </p>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
-                                <p style={{ fontSize: '1.8rem', fontWeight: 700 }}>{sai}</p>
-                                <span style={{
-                                    fontSize: '0.75rem',
-                                    fontWeight: 700,
-                                    color: saiCtx.color,
-                                    background: `${saiCtx.color}18`,
-                                    border: `1px solid ${saiCtx.color}30`,
-                                    padding: '2px 8px',
-                                    borderRadius: '100px',
-                                }}>
-                                    {saiCtx.label}
-                                </span>
-                            </div>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
-                                {saiCtx.description}
-                            </p>
-                            <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px', opacity: 0.7 }}>
-                                Combines mastery, trend, accuracy & calibration (0–100)
-                            </p>
-                        </div>
-                        <BarChart size={24} style={{ flexShrink: 0 }} />
-                    </div>
-                </div>
             </div>
 
             {/* Concepts Section */}
@@ -165,10 +117,10 @@ export default function DashboardPage() {
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                         {concepts.slice(0, 6).map((concept) => (
-                            <Link
+                            <div
                                 key={concept.id}
-                                href={`/dashboard/concept/${concept.id}?title=${encodeURIComponent(concept.title)}`}
-                                style={{ textDecoration: 'none' }}
+                                style={{ textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() => router.push(`/dashboard/concept/${concept.id}?title=${encodeURIComponent(concept.title)}`)}
                             >
                                 <div className="glass-card" style={{ padding: '20px', cursor: 'pointer', transition: 'transform 0.15s ease' }}
                                     onMouseOver={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
@@ -199,7 +151,7 @@ export default function DashboardPage() {
                                         </Link>
                                     </div>
                                 </div>
-                            </Link>
+                            </div>
                         ))}
                     </div>
                 )}

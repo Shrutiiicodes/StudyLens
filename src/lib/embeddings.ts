@@ -82,6 +82,8 @@ export function chunkText(
     maxTokens: number = 800,
     overlapTokens: number = 50
 ): string[] {
+    if (!text || text.trim().length === 0) return [];
+
     const charPerToken = 4;
     const minChars = minTokens * charPerToken;
     const maxChars = maxTokens * charPerToken;
@@ -104,8 +106,17 @@ export function chunkText(
             }
         }
 
-        chunks.push(text.slice(start, end).trim());
-        start = end - overlapChars;
+        const chunk = text.slice(start, end).trim();
+        if (chunk.length > 0) chunks.push(chunk);
+
+        // ── CRITICAL FIX: always advance forward ──
+        const nextStart = end - overlapChars;
+        if (nextStart <= start) {
+            // overlap would push us backwards — just advance past this chunk
+            start = end;
+        } else {
+            start = nextStart;
+        }
     }
 
     return chunks.filter((chunk) => chunk.length > 0);

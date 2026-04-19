@@ -40,13 +40,7 @@ export default function HomePage() {
       title: 'Spaced Reinforcement',
       description: 'Forgetting model ensures you review concepts at the optimal time. Never let your mastery decay.',
       gradient: 'linear-gradient(135deg, #a855f7, #ec4899)',
-    },
-    {
-      icon: <Trophy size={32} />,
-      title: 'Student Ability Index',
-      description: 'A holistic score combining mastery, trends, accuracy, and calibration. Track your growth over time.',
-      gradient: 'linear-gradient(135deg, #f59e0b, #22c55e)',
-    },
+    }
   ];
 
   return (

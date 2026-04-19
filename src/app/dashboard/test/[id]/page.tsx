@@ -433,7 +433,7 @@ export default function TestPage() {
                 <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
                     <div style={{ width: '60px', height: '60px', border: '3px solid var(--border-subtle)', borderTop: '3px solid var(--accent-primary)', borderRadius: '50%', animation: 'spin-slow 1s linear infinite', margin: '0 auto 24px' }} />
                     <h2 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '12px' }}>Generating Questions...</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>AI is creating personalised questions. This may take 15–30 seconds.</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Creating personalised questions. This may take 15–30 seconds.</p>
                 </div>
             </div>
         );
@@ -467,7 +467,7 @@ export default function TestPage() {
                 <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
                     <div style={{ width: '60px', height: '60px', border: '3px solid var(--border-subtle)', borderTop: '3px solid var(--accent-primary)', borderRadius: '50%', animation: 'spin-slow 1s linear infinite', margin: '0 auto 24px' }} />
                     <h2 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '12px' }}>Evaluating Results...</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Computing your learning gain and calibration metrics...</p>
+                    {/* <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Computing your learning gain and calibration metrics...</p> */}
                 </div>
             </div>
         );
@@ -538,7 +538,7 @@ export default function TestPage() {
                     </div>
 
                     {/* Metrics panels */}
-                    <MetricsPanel metrics={sessionMetrics} />
+                    {/* <MetricsPanel metrics={sessionMetrics} /> */}
 
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>

@@ -122,7 +122,7 @@ export default function LearnPage() {
                 <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
                     <div style={{ width: '60px', height: '60px', border: '3px solid var(--border-subtle)', borderTop: '3px solid var(--accent-primary)', borderRadius: '50%', animation: 'spin-slow 1s linear infinite', margin: '0 auto 24px' }} />
                     <h2 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '12px' }}>Preparing Your Lesson...</h2>
-                    <p style={{ color: 'var(--text-secondary)' }}>AI is generating personalised learning material.</p>
+                    <p style={{ color: 'var(--text-secondary)' }}>Generating personalised learning material.</p>
                 </div>
             </div>
         );
