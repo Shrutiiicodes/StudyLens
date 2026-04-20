@@ -137,7 +137,6 @@ class AnswerResponse(BaseModel):
     is_correct: bool
     score: float
     feedback: str
-    hint: str
     correct_explanation: str
 
 # ── Startup / Shutdown ────────────────────────────────────────────────────
@@ -354,7 +353,6 @@ async def submit_answer(request: AnswerRequest):
         is_correct=result.is_correct,
         score=result.score,
         feedback=result.gap_description if not result.is_correct else "Correct!",
-        hint=result.hint if not result.is_correct else "",
         correct_explanation=result.correct_explanation,
     )
 
@@ -365,7 +363,7 @@ async def submit_all_answers(request: SubmitAllRequest):
     Submit all student answers at once and receive a full misconception report.
 
     Returns per-question breakdown with severity, misconception labels,
-    gap descriptions, hints, KG paths, and distractor distances.
+    gap descriptions, KG paths, and distractor distances.
     """
     logger.info("POST /submit-all — doc_id='%s', %d answers",
                 request.doc_id, len(request.answers))
@@ -441,7 +439,6 @@ async def submit_all_answers(request: SubmitAllRequest):
             "misconception_label":  result.misconception_label,
             "gap_description":      result.gap_description,
             "correct_explanation":  result.correct_explanation,
-            "hint":                 result.hint,
             "kg_path":              result.kg_path,
             "checks":               result.checks,
             "distractor_distance":  result.distractor_distance,

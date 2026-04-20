@@ -11,7 +11,9 @@ import {
     FileText,
     CheckCircle,
     Book,
-    Lock
+    Lock,
+    Info,
+    Trash2,
 } from 'lucide-react';
 
 interface ConceptRecord {
@@ -40,6 +42,7 @@ export default function ConceptsPage() {
     const [concepts, setConcepts] = useState<ConceptRecord[]>([]);
     const [progress, setProgress] = useState<Record<string, ProgressData>>({});
     const [loading, setLoading] = useState(true);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchData() {
@@ -71,6 +74,32 @@ export default function ConceptsPage() {
 
         fetchData();
     }, []);
+
+    async function handleDelete(concept: ConceptRecord) {
+        const confirmed = window.confirm(
+            `Delete "${concept.title}"?\n\nThis will permanently remove the concept, all test history, and mastery progress. This cannot be undone.`
+        );
+        if (!confirmed) return;
+
+        const stored = localStorage.getItem('study-lens-user');
+        if (!stored) return;
+        const user = JSON.parse(stored);
+
+        setDeletingId(concept.id);
+        try {
+            const res = await fetch(`/api/concepts/${concept.id}?userId=${user.id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                setConcepts(prev => prev.filter(c => c.id !== concept.id));
+            } else {
+                alert(`Failed to delete: ${data.error}`);
+            }
+        } catch {
+            alert('Network error. Please try again.');
+        } finally {
+            setDeletingId(null);
+        }
+    }
 
     function getUrgency(conceptId: string): 'critical' | 'soon' | 'ok' | 'none' {
         const p = progress[conceptId];
@@ -200,13 +229,44 @@ export default function ConceptsPage() {
                                                 )}
                                             </div>
                                         </div>
-                                        <Link
-                                            href={`/dashboard/learn/${concept.id}`}
-                                            className="btn-secondary"
-                                            style={{ textDecoration: 'none', fontSize: '0.85rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}
-                                        >
-                                            <Book size={16} /> Learn It
-                                        </Link>
+                                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
+                                            <Link
+                                                href={`/dashboard/concept/${concept.id}?title=${encodeURIComponent(concept.title)}`}
+                                                className="btn-ghost"
+                                                style={{ textDecoration: 'none', fontSize: '0.85rem', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                title="View concept details"
+                                            >
+                                                <Info size={16} /> Details
+                                            </Link>
+                                            <Link
+                                                href={`/dashboard/learn/${concept.id}`}
+                                                className="btn-secondary"
+                                                style={{ textDecoration: 'none', fontSize: '0.85rem', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                            >
+                                                <Book size={16} /> Learn It
+                                            </Link>
+                                            <button
+                                                onClick={() => handleDelete(concept)}
+                                                disabled={deletingId === concept.id}
+                                                title="Delete concept"
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: '1px solid rgba(239,68,68,0.3)',
+                                                    borderRadius: 'var(--radius-md)',
+                                                    padding: '8px 10px',
+                                                    cursor: deletingId === concept.id ? 'not-allowed' : 'pointer',
+                                                    color: deletingId === concept.id ? 'var(--text-muted)' : '#ef4444',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    opacity: deletingId === concept.id ? 0.5 : 1,
+                                                    transition: 'all 0.2s',
+                                                }}
+                                                onMouseEnter={(e) => { if (deletingId !== concept.id) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.1)'; }}
+                                                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 

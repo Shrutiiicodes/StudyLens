@@ -34,7 +34,6 @@ export interface MisconceptionItem {
     misconception_label: string;
     gap_description: string;
     correct_explanation: string;
-    hint: string;
     kg_path: Array<{ from: string; relation: string; to: string }>;
     checks: Record<string, boolean>;
     distractor_distance?: number;
@@ -132,7 +131,7 @@ export async function ingestDocument(
 /**
  * POST /submit-all
  * Submit all student answers at once and get a full misconception report.
- * Includes KG-grounded gap analysis, severity classification, and hints.
+ * Includes KG-grounded gap analysis, severity classification.
  */
 export async function getMisconceptionReport(
     docId: string,

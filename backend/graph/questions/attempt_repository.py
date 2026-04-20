@@ -8,7 +8,7 @@ Nodes
     (:Attempt {
         attempt_id, question_id, student_answer,
         is_correct, score, misconception,
-        explanation, correct_explanation, hint,
+        explanation, correct_explanation,
         created_at
     })
 
@@ -82,7 +82,6 @@ class AttemptRepository:
                 a.misconception        = $misconception,
                 a.explanation          = $explanation,
                 a.correct_explanation  = $correct_explanation,
-                a.hint                 = $hint,
                 a.created_at           = $created_at
             WITH a
             MATCH (q:Question {question_id: $question_id})
@@ -96,7 +95,6 @@ class AttemptRepository:
             misconception=result.misconception,
             explanation=result.explanation,
             correct_explanation=result.correct_explanation,
-            hint=result.hint,
             created_at=int(time.time()),
         )
 

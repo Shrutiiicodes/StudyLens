@@ -3,14 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ProgressCard from '@/components/ProgressCard';
-import ConceptMap from '@/components/ConceptMap';
 import MasteryGraph from '@/components/MasteryGraph';
 import {
     ArrowLeft,
     Target,
     BookOpen,
     ClipboardList,
-    Share2,
     BarChart2,
     Search,
     FileEdit,
@@ -63,7 +61,7 @@ export default function ConceptDetailPage() {
     const [loading, setLoading] = useState(true);
     const [graphNodes, setGraphNodes] = useState<GraphNode[]>([]);
     const [graphEdges, setGraphEdges] = useState<GraphEdge[]>([]);
-    const [activeTab, setActiveTab] = useState<'overview' | 'graph' | 'history'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
     const [sessions, setSessions] = useState<Array<{ id: string; mode: string; score: number; passed: boolean; nlg: number | null; created_at: string }>>([]);
 
     const titleFromUrl = searchParams.get('title');
@@ -205,14 +203,14 @@ export default function ConceptDetailPage() {
                 background: 'var(--bg-secondary)', padding: '4px',
                 borderRadius: 'var(--radius-md)', width: 'fit-content',
             }}>
-                {(['overview', 'graph', 'history'] as const).map((tab) => (
+                {(['overview', 'history'] as const).map((tab) => (
                     <button
                         key={tab}
                         className={tab === activeTab ? 'btn-primary' : 'btn-ghost'}
                         onClick={() => setActiveTab(tab)}
                         style={{ padding: '10px 20px', fontSize: '0.9rem', borderRadius: 'var(--radius-sm)', textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
-                        {tab === 'overview' ? <ClipboardList size={16} /> : tab === 'graph' ? <Share2 size={16} /> : <BarChart2 size={16} />}
+                        {tab === 'overview' ? <ClipboardList size={16} /> : <BarChart2 size={16} />}
                         {tab}
                     </button>
                 ))}
@@ -254,8 +252,6 @@ export default function ConceptDetailPage() {
                             {[
                                 { label: 'Current Stage', value: isComplete ? 'Complete ✓' : stage.charAt(0).toUpperCase() + stage.slice(1), color: isComplete ? 'var(--accent-success)' : 'var(--accent-primary)' },
                                 { label: 'Mastery Score', value: `${Math.round(mastery)}%`, color: mastery >= 80 ? 'var(--accent-success)' : mastery >= 50 ? 'var(--accent-primary)' : 'var(--accent-warning)' },
-                                { label: 'Graph Nodes', value: String(graphNodes.length), color: 'var(--accent-tertiary)' },
-                                { label: 'Source', value: concept?.source_document?.split('/').pop() || 'N/A', color: 'var(--text-primary)' },
                                 { label: 'Created', value: concept?.created_at ? new Date(concept.created_at).toLocaleDateString() : 'N/A', color: 'var(--text-primary)' },
                             ].map(({ label, value, color }) => (
                                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -268,17 +264,6 @@ export default function ConceptDetailPage() {
                 </div>
             )}
 
-            {/* Graph Tab */}
-            {activeTab === 'graph' && (
-                graphNodes.length > 0
-                    ? <ConceptMap nodes={graphNodes} edges={graphEdges} />
-                    : (
-                        <div className="glass-card" style={{ padding: '60px 40px', textAlign: 'center' }}>
-                            <Share2 size={48} style={{ opacity: 0.3, margin: '0 auto 20px' }} />
-                            <p style={{ color: 'var(--text-secondary)' }}>Knowledge graph not available. The graph is built during document upload using Neo4j.</p>
-                        </div>
-                    )
-            )}
 
             {/* History Tab — Fix 13: real session data */}
             {activeTab === 'history' && (

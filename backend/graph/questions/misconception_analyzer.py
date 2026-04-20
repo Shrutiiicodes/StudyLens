@@ -91,7 +91,6 @@ class MisconceptionResult:
     misconception_label : Short label e.g. "Confused supplier with trader"
     gap_description     : What specific conceptual link was missed
     correct_explanation : What the correct answer means in context
-    hint                : Socratic nudge toward the right answer
     kg_path             : The graph path between chosen and correct concept
                           (MCQ only) — shown in report as evidence
     checks              : For short answer — {"object": bool, "relation": bool,
@@ -105,7 +104,6 @@ class MisconceptionResult:
     misconception_label: str
     gap_description:     str
     correct_explanation: str
-    hint:                str
     attempt_id:          str             = ""
     kg_path:             list[str]       = field(default_factory=list)
     checks:              dict[str, bool] = field(default_factory=dict)
@@ -143,19 +141,15 @@ Your job is to write THREE short pieces of text:
                            Be specific. Refer to the actual concepts involved.
 2. "correct_explanation" – 1-2 sentences explaining why the correct answer is correct,
                            in plain language a school student can understand.
-3. "hint"                – 1 Socratic question that guides the student toward the right answer
-                           WITHOUT revealing it. Point to a specific aspect to reconsider.
 
 Return ONLY a JSON object with these three string fields.
 Example:
 {
   "gap_description": "The student identified traders as the food source, but traders exchanged goods between cities — they did not grow or herd food themselves. The direct suppliers were farmers and herders.",
   "correct_explanation": "Harappan cities depended on farmers and herders in surrounding villages who sent food into the cities. Traders played a different role — moving goods between regions.",
-  "hint": "Who actually produces food — the people who grow and raise it, or the people who move it between places?"
 }
 
 Rules:
-- Never reveal the correct answer directly in the hint.
 - gap_description must reference the specific wrong concept the student chose.
 - Keep all three fields under 3 sentences each.
 - Return ONLY the JSON. No markdown, no preamble.\
@@ -169,7 +163,7 @@ Misconception label: {label}
 KG path (correct → wrong concept): {kg_path}
 Source text: {source_text}
 
-Write the gap_description, correct_explanation, and hint.\
+Write the gap_description, correct_explanation.\
 """
 
 # Analyzer
@@ -280,7 +274,6 @@ class MisconceptionAnalyzer:
             misconception_label=label,
             gap_description=explanation.get("gap_description", ""),
             correct_explanation=explanation.get("correct_explanation", ""),
-            hint=explanation.get("hint", ""),
             kg_path=kg_path,
             checks=checks,
             distractor_distance=dist,
@@ -484,11 +477,11 @@ class MisconceptionAnalyzer:
         source_text:    str,
     ) -> dict:
         """
-        Call the LLM to write gap_description, correct_explanation, and hint.
+        Call the LLM to write gap_description, correct_explanation.
         The LLM receives the already-identified misconception label and KG path —
         it does not re-evaluate correctness. It only writes explanatory text.
 
-        Returns dict with keys: gap_description, correct_explanation, hint.
+        Returns dict with keys: gap_description, correct_explanation.
         Falls back to a template-based explanation if Groq fails.
         """
         kg_path_str = (
@@ -548,7 +541,6 @@ class MisconceptionAnalyzer:
             return {
                 "gap_description":     str(data.get("gap_description", "")).strip(),
                 "correct_explanation": str(data.get("correct_explanation", "")).strip(),
-                "hint":                str(data.get("hint", "")).strip(),
             }
         except json.JSONDecodeError:
             return {}
@@ -559,8 +551,7 @@ class MisconceptionAnalyzer:
         """Template-based fallback when LLM is unavailable."""
         return {
             "gap_description":     f"{label}. The answer '{student_answer}' does not match the expected concept.",
-            "correct_explanation": f"The correct answer is '{correct}'. Review the relevant section of your notes for more detail.",
-            "hint":                "Look at the specific relationship being asked about — what does the source text say connects these two concepts?",
+            "correct_explanation": f"The correct answer is '{correct}'. Review the relevant section of your notes for more detail."
         }
 
    
@@ -576,8 +567,7 @@ class MisconceptionAnalyzer:
             severity=Severity.CRITICAL,
             misconception_label="No answer provided",
             gap_description="The student did not attempt this question.",
-            correct_explanation=f"The correct answer is '{correct_answer}'.",
-            hint="Attempt the question — even a partial answer helps identify what you know.",
+            correct_explanation=f"The correct answer is '{correct_answer}'."
         )
 
     def _correct_result(
@@ -600,8 +590,7 @@ class MisconceptionAnalyzer:
             severity=Severity.CORRECT,
             misconception_label="",
             gap_description="",
-            correct_explanation=explanation,
-            hint="",
+            correct_explanation=explanation
         )
 
     def _explain_correct(
