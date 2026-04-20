@@ -49,6 +49,7 @@ export interface QuestionResult {
     selected_answer?: string;
     correct_answer?: string;
     explanation?: string;
+    is_spaced?: boolean;
 }
 
 export interface DifficultyDistribution {

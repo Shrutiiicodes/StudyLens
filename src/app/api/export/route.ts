@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
                 session_id,
                 difficulty_param,
                 student_theta,
+                is_spaced_review,
                 created_at
             `)
             .eq('user_id', userId)
@@ -120,8 +121,8 @@ export async function GET(request: NextRequest) {
 
             // Spaced review: attempts where mode column was stored as 'spaced'
             // (injected by question-generator silent injection)
-            const isSpacedReview = a.mode === 'spaced' ? 1 : 0;
-            const cleanMode = isSpacedReview ? 'practice' : (a.mode ?? 'unknown');
+            const isSpacedReview = a.is_spaced_review ? 1 : 0;
+            const cleanMode = a.mode ?? 'unknown';
 
             return {
                 student_id: a.user_id,

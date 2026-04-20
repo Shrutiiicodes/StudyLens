@@ -16,6 +16,7 @@ interface QuestionData {
     difficulty: number;
     concept_id: string;
     cognitive_level: number;
+    is_spaced?: boolean;
 }
 
 // Updated interface — standard ITS metrics added
@@ -382,6 +383,8 @@ export default function TestPage() {
                         selected_answer: results[i]?.selectedAnswer ?? '',
                         correct_answer: q.correct_answer,
                         explanation: q.explanation,
+                        is_spaced: q.is_spaced ?? false,
+                        question_type: q.type
                     }));
 
                     const evalRes = await fetch('/api/diagnostic', {

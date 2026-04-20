@@ -330,7 +330,7 @@ export async function generateQuestionsForMode(
                                 difficulty: 2,
                                 context: sContext,
                             });
-                            (sq as any)._is_spaced = true;
+                            sq.is_spaced = true;
                             questions.push(sq);
                             count--;
                         } catch (e) {

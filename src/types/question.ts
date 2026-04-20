@@ -16,7 +16,8 @@ export interface Question {
     format: 'mcq'; // only MCQ questions are supported
     // ── Graph-distractor fields (set when graph distractors are used) ──
     distractor_distances?: Record<string, number>; // { optionText: hopDistance }
-    concept_title?: string;                        // used by misconception analysis
+    concept_title?: string;// used by misconception analysis
+    is_spaced?: boolean;
 }
 
 export interface QuestionGenerationRequest {

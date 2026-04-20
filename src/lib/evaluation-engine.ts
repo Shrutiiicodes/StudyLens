@@ -135,8 +135,8 @@ export async function evaluateDiagnostic(
     metrics: ReturnType<typeof computeAllSessionMetrics>;
 }> {
     // ── 1. Compute raw score ──────────────────────────────────────────────
-    const score = calculateUnifiedScore(results) * 100;
-
+    const parentResults = results.filter(r => !r.is_spaced);
+    const score = calculateUnifiedScore(parentResults.length > 0 ? parentResults : results) * 100;
     // ── 2. Fetch pre-session mastery ──────────────────────────────────────
     const preMastery = await getCurrentMastery(userId, conceptId);
 
@@ -152,22 +152,21 @@ export async function evaluateDiagnostic(
         : undefined;
 
     // ── 4. Mastery update ─────────────────────────────────────────────────
-    const masteryUpdate = updateMastery(preMastery, score / 100, mode as AssessmentMode, results, bktParams);
+    const masteryUpdate = updateMastery(preMastery, score / 100, mode as AssessmentMode, parentResults, bktParams);
     const postMastery = masteryUpdate.new_score;
     const passed = score >= PASS_THRESHOLD;
 
     // ── 5. Build AttemptResult array ──────────────────────────────────────
-    const attemptResults: AttemptResult[] = results.map((r) => {
-        const qType = r.question_type ?? 'recall';
-        return {
-            correct: r.correct,
-            confidence: r.confidence,
-            time_taken: r.time_taken,
-            question_type: qType,
-            cognitive_level: r.cognitive_level ?? inferCognitiveLevel(qType),
-            difficulty: r.difficulty,
-        };
-    });
+    // Metrics reflect the parent concept's session; spaced-review attempts
+    // are persisted separately in step 11 but don't factor into FAS/WBS/etc.
+    const attemptResults: AttemptResult[] = parentResults.map((r) => ({
+        correct: r.correct,
+        confidence: r.confidence,
+        time_taken: r.time_taken,
+        question_type: r.question_type ?? 'recall',
+        cognitive_level: r.cognitive_level ?? inferCognitiveLevel(r.question_type ?? 'recall'),
+        difficulty: r.difficulty,
+    }));
 
     // ── 6. Compute all metrics ────────────────────────────────────────────
     const sessionMetrics = computeAllSessionMetrics(attemptResults, score, preMastery, postMastery);
@@ -248,8 +247,8 @@ export async function evaluateDiagnostic(
             question_type: result.question_type ?? 'recall',
             time_taken: result.time_taken,
             confidence: result.confidence,
-            mode: mode === 'spaced' ? 'practice' : mode,
-            is_spaced_review: mode === 'spaced' || (result.concept_id != null && result.concept_id !== conceptId),
+            mode,
+            is_spaced_review: result.is_spaced === true,
             session_id: sessionId,
             question_text: result.question_text,
             selected_answer: result.selected_answer,
@@ -257,7 +256,45 @@ export async function evaluateDiagnostic(
             explanation: result.explanation,
         });
     }
+    // ── 11b. Update mastery for spaced concepts ───────────────────────────
+    // Each spaced review question is about an older concept from the same
+    // document. We update that concept's mastery via BKT so that successful
+    // recall strengthens it and forgetting weakens it further (triggering
+    // another spaced review next session).
+    const spacedResults = results.filter(r => r.is_spaced && r.concept_id);
+    const spacedByConcept = new Map<string, QuestionResult[]>();
+    for (const r of spacedResults) {
+        const cid = r.concept_id!;
+        if (!spacedByConcept.has(cid)) spacedByConcept.set(cid, []);
+        spacedByConcept.get(cid)!.push(r);
+    }
 
+    for (const [spacedConceptId, spacedRs] of spacedByConcept) {
+        try {
+            const preSpacedMastery = await getCurrentMastery(userId, spacedConceptId);
+            // Use the same fitted BKT params we loaded above — if the spaced concept
+            // has its own fitted params, prefer those.
+            const { data: spacedParams } = await supabase
+                .from('concept_bkt_params')
+                .select('p_l0, p_t, p_s, p_g')
+                .eq('concept_id', spacedConceptId)
+                .single();
+            const paramsForSpaced = spacedParams ?? bktParams;
+
+            const spacedUpdate = updateMastery(
+                preSpacedMastery,
+                0, // score arg is ignored when results are provided
+                'practice' as AssessmentMode,
+                spacedRs,
+                paramsForSpaced,
+            );
+            // Preserve the spaced concept's existing stage — spaced review shouldn't
+            // demote or promote stage state; it only nudges the mastery score.
+            await saveMasteryWithStage(userId, spacedConceptId, spacedUpdate.new_score, currentStage);
+        } catch (e) {
+            console.warn('[Eval] Spaced mastery update failed for concept', spacedConceptId, (e as Error).message);
+        }
+    }
     // ── 12. Compute convergence and persist ───────────────────────────────
     const { data: allSessionScores } = await supabase
         .from('sessions')
