@@ -14,9 +14,6 @@ export const CHUNK_MAX_TOKENS = 800;
 export const CHUNK_OVERLAP_TOKENS = 50;
 
 // ─── Personalization ───
-export const LAMBDA_PRACTICE = 0.2;
-export const LAMBDA_MASTERY = 0.35;
-export const LAMBDA_SPACED = 0.5;
 export const GAMMA_FORGETTING = 0.05;
 
 export const MASTERY_UNLOCK_THRESHOLD = 85;
@@ -44,63 +41,11 @@ export const COGNITIVE_LEVEL_MAP: Record<string, number> = {
     analytical: 4,
 };
 
-// ─── Relation Bloom's Map ───
-export const RELATION_BLOOM_MAP: Record<string, number> = {
-    IS_A: 1,
-    DEFINES: 1,
-    EXAMPLE_OF: 1,
-    PART_OF: 2,
-    FEATURE_OF: 2,
-    CAUSES: 2,
-    CONTRASTS_WITH: 3,
-    USED_FOR: 3,
-    PRECEDES: 2,
-    REQUIRES: 3,
-    EXTENSION_OF: 4,
-    FOUND_IN: 1,
-    LOCATED_IN: 1,
-    CONTAINS: 2,
-    CHARACTERIZED_BY: 2,
-    DISCOVERED_BY: 1,
-    BUILT_BY: 1,
-    PRODUCED_BY: 2,
-    SUPPLIED_BY: 2,
-    TRADED_BY: 3,
-    LED_TO: 2,
-    RELATES_TO: 2,
-    COMPARED_WITH: 3,
-    OCCURS_DURING: 2,
-    VISIBLE_IN: 1,
-};
-
 // ─── Question Count Limits Per Mode ───
 export const QUESTION_LIMITS: Record<string, { min: number; max: number }> = {
     diagnostic: { min: 3, max: 5 },
     practice: { min: 3, max: 7 },
     mastery: { min: 5, max: 8 },
-};
-
-// ─── Assessment Weights ───
-export const DIAGNOSTIC_WEIGHTS = {
-    accuracy: 0.5,
-    cognitive_depth: 0.3,
-    confidence_calibration: 0.2,
-};
-
-export const PRACTICE_WEIGHTS = {
-    accuracy: 0.4,
-    cognitive_depth: 0.2,
-    speed_efficiency: 0.15,
-    confidence_calibration: 0.15,
-    misconception_penalty: 0.1,
-};
-
-export const MASTERY_WEIGHTS = {
-    accuracy: 0.35,
-    cognitive_depth: 0.30,
-    misconception_penalty: 0.15,
-    speed_efficiency: 0.10,
-    confidence_calibration: 0.10,
 };
 
 export const SPACED_WEIGHTS = {
@@ -159,3 +104,20 @@ export const DEFAULT_HOURS_ELAPSED = 24;
 
 // ─── Backend URL ───
 export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
+// ─── Stages ───
+// Ordered progression stages a student moves through for each concept.
+// 'complete' is a terminal *status*, not an actionable stage — kept separate.
+export const STAGE_KEYS = ['diagnostic', 'practice', 'mastery'] as const;
+export type StageKey = (typeof STAGE_KEYS)[number];
+
+// Full set including terminal status — used where 'complete' must be indexed.
+export const STAGE_KEYS_WITH_COMPLETE = [...STAGE_KEYS, 'complete'] as const;
+export type StageKeyWithComplete = (typeof STAGE_KEYS_WITH_COMPLETE)[number];
+
+// Rich UI metadata for each stage (icons are added at the call-site in TSX).
+export const STAGE_DEFS: Array<{ key: StageKey; label: string; description: string }> = [
+    { key: 'diagnostic', label: 'Easy 5',        description: 'Initial knowledge check' },
+    { key: 'practice',   label: 'Practice Test',  description: 'Adaptive practice questions' },
+    { key: 'mastery',    label: 'Mastery Test',   description: 'Prove full understanding' },
+];

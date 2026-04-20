@@ -13,6 +13,7 @@ export interface Question {
     explanation: string;
     cognitive_level: number; // 1-4
     bloom_level: BloomLevel;
+    format: 'mcq'; // only MCQ questions are supported
     // ── Graph-distractor fields (set when graph distractors are used) ──
     distractor_distances?: Record<string, number>; // { optionText: hopDistance }
     concept_title?: string;                        // used by misconception analysis

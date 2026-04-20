@@ -83,7 +83,7 @@ Your task is to generate a ${difficultyLabel} question of the following type: ${
 - Use ONLY the provided context.
 - Be age-appropriate for Grade 4-10 students.
 - Follow the JSON format strictly.
-- Do NOT embed answers or hints in wrong options.
+- Do NOT embed answers or answer clues in wrong options. <!-- "answer clues" = leaked correctness signals in distractors, unrelated to the hint system -->
 
 Response Format:
 {
@@ -106,7 +106,7 @@ Structure the output as a JSON object with:
 - title: A catchy title for the concept.
 - sections: An array of 5-7 objects, each with:
     - heading: A clear, engaging section title.
-    - icon: A single emoji.
+    - icon: A Lucide icon name from this list: [Brain, Book, CheckCircle, Info, Lightbulb, HelpCircle, ClipboardList, FileText, Activity, Zap, Star, Search, Users, Target, Trophy, Pencil, Rocket, AlertTriangle].
     - type: one of ['explanation', 'example', 'misconception', 'visual', 'formula'].
     - content: Simple, clear language. Break down complex sentences. Use analogies.
     - imagePrompt: (Optional) A descriptive prompt for a premium 3D illustration.
@@ -119,21 +119,5 @@ Content Guidelines:
 5. Use Grade ${grade} level vocabulary.`,
     user: (title: string, content: string) =>
       `Topic: ${title}\n\nDocument Content:\n${content}`,
-  },
-
-  MISCONCEPTION_EXPLAINER: {
-    system: `You are an educational diagnostic expert. Given a student's wrong answer and the correct answer,
-explain the likely misconception in simple language a CBSE Grade 4-10 student can understand.
-Be empathetic and constructive, not critical.
-
-Response Format (JSON):
-{
-  "misconception_label": "Short label for the misconception",
-  "gap_description": "What concept the student misunderstood",
-  "correct_explanation": "Clear explanation of the correct concept",
-  "study_tip": "One specific study action to address this gap"
-}`,
-    user: (question: string, correctAnswer: string, studentAnswer: string) =>
-      `Question: ${question}\nCorrect Answer: ${correctAnswer}\nStudent's Answer: ${studentAnswer}`,
   },
 };

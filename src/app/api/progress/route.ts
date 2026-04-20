@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-
-// 'complete' is the terminal stage — reached by passing the mastery test.
-// Summary assessment has been removed; mastery test is the final gate.
-const STAGES = ['diagnostic', 'practice', 'mastery', 'complete'] as const;
-type Stage = typeof STAGES[number];
+import { STAGE_KEYS, STAGE_KEYS_WITH_COMPLETE, type StageKeyWithComplete } from '@/config/constants';
 
 /**
  * GET /api/progress?userId=xxx&conceptId=xxx
@@ -31,8 +27,8 @@ export async function GET(request: NextRequest) {
                 .eq('concept_id', conceptId)
                 .single();
 
-            const currentStage = (mastery?.current_stage || 'diagnostic') as Stage;
-            const stageIndex = STAGES.indexOf(currentStage);
+            const currentStage = (mastery?.current_stage || 'diagnostic') as StageKeyWithComplete;
+            const stageIndex = STAGE_KEYS_WITH_COMPLETE.indexOf(currentStage);
             const isComplete = currentStage === 'complete';
 
             return NextResponse.json({
@@ -44,7 +40,7 @@ export async function GET(request: NextRequest) {
                 masteryScore: mastery?.mastery_score || 0,
                 lastUpdated: mastery?.last_updated || null,
                 // Show 3 actionable stages; 'complete' is a status not a stage button
-                stages: (['diagnostic', 'practice', 'mastery'] as const).map((stage, idx) => ({
+                stages: STAGE_KEYS.map((stage, idx) => ({
                     name: stage,
                     status: isComplete || idx < stageIndex
                         ? 'completed'
@@ -88,7 +84,7 @@ export async function GET(request: NextRequest) {
             stageIndex: 0,
             isComplete: false,
             masteryScore: 0,
-            stages: (['diagnostic', 'practice', 'mastery'] as const).map((s, i) => ({
+            stages: STAGE_KEYS.map((s, i) => ({
                 name: s,
                 status: i === 0 ? 'current' : 'locked',
             })),

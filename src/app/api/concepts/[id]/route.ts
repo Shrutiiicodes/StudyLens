@@ -7,11 +7,11 @@ import { getServiceSupabase } from '@/lib/supabase';
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const supabase = getServiceSupabase();
-        const conceptId = params.id;
+        const { id: conceptId } = await params;
         const userId = request.nextUrl.searchParams.get('userId');
 
         if (!userId) {

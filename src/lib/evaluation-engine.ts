@@ -34,6 +34,7 @@ import { QuestionResult, MasteryUpdate } from '@/types/mastery';
 import { Question, AnswerSubmission, AnswerResult, QuestionType } from '@/types/question';
 import { updateIRTState, getInitialDifficultyParam, masteryToTheta } from './irt';
 import { analyzeAnswer } from './distractor-engine';
+import { STAGE_KEYS, PASS_THRESHOLD } from '@/config/constants';
 
 /**
  * Evaluate a student's answer and update mastery.
@@ -62,7 +63,17 @@ export async function evaluateAnswer(
 
     const score = calculateUnifiedScore([questionResult]);
     const masteryUpdate = updateMastery(currentMastery, score, mode);
-    await saveMastery(userId, question.concept_id, masteryUpdate.new_score);
+
+    // Preserve the existing stage — evaluateAnswer only updates the score,
+    // stage advancement is exclusively handled by evaluateDiagnostic.
+    const { data: stageRow } = await supabase
+        .from('mastery')
+        .select('current_stage')
+        .eq('user_id', userId)
+        .eq('concept_id', question.concept_id)
+        .single();
+    const existingStage = stageRow?.current_stage ?? 'diagnostic';
+    await saveMasteryWithStage(userId, question.concept_id, masteryUpdate.new_score, existingStage);
 
     // ── KG-grounded misconception analysis ───────────────────────────────
     // Primary: deterministic graph-topology scoring
@@ -74,9 +85,7 @@ export async function evaluateAnswer(
             questionText: question.text,
             correctAnswer: question.correct_answer,
             studentAnswer: submission.selected_answer,
-            qType: question.options?.length === 4 ? 'mcq' : 'short',
             concept: question.concept_title || '',
-            relation: '',
             distanceMap: question.distractor_distances,
             userId,
             documentId: question.concept_id,
@@ -108,9 +117,6 @@ export async function evaluateAnswer(
     };
 }
 
-const STAGES = ['diagnostic', 'practice', 'mastery'] as const;
-// Mastery learning threshold: 80% per Bloom (1984) mastery learning criteria.
-const PASS_THRESHOLD = 80;
 
 /**
  * Evaluate a full assessment session.
@@ -151,14 +157,17 @@ export async function evaluateDiagnostic(
     const passed = score >= PASS_THRESHOLD;
 
     // ── 5. Build AttemptResult array ──────────────────────────────────────
-    const attemptResults: AttemptResult[] = results.map((r) => ({
-        correct: r.correct,
-        confidence: r.confidence,
-        time_taken: r.time_taken,
-        question_type: 'recall',
-        cognitive_level: r.cognitive_level ?? inferCognitiveLevel('recall'),
-        difficulty: r.difficulty,
-    }));
+    const attemptResults: AttemptResult[] = results.map((r) => {
+        const qType = r.question_type ?? 'recall';
+        return {
+            correct: r.correct,
+            confidence: r.confidence,
+            time_taken: r.time_taken,
+            question_type: qType,
+            cognitive_level: r.cognitive_level ?? inferCognitiveLevel(qType),
+            difficulty: r.difficulty,
+        };
+    });
 
     // ── 6. Compute all metrics ────────────────────────────────────────────
     const sessionMetrics = computeAllSessionMetrics(attemptResults, score, preMastery, postMastery);
@@ -206,16 +215,16 @@ export async function evaluateDiagnostic(
         .single();
 
     const currentStage = masteryRecord?.current_stage || 'diagnostic';
-    const currentStageIndex = STAGES.indexOf(currentStage as (typeof STAGES)[number]);
-    const modeIndex = STAGES.indexOf(mode as (typeof STAGES)[number]);
+    const currentStageIndex = STAGE_KEYS.indexOf(currentStage as (typeof STAGE_KEYS)[number]);
+    const modeIndex = STAGE_KEYS.indexOf(mode as (typeof STAGE_KEYS)[number]);
 
     let nextStage = currentStage;
     if (passed && modeIndex >= 0 && modeIndex <= currentStageIndex + 1) {
         if (mode === 'mastery') {
             nextStage = 'complete';
         } else {
-            const nextIndex = Math.min(modeIndex + 1, STAGES.length - 1);
-            nextStage = STAGES[nextIndex];
+            const nextIndex = Math.min(modeIndex + 1, STAGE_KEYS.length - 1);
+            nextStage = STAGE_KEYS[nextIndex];
         }
     }
 
@@ -333,29 +342,6 @@ async function getCurrentMastery(userId: string, conceptId: string): Promise<num
     const hoursElapsed =
         (Date.now() - new Date(data.last_updated).getTime()) / (1000 * 60 * 60);
     return calculateDecayedMastery(data.mastery_score, hoursElapsed);
-}
-
-async function saveMastery(userId: string, conceptId: string, score: number): Promise<void> {
-    const { data: existing } = await supabase
-        .from('mastery')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('concept_id', conceptId)
-        .single();
-
-    if (existing) {
-        await supabase
-            .from('mastery')
-            .update({ mastery_score: score, last_updated: new Date().toISOString() })
-            .eq('id', existing.id);
-    } else {
-        await supabase.from('mastery').insert({
-            user_id: userId,
-            concept_id: conceptId,
-            mastery_score: score,
-            last_updated: new Date().toISOString(),
-        });
-    }
 }
 
 async function saveMasteryWithStage(

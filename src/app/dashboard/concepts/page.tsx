@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { STAGE_DEFS } from '@/config/constants';
 import {
     Search,
     FileEdit,
@@ -30,13 +31,15 @@ interface ProgressData {
     needsReview?: boolean; // Fix 15: FSRS-triggered review indicator
 }
 
-// The 3 actionable stages students progress through.
-// 'complete' is a status, not a stage button — handled separately.
-const STAGES = [
-    { key: 'diagnostic', label: 'Easy 5', icon: <Search size={14} />, description: 'Initial knowledge check' },
-    { key: 'practice', label: 'Practice Test', icon: <FileEdit size={14} />, description: 'Adaptive practice questions' },
-    { key: 'mastery', label: 'Mastery Test', icon: <Trophy size={14} />, description: 'Prove full understanding' },
-];
+// Icons for each stage — injected at render-time since JSX can't live in constants.ts.
+const STAGE_ICONS: Record<string, React.ReactNode> = {
+    diagnostic: <Search size={14} />,
+    practice:   <FileEdit size={14} />,
+    mastery:    <Trophy size={14} />,
+};
+
+// Re-export STAGE_DEFS with icons merged in for local use.
+const STAGES = STAGE_DEFS.map(s => ({ ...s, icon: STAGE_ICONS[s.key] }));
 
 export default function ConceptsPage() {
     const [concepts, setConcepts] = useState<ConceptRecord[]>([]);

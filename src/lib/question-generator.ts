@@ -193,6 +193,7 @@ export async function generateQuestion(request: QuestionGenerationRequest): Prom
         concept_id: request.concept_id,
         concept_title: request.concept_title,
         type: request.type,
+        format: 'mcq', // all generated questions are MCQ; set explicitly, never inferred
         difficulty: finalDifficulty,
         text: parsed.text,
         options: finalOptions,

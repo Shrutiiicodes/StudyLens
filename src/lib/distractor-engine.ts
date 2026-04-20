@@ -46,12 +46,7 @@ export interface MisconceptionResult {
     gapDescription: string;
     correctExplanation: string;
     kgPath: string[];                // graph path between wrong and correct concept
-    checks: {                        // short-answer only
-        object: boolean;
-        relation: boolean;
-        subject: boolean;
-    };
-    distractorDistance: number | null; // MCQ only
+    distractorDistance: number | null; // distance of chosen option in KG
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -68,24 +63,6 @@ export const RELATION_WEIGHTS: Record<string, number> = {
     SUPPLIED_BY: 0.85, TRADED_BY: 0.85, INVENTED_BY: 0.85,
     FOUND_IN: 0.8, LOCATED_IN: 0.7,
     CONTAINS: 0.65, PART_OF: 0.6, IS_A: 0.55,
-};
-
-// Relation keywords for short-answer relation check
-const RELATION_KEYWORDS: Record<string, string[]> = {
-    LOCATED_IN: ['located', 'found', 'in', 'at', 'city', 'place', 'site'],
-    FOUND_IN: ['found', 'discovered', 'located', 'in', 'at'],
-    USED_FOR: ['used', 'purpose', 'function', 'for', 'served'],
-    SUPPLIED_BY: ['supplied', 'provided', 'sent', 'came from', 'source'],
-    PART_OF: ['part of', 'belongs to', 'component', 'section', 'member'],
-    BUILT_BY: ['built', 'constructed', 'made', 'created', 'erected'],
-    DISCOVERED_BY: ['discovered', 'found', 'excavated', 'unearthed'],
-    PRODUCED_BY: ['produced', 'made', 'created', 'manufactured'],
-    TRADED_BY: ['traded', 'exchanged', 'sold', 'bought', 'commerce'],
-    CAUSED_BY: ['caused', 'led to', 'resulted from', 'because', 'due to'],
-    LED_TO: ['led to', 'caused', 'resulted in', 'brought about'],
-    REQUIRES: ['requires', 'needs', 'depends on', 'prerequisite'],
-    CAUSES: ['causes', 'leads to', 'results in', 'produces'],
-    IS_A: ['is a', 'type of', 'kind of', 'example of', 'subclass'],
 };
 
 // ─── Simple bag-of-chars cosine similarity ────────────────────────────────────
@@ -283,9 +260,7 @@ interface AnalyzeAnswerInput {
     questionText: string;
     correctAnswer: string;
     studentAnswer: string;
-    qType: 'mcq' | 'short';
     concept: string;
-    relation: string;
     distanceMap?: Record<string, number>; // MCQ: distractor distances
     userId: string;
     documentId?: string;
@@ -300,7 +275,7 @@ interface AnalyzeAnswerInput {
 export async function analyzeAnswer(input: AnalyzeAnswerInput): Promise<MisconceptionResult> {
     const {
         questionText, correctAnswer, studentAnswer,
-        qType, concept, relation, distanceMap,
+        concept, distanceMap,
         userId, documentId, sourceText,
     } = input;
 
@@ -314,23 +289,9 @@ export async function analyzeAnswer(input: AnalyzeAnswerInput): Promise<Misconce
         return correctResult(questionText, correctAnswer, sourceText);
     }
 
-    // Step 3 — deterministic scoring
-    let score: number;
-    let checks = { object: false, relation: false, subject: false };
-    let misconceptionLabel: string;
-    let distractorDistance: number | null = null;
-
-    if (qType === 'mcq') {
-        const result = scoreMCQ(studentAnswer, correctAnswer, distanceMap || {});
-        score = result.score;
-        distractorDistance = result.distance;
-        misconceptionLabel = result.label;
-    } else {
-        const result = scoreShortAnswer(studentAnswer, correctAnswer, concept, relation);
-        score = result.score;
-        checks = result.checks;
-        misconceptionLabel = result.label;
-    }
+    // Step 3 — deterministic MCQ scoring
+    const { score, distance: distractorDistance, label: misconceptionLabel } =
+        scoreMCQ(studentAnswer, correctAnswer, distanceMap || {});
 
     const severity = severityFromScore(score);
 
@@ -354,7 +315,6 @@ export async function analyzeAnswer(input: AnalyzeAnswerInput): Promise<Misconce
         gapDescription: explanation.gap_description || '',
         correctExplanation: explanation.correct_explanation || '',
         kgPath,
-        checks,
         distractorDistance,
     };
 }
@@ -387,59 +347,6 @@ function scoreMCQ(
             : `Chose an unrelated concept (${studentAnswer})`;
 
     return { score, distance: dist, label };
-}
-
-function scoreShortAnswer(
-    studentAnswer: string,
-    correctAnswer: string,
-    concept: string,
-    relation: string
-): { score: number; checks: { object: boolean; relation: boolean; subject: boolean }; label: string } {
-    const sLower = studentAnswer.toLowerCase();
-    const cLower = correctAnswer.toLowerCase();
-    const conLower = concept.toLowerCase();
-
-    // Object check (weight 0.6)
-    const correctWords = new Set(
-        cLower.replace(/[^\w\s]/g, '').split(/\s+/)
-            .filter(w => !['the', 'a', 'an', 'and', 'of'].includes(w))
-    );
-    const studentWords = new Set(sLower.replace(/[^\w\s]/g, '').split(/\s+/));
-    const overlap = correctWords.size > 0
-        ? [...correctWords].filter(w => studentWords.has(w)).length / correctWords.size
-        : 0;
-    const objScore = Math.min(overlap, 1.0);
-    const objectOk = objScore >= 0.5;
-
-    // Relation check (weight 0.25)
-    const relKeywords = RELATION_KEYWORDS[relation.toUpperCase()] || [];
-    const relationOk = relKeywords.length > 0
-        ? relKeywords.some(kw => sLower.includes(kw))
-        : true;
-
-    // Subject check (weight 0.15)
-    const conceptWords = new Set(
-        conLower.replace(/[^\w\s]/g, '').split(/\s+/)
-            .filter(w => !['the', 'a', 'an'].includes(w))
-    );
-    const subjectOk = conceptWords.size > 0
-        ? [...conceptWords].some(w => sLower.includes(w))
-        : true;
-
-    const score = objScore * 0.6 + (relationOk ? 1.0 : 0.0) * 0.25 + (subjectOk ? 1.0 : 0.0) * 0.15;
-    const checks = { object: objectOk, relation: relationOk, subject: subjectOk };
-
-    const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
-    const relReadable = relation.toLowerCase().replace(/_/g, ' ');
-    let label: string;
-
-    if (failed.length === 0) label = 'Minor wording issue — answer is essentially correct';
-    else if (JSON.stringify(failed) === JSON.stringify(['object'])) label = `Wrong answer for ${concept} — did not identify the correct ${relReadable}`;
-    else if (JSON.stringify(failed) === JSON.stringify(['relation'])) label = `Correct topic but wrong relationship type — expected ${relReadable}`;
-    else if (failed.includes('object') && failed.includes('relation')) label = `Fundamental gap on ${concept} — wrong answer and wrong relationship`;
-    else label = `Incomplete answer on ${concept} — missing: ${failed.join(', ')}`;
-
-    return { score: Math.round(score * 100) / 100, checks, label };
 }
 
 function severityFromScore(score: number): MisconceptionSeverity {
@@ -517,11 +424,11 @@ You will be given a question, the correct answer, the student's wrong answer,
 the specific misconception label already identified, and the knowledge graph path
 between the student's answer and the correct answer.
 
-Your job is to write THREE short pieces of text:
+Your job is to write TWO short pieces of text:
 1. "gap_description"     — 1-2 sentences explaining exactly what conceptual link the student missed. Be specific.
 2. "correct_explanation" — 1-2 sentences explaining why the correct answer is correct, in plain language.
 
-Return ONLY a JSON object with these three string fields. No markdown, no preamble.`,
+Return ONLY a JSON object with these two string fields. No markdown, no preamble.`,
             },
             {
                 role: 'user',
@@ -554,7 +461,7 @@ function blankResult(): MisconceptionResult {
         misconceptionLabel: 'No answer provided',
         gapDescription: 'The student did not provide an answer.',
         correctExplanation: 'Please attempt the question before submitting.',
-        kgPath: [], checks: { object: false, relation: false, subject: false },
+        kgPath: [],
         distractorDistance: null,
     };
 }
@@ -567,7 +474,7 @@ async function correctResult(
         misconceptionLabel: 'Correct answer',
         gapDescription: '',
         correctExplanation: `"${correct}" is correct. Well done!`,
-        kgPath: [], checks: { object: true, relation: true, subject: true },
+        kgPath: [],
         distractorDistance: null,
     };
 }

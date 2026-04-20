@@ -12,14 +12,8 @@
  */
 
 import {
-    DIAGNOSTIC_WEIGHTS,
-    PRACTICE_WEIGHTS,
-    MASTERY_WEIGHTS,
     SPACED_WEIGHTS,
     SAI_WEIGHTS,
-    LAMBDA_PRACTICE,
-    LAMBDA_MASTERY,
-    LAMBDA_SPACED,
     GAMMA_FORGETTING,
 } from '@/config/constants';
 import { AssessmentMode } from '@/types/student';
