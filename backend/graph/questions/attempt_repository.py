@@ -92,8 +92,8 @@ class AttemptRepository:
             student_answer=result.student_answer,
             is_correct=result.is_correct,
             score=result.score,
-            misconception=result.misconception,
-            explanation=result.explanation,
+            misconception=result.misconception_label,
+            explanation=result.gap_description,
             correct_explanation=result.correct_explanation,
             created_at=int(time.time()),
         )
