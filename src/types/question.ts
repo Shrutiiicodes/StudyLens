@@ -55,7 +55,6 @@ export interface AnswerResult {
         misconceptionLabel: string;
         gapDescription: string;
         correctExplanation: string;
-        hint: string;
         kgPath: string[];
     };
 }

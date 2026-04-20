@@ -45,7 +45,6 @@ export interface MisconceptionResult {
     misconceptionLabel: string;
     gapDescription: string;
     correctExplanation: string;
-    hint: string;
     kgPath: string[];                // graph path between wrong and correct concept
     checks: {                        // short-answer only
         object: boolean;
@@ -354,7 +353,6 @@ export async function analyzeAnswer(input: AnalyzeAnswerInput): Promise<Misconce
         misconceptionLabel,
         gapDescription: explanation.gap_description || '',
         correctExplanation: explanation.correct_explanation || '',
-        hint: explanation.hint || '',
         kgPath,
         checks,
         distractorDistance,
@@ -502,7 +500,7 @@ async function explainMisconception(
     label: string,
     kgPath: string[],
     sourceText: string
-): Promise<{ gap_description: string; correct_explanation: string; hint: string }> {
+): Promise<{ gap_description: string; correct_explanation: string; }> {
     const kgPathStr = kgPath.length > 0
         ? kgPath.join(' → ')
         : 'Path not available in graph.';
@@ -522,7 +520,6 @@ between the student's answer and the correct answer.
 Your job is to write THREE short pieces of text:
 1. "gap_description"     — 1-2 sentences explaining exactly what conceptual link the student missed. Be specific.
 2. "correct_explanation" — 1-2 sentences explaining why the correct answer is correct, in plain language.
-3. "hint"                — 1 Socratic question guiding the student toward the right answer WITHOUT revealing it.
 
 Return ONLY a JSON object with these three string fields. No markdown, no preamble.`,
             },
@@ -535,17 +532,16 @@ Misconception label: ${label}
 KG path: ${kgPathStr}
 Source text: ${sourceTrimmed}
 
-Write the gap_description, correct_explanation, and hint.`,
+Write the gap_description, correct_explanation.`,
             },
         ], { jsonMode: true, temperature: 0.3 });
 
-        return parseLLMJson<{ gap_description: string; correct_explanation: string; hint: string }>(response);
+        return parseLLMJson<{ gap_description: string; correct_explanation: string; }>(response);
     } catch {
         // Template fallback if LLM fails
         return {
             gap_description: `The student answered "${studentAnswer}" but the correct answer is "${correct}". ${label}.`,
             correct_explanation: `The correct answer is "${correct}". Review the relevant section of your notes.`,
-            hint: `Think about the relationship between "${question.split('?')[0].slice(-40)}" and the key concepts in this topic.`,
         };
     }
 }
@@ -558,7 +554,6 @@ function blankResult(): MisconceptionResult {
         misconceptionLabel: 'No answer provided',
         gapDescription: 'The student did not provide an answer.',
         correctExplanation: 'Please attempt the question before submitting.',
-        hint: 'Try to recall what you know about this concept before leaving it blank.',
         kgPath: [], checks: { object: false, relation: false, subject: false },
         distractorDistance: null,
     };
@@ -572,7 +567,6 @@ async function correctResult(
         misconceptionLabel: 'Correct answer',
         gapDescription: '',
         correctExplanation: `"${correct}" is correct. Well done!`,
-        hint: '',
         kgPath: [], checks: { object: true, relation: true, subject: true },
         distractorDistance: null,
     };

@@ -89,7 +89,6 @@ export async function evaluateAnswer(
                 misconceptionLabel: analysis.misconceptionLabel,
                 gapDescription: analysis.gapDescription,
                 correctExplanation: analysis.correctExplanation,
-                hint: analysis.hint,
                 kgPath: analysis.kgPath,
             };
         }

@@ -131,7 +131,6 @@ Response Format (JSON):
   "misconception_label": "Short label for the misconception",
   "gap_description": "What concept the student misunderstood",
   "correct_explanation": "Clear explanation of the correct concept",
-  "hint": "A hint to guide the student to the right answer",
   "study_tip": "One specific study action to address this gap"
 }`,
     user: (question: string, correctAnswer: string, studentAnswer: string) =>

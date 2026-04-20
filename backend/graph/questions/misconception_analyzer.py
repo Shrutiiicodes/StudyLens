@@ -136,13 +136,13 @@ You will be given:
 - The specific conceptual gap already identified (you do not re-evaluate correctness)
 - The knowledge graph path between the student's answer and the correct answer (if available)
 
-Your job is to write THREE short pieces of text:
+Your job is to write TWO short pieces of text:
 1. "gap_description"     – 1-2 sentences explaining exactly what conceptual link the student missed.
                            Be specific. Refer to the actual concepts involved.
 2. "correct_explanation" – 1-2 sentences explaining why the correct answer is correct,
                            in plain language a school student can understand.
 
-Return ONLY a JSON object with these three string fields.
+Return ONLY a JSON object with these two string fields.
 Example:
 {
   "gap_description": "The student identified traders as the food source, but traders exchanged goods between cities — they did not grow or herd food themselves. The direct suppliers were farmers and herders.",
@@ -151,7 +151,7 @@ Example:
 
 Rules:
 - gap_description must reference the specific wrong concept the student chose.
-- Keep all three fields under 3 sentences each.
+- Keep all two fields under 3 sentences each.
 - Return ONLY the JSON. No markdown, no preamble.\
 """
 
@@ -496,7 +496,7 @@ class MisconceptionAnalyzer:
             student_answer=student_answer,
             label=label,
             kg_path=kg_path_str,
-            source_text=source_trimmed,
+            source_text=source_trimmed
         )
 
         for attempt in range(1, 3):
