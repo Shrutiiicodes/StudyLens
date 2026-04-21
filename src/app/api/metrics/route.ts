@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
 
         let attemptsQuery = supabase
             .from('attempts')
-            .select('correct, confidence, time_taken, difficulty, cognitive_level, mode, created_at, concept_id')
+            .select('correct, confidence, time_taken, difficulty, cognitive_level, mode, question_type, created_at, concept_id')
             .eq('user_id', userId)
             .order('created_at', { ascending: true });
 
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
             correct: a.correct,
             confidence: a.confidence ?? 0.5,
             time_taken: a.time_taken ?? 0,
-            question_type: a.mode ?? 'recall',
+            question_type: a.question_type ?? 'recall',
             cognitive_level: a.cognitive_level ?? 1,
             difficulty: a.difficulty ?? 1,
         }));

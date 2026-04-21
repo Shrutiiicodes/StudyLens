@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         // Fetch all attempts for question-type breakdown per session
         const { data: allAttempts } = await supabase
             .from('attempts')
-            .select('concept_id, correct, difficulty, cognitive_level, mode, session_id')
+            .select('concept_id, correct, difficulty, cognitive_level, question_type, session_id')
             .eq('user_id', userId);
 
         // ── Build weak topics map ─────────────────────────────────────────
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
             if (!attempt.correct) b.by_difficulty_incorrect[diffKey] += 1;
 
             // Question type via cognitive_level proxy
-            const typeKey = attempt.mode ?? 'recall';
+            const typeKey = attempt.question_type ?? 'recall';
             if (!b.by_type[typeKey]) b.by_type[typeKey] = { total: 0, incorrect: 0 };
             b.by_type[typeKey].total += 1;
             if (!attempt.correct) b.by_type[typeKey].incorrect += 1;

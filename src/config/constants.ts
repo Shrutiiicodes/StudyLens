@@ -117,7 +117,7 @@ export type StageKeyWithComplete = (typeof STAGE_KEYS_WITH_COMPLETE)[number];
 
 // Rich UI metadata for each stage (icons are added at the call-site in TSX).
 export const STAGE_DEFS: Array<{ key: StageKey; label: string; description: string }> = [
-    { key: 'diagnostic', label: 'Easy 5',        description: 'Initial knowledge check' },
-    { key: 'practice',   label: 'Practice Test',  description: 'Adaptive practice questions' },
-    { key: 'mastery',    label: 'Mastery Test',   description: 'Prove full understanding' },
+    { key: 'diagnostic', label: 'Easy 5', description: 'Initial knowledge check' },
+    { key: 'practice', label: 'Practice Test', description: 'Adaptive practice questions' },
+    { key: 'mastery', label: 'Mastery Test', description: 'Prove full understanding' },
 ];
