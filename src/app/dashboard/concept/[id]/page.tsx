@@ -4,44 +4,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ProgressCard from '@/components/ProgressCard';
 import MasteryGraph from '@/components/MasteryGraph';
-import {
-    ArrowLeft,
-    Target,
-    BookOpen,
-    ClipboardList,
-    BarChart2,
-    Search,
-    FileEdit,
-    Trophy,
-    CheckCircle,
-} from 'lucide-react';
-
-interface ConceptDetail {
-    id: string;
-    title: string;
-    source_document: string;
-    created_at: string;
-}
-
-interface GraphNode {
-    id: string;
-    label: string;
-    type: 'concept' | 'definition' | 'example' | 'formula' | 'misconception';
-    properties?: Record<string, string>;
-}
-
-interface GraphEdge {
-    source: string;
-    target: string;
-    type: string;
-}
-
-interface ConceptProgress {
-    mastery_score: number;
-    current_stage: string;
-    is_complete: boolean;
-    last_updated: string;
-}
+import { ArrowLeft, Target, BookOpen, ClipboardList, BarChart2, Search, FileEdit, Trophy, CheckCircle, } from 'lucide-react';
+import { ConceptDetail, ConceptProgress, ConceptNode, ConceptRelation } from '@/types/concept';
+import { ConceptSessionSummary } from '@/types/session';
 
 // Derive ProgressCard status from stage
 function stageToStatus(stage: string): 'locked' | 'unlocked' | 'mastered' {
@@ -59,10 +24,10 @@ export default function ConceptDetailPage() {
     const [concept, setConcept] = useState<ConceptDetail | null>(null);
     const [progress, setProgress] = useState<ConceptProgress | null>(null);
     const [loading, setLoading] = useState(true);
-    const [graphNodes, setGraphNodes] = useState<GraphNode[]>([]);
-    const [graphEdges, setGraphEdges] = useState<GraphEdge[]>([]);
+    const [graphNodes, setGraphNodes] = useState<ConceptNode[]>([]);
+    const [graphEdges, setGraphEdges] = useState<ConceptRelation[]>([]);
     const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
-    const [sessions, setSessions] = useState<Array<{ id: string; mode: string; score: number; passed: boolean; nlg: number | null; created_at: string }>>([]);
+    const [sessions, setSessions] = useState<ConceptSessionSummary[]>([]);
 
     const titleFromUrl = searchParams.get('title');
     const conceptTitle = concept?.title || titleFromUrl || 'Concept';

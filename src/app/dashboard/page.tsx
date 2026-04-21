@@ -3,23 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-    FileText,
-    Target,
-    BookOpen,
-    Book,
-    ClipboardList,
-    Rocket,
-    Brain,
-    Clock,
-} from 'lucide-react';
-
-interface ConceptRecord {
-    id: string;
-    title: string;
-    source_document: string;
-    created_at: string;
-}
+import { FileText, Target, BookOpen, Book, ClipboardList, Rocket, Brain, Clock } from 'lucide-react';
+import { ConceptRecord } from '@/types/concept';
 
 export default function DashboardPage() {
     const [user, setUser] = useState<{ id: string; full_name: string; grade: number } | null>(null);

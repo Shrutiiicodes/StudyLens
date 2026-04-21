@@ -3,34 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { STAGE_DEFS } from '@/config/constants';
-import {
-    Search,
-    FileEdit,
-    Trophy,
-    Clock,
-    Pencil,
-    FileText,
-    CheckCircle,
-    Book,
-    Lock,
-    Info,
-    Trash2,
-} from 'lucide-react';
-
-interface ConceptRecord {
-    id: string;
-    title: string;
-    source_document: string;
-    created_at: string;
-}
-
-interface ProgressData {
-    score: number;
-    stage: string;
-    lastUpdated: string;
-    needsReview?: boolean; // Fix 15: FSRS-triggered review indicator
-}
-
+import { Search, FileEdit, Trophy, Clock, Pencil, FileText, CheckCircle, Book, Lock, Info, Trash2, } from 'lucide-react';
+import { ConceptRecord, ProgressData } from '@/types/concept';
 // Icons for each stage — injected at render-time since JSX can't live in constants.ts.
 const STAGE_ICONS: Record<string, React.ReactNode> = {
     diagnostic: <Search size={14} />,

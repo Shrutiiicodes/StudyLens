@@ -3,40 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Search, FileEdit, Trophy, Clock, ClipboardList,
-    BarChart, Target, ChevronRight, TrendingUp,
-    TrendingDown, Minus, AlertTriangle, ChevronDown, ChevronUp,
+    Search, FileEdit, Trophy, Clock, ClipboardList, BarChart, Target, ChevronRight, TrendingUp, TrendingDown, Minus, AlertTriangle, ChevronDown, ChevronUp,
 } from 'lucide-react';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface SessionBreakdown {
-    total: number;
-    correct: number;
-    by_difficulty: { easy: number; medium: number; hard: number };
-    by_difficulty_incorrect: { easy: number; medium: number; hard: number };
-    by_type: Record<string, { total: number; incorrect: number }>;
-}
-
-interface SessionRecord {
-    id: string;
-    concept_id: string;
-    concept_title: string;
-    mode: string;
-    score: number;
-    passed: boolean;
-    nlg: number | null;
-    brier_score: number | null;
-    created_at: string;
-    breakdown: SessionBreakdown | null;
-}
-
-interface WeakTopic {
-    concept_id: string;
-    concept_title: string;
-    incorrect_count: number;
-    questions: Array<{ question_text: string; correct_answer: string; difficulty: number }>;
-}
+import { SessionRecord, WeakTopic, SessionBreakdown } from '@/types/session';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

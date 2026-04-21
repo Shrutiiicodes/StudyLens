@@ -54,3 +54,48 @@ export interface DocumentValidation {
     conceptDensity: number;
     warnings: string[];
 }
+
+// ─── Dashboard / API response shapes ─────────────────────────────────────────
+
+/**
+ * Minimal concept record returned by GET /api/concepts.
+ * Mastery fields are joined in from the mastery table when available.
+ */
+export interface ConceptRecord {
+    id: string;
+    title: string;
+    source_document: string;
+    created_at: string;
+    mastery_score?: number;
+    current_stage?: string;
+    last_updated?: string | null;
+}
+
+/**
+ * Extended concept detail for the concept-detail page.
+ * Currently identical to ConceptRecord; kept as a separate alias so
+ * the detail view can grow fields (description, prerequisites, etc.)
+ * without churning every consumer of ConceptRecord.
+ */
+export type ConceptDetail = ConceptRecord;
+
+/**
+ * Per-concept stage + mastery state from GET /api/progress?conceptId=xxx.
+ */
+export interface ConceptProgress {
+    mastery_score: number;
+    current_stage: string;
+    is_complete: boolean;
+    last_updated?: string;
+}
+
+/**
+ * Student progress summary used by the concepts list page.
+ * Returned as a per-concept map by GET /api/progress (no conceptId).
+ */
+export interface ProgressData {
+    score: number;
+    stage: string;
+    lastUpdated: string;
+    needsReview?: boolean;
+}

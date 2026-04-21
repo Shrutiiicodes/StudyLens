@@ -5,12 +5,7 @@ import UploadZone from '@/components/UploadZone';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { XCircle, CheckCircle, AlertTriangle, Target, FileText } from 'lucide-react';
-
-interface ConceptRecord {
-    id: string;
-    title: string;
-    created_at: string;
-}
+import { ConceptRecord } from '@/types/concept';
 
 interface UploadResult {
     success: boolean;
