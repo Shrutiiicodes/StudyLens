@@ -11,6 +11,14 @@ import {
     buildGraphDistractors,
     selectDistractors,
 } from './distractor-engine';
+import {
+    samplePoolQuestion,
+    persistToPool,
+    recordExposures,
+    hashContext,
+    type PoolKey,
+    type PoolQuestion,
+} from './question-pool';
 
 /**
  * Question Generator
@@ -18,7 +26,13 @@ import {
  * Generates questions from the Knowledge Graph using LLM.
  * 5 Question Types × 3 Difficulty Levels
  *
- * Distractor selection order:
+ * Caching layer (question_pool table):
+ *   1. Sample from the per-concept pool first — no LLM call on a hit.
+ *   2. On miss, generate via LLM and persist to the pool for next time.
+ *   3. Mastery-mode weak-spot reinforcement questions are user-specific and
+ *      always go straight to the LLM (skipPool = true).
+ *
+ * Distractor selection order (unchanged):
  *   1. Graph-hop distractors (primary) — topology-grounded, difficulty from graph
  *   2. LLM-generated options (fallback) — when graph can't supply ≥3 distractors
  */
@@ -95,8 +109,15 @@ async function chatCompletionWithRetry(
     throw lastError;
 }
 
-// ─── Generate a single question ───
+// ─── Generate a single question (pure LLM — no pool) ───
 
+/**
+ * Generate a single question via LLM. This function does NOT consult the
+ * question pool — it's the "always regenerate" path used by:
+ *   - pool misses in generateOrSampleQuestion
+ *   - mastery-mode weak-spot reinforcement (user-specific context)
+ *   - spaced-review for concepts without a populated pool
+ */
 export async function generateQuestion(request: QuestionGenerationRequest): Promise<Question> {
     const context = request.context !== undefined
         ? request.context
@@ -203,6 +224,88 @@ export async function generateQuestion(request: QuestionGenerationRequest): Prom
     };
 }
 
+
+// ─── Generate OR sample (pool-first path) ───
+
+interface GenerateOrSampleOptions {
+    /** Skip the pool entirely — use this for user-specific prompts. */
+    skipPool?: boolean;
+    /** Pool IDs already served in this session; don't deal them again. */
+    dealtPoolIds: Set<string>;
+    /** Accumulator for exposures to record at end of session. */
+    exposures: Array<{ poolQuestionId: string; conceptId: string }>;
+}
+
+/**
+ * Pool-first question generation.
+ *   1. If skipPool is false, try to sample from the pool.
+ *   2. Otherwise (or on miss) generate via LLM and persist.
+ *
+ * Either way, the returned Question has all the same fields as
+ * generateQuestion() produces — callers don't care whether it came from
+ * the pool or was freshly generated.
+ */
+async function generateOrSampleQuestion(
+    request: QuestionGenerationRequest,
+    opts: GenerateOrSampleOptions
+): Promise<Question> {
+    const poolKey: PoolKey = {
+        conceptId: request.concept_id,
+        type: request.type,
+        difficulty: request.difficulty,
+    };
+
+    // ── 1. Pool sample ───────────────────────────────────────────────────
+    if (!opts.skipPool) {
+        const sampled = await samplePoolQuestion(poolKey, request.user_id, opts.dealtPoolIds);
+        if (sampled) {
+            opts.dealtPoolIds.add(sampled.pool_id!);
+            opts.exposures.push({
+                poolQuestionId: sampled.pool_id!,
+                conceptId: request.concept_id,
+            });
+            console.log(
+                `[QGen] Pool hit: ${request.type}/${request.difficulty} for concept ${request.concept_id.slice(0, 8)}`
+            );
+            // Strip the internal pool_id field before returning to the caller
+            const { pool_id: _pool_id, ...q } = sampled as PoolQuestion;
+            void _pool_id;
+            return q as Question;
+        }
+    }
+
+    // ── 2. LLM generation ───────────────────────────────────────────────
+    const generated = await generateQuestion(request);
+
+    // ── 3. Persist to pool if this was a cacheable generation ───────────
+    //     When we persist, we also rewrite the question's id to the stable
+    //     pool_<row_id> form. That way, whether this exact question came
+    //     from the pool now or in a future session, it carries the SAME
+    //     question_id — so the IRT endpoint aggregates response stats
+    //     across all students correctly.
+    //
+    //     skipPool = user-specific prompt, don't pollute the shared pool.
+    if (!opts.skipPool) {
+        const contextHash = hashContext(request.context ?? '');
+        const poolId = await persistToPool(poolKey, generated, contextHash);
+        if (poolId) {
+            generated.id = `pool_${poolId}`;
+            opts.dealtPoolIds.add(poolId);
+            if (request.user_id) {
+                opts.exposures.push({
+                    poolQuestionId: poolId,
+                    conceptId: request.concept_id,
+                });
+            }
+            console.log(
+                `[QGen] Pool miss → generated + cached: ${request.type}/${request.difficulty}`
+            );
+        }
+    }
+
+    return generated;
+}
+
 // ─── Question count based on context richness ───
 
 function getQuestionCount(context: string, mode: AssessmentMode): number {
@@ -282,6 +385,12 @@ export async function generateQuestionsForMode(
     let count = getQuestionCount(context, mode);
     const questions: Question[] = [];
 
+    // Per-session bookkeeping for the pool:
+    //  - dealtPoolIds: prevents dealing the same pool row twice this session
+    //  - exposures: batched write at the end of generation
+    const dealtPoolIds = new Set<string>();
+    const exposures: Array<{ poolQuestionId: string; conceptId: string }> = [];
+
     // ── SPACED REPETITION INJECTION ───────────────────────────────────────
     if (userId && (mode === 'practice' || mode === 'mastery')) {
         try {
@@ -321,14 +430,20 @@ export async function generateQuestionsForMode(
                         const sContext = await getConceptContext(sc.concept_id);
                         const sTitle = (sc.concepts as any)?.title || 'Review Concept';
                         try {
-                            const sq = await generateQuestion({
-                                concept_id: sc.concept_id,
-                                concept_title: sTitle,
-                                type: 'recall',
-                                difficulty: 2,
-                                context: sContext,
-                                user_id: userId,
-                            });
+                            // Spaced questions go through the pool path — if
+                            // the other concept's pool is populated, this
+                            // costs zero LLM calls.
+                            const sq = await generateOrSampleQuestion(
+                                {
+                                    concept_id: sc.concept_id,
+                                    concept_title: sTitle,
+                                    type: 'recall',
+                                    difficulty: 2,
+                                    context: sContext,
+                                    user_id: userId,
+                                },
+                                { dealtPoolIds, exposures }
+                            );
                             sq.is_spaced = true;
                             questions.push(sq);
                             count--;
@@ -346,8 +461,11 @@ export async function generateQuestionsForMode(
     // ── Generate main session questions ───────────────────────────────────
     const configs = getConfigsForMode(mode, count, currentMastery);
 
+    // Mastery mode: determine whether the first question should be a
+    // user-specific "weak-spot reinforcement" question (always LLM).
+    // If so, we carve it off and serve the rest from the pool.
+    let weakSpotContext: string | null = null;
     if (mode === 'mastery' && userId) {
-        // Fetch up to 3 of this user's past incorrect answers for this concept
         const { data: weakSpots } = await supabase
             .from('attempts')
             .select('question_text, correct_answer')
@@ -359,29 +477,43 @@ export async function generateQuestionsForMode(
             .limit(3);
 
         if (weakSpots && weakSpots.length > 0) {
-            // Add them as additional context to the first question's prompt
-            // by appending to the context string
-            const weakSpotContext = weakSpots
-                .map(w => `Previously missed: "${w.question_text}" — correct answer: "${w.correct_answer}"`)
-                .join('\n');
-            context = context + '\n\n[REINFORCE THESE GAPS]\n' + weakSpotContext;
+            weakSpotContext = context + '\n\n[REINFORCE THESE GAPS]\n' +
+                weakSpots
+                    .map(w => `Previously missed: "${w.question_text}" — correct answer: "${w.correct_answer}"`)
+                    .join('\n');
         }
     }
 
     for (let i = 0; i < configs.length; i++) {
         try {
-            const q = await generateQuestion({
-                concept_id: conceptId,
-                concept_title: conceptTitle,
-                type: configs[i].type,
-                difficulty: configs[i].difficulty,
-                context,
-                user_id: userId,
-            });
+            // First config slot in mastery mode with a weak-spot profile is
+            // user-specific and must bypass the shared pool.
+            const isUserSpecific = i === 0 && weakSpotContext !== null;
+
+            const q = await generateOrSampleQuestion(
+                {
+                    concept_id: conceptId,
+                    concept_title: conceptTitle,
+                    type: configs[i].type,
+                    difficulty: configs[i].difficulty,
+                    context: isUserSpecific ? weakSpotContext! : context,
+                    user_id: userId,
+                },
+                {
+                    dealtPoolIds,
+                    exposures,
+                    skipPool: isUserSpecific,
+                }
+            );
             questions.push(q);
         } catch (error) {
             console.error(`[QGen] Failed to generate question ${i + 1} after retries:`, (error as Error).message);
         }
+    }
+
+    // ── Batch-record exposures ───────────────────────────────────────────
+    if (userId && exposures.length > 0) {
+        void recordExposures(userId, exposures);
     }
 
     return questions.sort(() => Math.random() - 0.5);
@@ -398,20 +530,31 @@ export async function generateAssessmentQuestions(
     const context = await getConceptContext(conceptId);
     const questions: Question[] = [];
 
+    // This helper is called in ad-hoc contexts — give it the pool path too.
+    const dealtPoolIds = new Set<string>();
+    const exposures: Array<{ poolQuestionId: string; conceptId: string }> = [];
+
     for (let i = 0; i < count; i++) {
         try {
-            const q = await generateQuestion({
-                concept_id: conceptId,
-                concept_title: conceptTitle,
-                type,
-                difficulty,
-                context,
-                user_id: userId,
-            });
+            const q = await generateOrSampleQuestion(
+                {
+                    concept_id: conceptId,
+                    concept_title: conceptTitle,
+                    type,
+                    difficulty,
+                    context,
+                    user_id: userId,
+                },
+                { dealtPoolIds, exposures }
+            );
             questions.push(q);
         } catch (error) {
             console.error(`[QGen] Failed to generate assessment question:`, (error as Error).message);
         }
+    }
+
+    if (userId && exposures.length > 0) {
+        void recordExposures(userId, exposures);
     }
 
     return questions;

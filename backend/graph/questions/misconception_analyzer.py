@@ -5,14 +5,16 @@ KG-grounded misconception analysis.
 Design principle
 ----------------
 Scoring and gap identification are deterministic — derived entirely from
-the knowledge graph structure. The LLM's only job is to write the
-human-readable explanation of a gap that the graph has already identified.
+the knowledge graph structure. Explanation writing is template-first with
+LLM escalation for unusual cases, and all LLM outputs are cached.
 
 This means:
   - Scores are reproducible (same answer always gets same score)
   - Misconception labels come from graph topology, not LLM opinion
   - The LLM cannot hallucinate a gap that doesn't exist in the graph
-  - Evaluation works even if the Groq call fails (fallback explanation)
+  - Most wrong answers get a graph-grounded TEMPLATE explanation (no LLM)
+  - Only unusual or repeat-miss cases escalate to the LLM
+  - Every LLM output is cached for cross-student reuse
 
 MCQ evaluation
 --------------
@@ -23,9 +25,6 @@ Scoring is purely distance-based:
   - Distance-2 wrong answer     → score = 0.2  (moderate gap)
   - Distance-3+ wrong answer    → score = 0.0  (fundamental gap)
 
-The KG path between correct and chosen concept is retrieved and passed to
-the LLM, which explains specifically what conceptual link the student missed.
-
 Short answer evaluation
 -----------------------
 The question carries:
@@ -34,15 +33,9 @@ The question carries:
   correct  (object of the triple, e.g. "Farmers And Herders")
 
 Three checks run in order, each contributing to the score:
-  1. Object check    — does the student answer contain / imply the correct object?
-                       Exact or fuzzy match against correct answer text.
-                       Weight: 0.6  (the most important — what is the answer?)
-  2. Relation check  — does the answer imply the correct relation type?
-                       Keyword heuristics per relation category.
-                       Weight: 0.25
-  3. Subject check   — does the answer demonstrate understanding of the subject?
-                       Checks if subject concept appears or is implied.
-                       Weight: 0.15
+  1. Object check    — weight 0.60
+  2. Relation check  — weight 0.25
+  3. Subject check   — weight 0.15
 
 Severity tiers
 --------------
@@ -50,8 +43,22 @@ Severity tiers
   CLOSE    0.60-0.84 → right idea, wrong detail
   PARTIAL  0.30-0.59 → partial understanding
   CRITICAL < 0.30   → fundamental gap
+
+Explanation policy (Hotspot C)
+------------------------------
+LLM is called only when one of these signals fires:
+  * No KG path found AND severity is PARTIAL or CRITICAL
+    (template without a path is uninformative)
+  * Short-answer question (templates can't capture the nuance)
+  * Student has repeatedly missed this concept — escalation via
+    supabase 'attempts' table lookup (requires conceptId; silently
+    skipped if unavailable)
+
+The cache key is (label | correct | student | concept | kg_path_joined),
+deliberately user-independent so cross-student reuse works.
 """
 
+import hashlib
 import json
 import logging
 import os
@@ -63,7 +70,41 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+# ──────────────────────────────────────────────────────────────────────────
+# Optional Supabase client for the cache + prior-wrong-attempts lookup.
+# If env vars aren't set, the cache is disabled and the analyzer still
+# works (template-first behaviour — the important win — is always on).
+# ──────────────────────────────────────────────────────────────────────────
+
+_SUPABASE_CLIENT = None
+
+
+def _get_supabase():
+    """Return a cached Supabase client, or None if unavailable."""
+    global _SUPABASE_CLIENT
+    if _SUPABASE_CLIENT is not None:
+        return _SUPABASE_CLIENT
+    url = os.environ.get("SUPABASE_URL")
+    key = (
+        os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        or os.environ.get("SUPABASE_SERVICE_KEY")
+        or os.environ.get("SUPABASE_KEY")
+    )
+    if not url or not key:
+        return None
+    try:
+        from supabase import create_client  # type: ignore
+        _SUPABASE_CLIENT = create_client(url, key)
+        return _SUPABASE_CLIENT
+    except Exception as exc:
+        logger.debug("Supabase client unavailable (cache disabled): %s", exc)
+        return None
+
+
+# ──────────────────────────────────────────────────────────────────────────
 # Severity
+# ──────────────────────────────────────────────────────────────────────────
+
 class Severity:
     CORRECT  = "CORRECT"
     CLOSE    = "CLOSE"
@@ -77,24 +118,15 @@ class Severity:
         if score >= 0.30: return Severity.PARTIAL
         return Severity.CRITICAL
 
+
+# ──────────────────────────────────────────────────────────────────────────
 # Result dataclass
+# ──────────────────────────────────────────────────────────────────────────
+
 @dataclass
 class MisconceptionResult:
     """
     Full evaluation result for one student answer.
-
-    Fields used in the report
-    -------------------------
-    severity            : CORRECT / CLOSE / PARTIAL / CRITICAL
-    score               : 0.0 – 1.0  (deterministic, not LLM-assigned)
-    is_correct          : score >= 0.85
-    misconception_label : Short label e.g. "Confused supplier with trader"
-    gap_description     : What specific conceptual link was missed
-    correct_explanation : What the correct answer means in context
-    kg_path             : The graph path between chosen and correct concept
-                          (MCQ only) — shown in report as evidence
-    checks              : For short answer — {"object": bool, "relation": bool,
-                          "subject": bool}
     """
     question_id:         str
     student_answer:      str
@@ -105,13 +137,16 @@ class MisconceptionResult:
     gap_description:     str
     correct_explanation: str
     attempt_id:          str             = ""
-    kg_path:             list[str]       = field(default_factory=list)
-    checks:              dict[str, bool] = field(default_factory=dict)
-    distractor_distance: Optional[int]  = None   # MCQ only
+    kg_path:             list            = field(default_factory=list)
+    checks:              dict            = field(default_factory=dict)
+    distractor_distance: Optional[int]   = None   # MCQ only
 
 
+# ──────────────────────────────────────────────────────────────────────────
 # Relation keyword heuristics for short-answer relation check
-_RELATION_KEYWORDS: dict[str, list[str]] = {
+# ──────────────────────────────────────────────────────────────────────────
+
+_RELATION_KEYWORDS = {
     "LOCATED_IN":    ["located", "found", "in", "at", "city", "place", "site"],
     "FOUND_IN":      ["found", "discovered", "located", "in", "at"],
     "USED_FOR":      ["used", "purpose", "function", "for", "served"],
@@ -126,7 +161,18 @@ _RELATION_KEYWORDS: dict[str, list[str]] = {
 }
 
 
+# ──────────────────────────────────────────────────────────────────────────
+# Escalation tunables
+# ──────────────────────────────────────────────────────────────────────────
+
+# How many prior wrong attempts on this concept before escalating to LLM.
+REPEAT_MISS_ESCALATION_THRESHOLD = 2
+
+
+# ──────────────────────────────────────────────────────────────────────────
 # LLM prompts — explanation only, scoring already done
+# ──────────────────────────────────────────────────────────────────────────
+
 _SYSTEM_PROMPT = """\
 You are an educational feedback writer for school-level history.
 
@@ -166,7 +212,11 @@ Source text: {source_text}
 Write the gap_description, correct_explanation.\
 """
 
+
+# ──────────────────────────────────────────────────────────────────────────
 # Analyzer
+# ──────────────────────────────────────────────────────────────────────────
+
 class MisconceptionAnalyzer:
     """
     KG-grounded misconception analyzer.
@@ -178,13 +228,15 @@ class MisconceptionAnalyzer:
             question_id    = q["question_id"],
             question_text  = q["question"],
             correct_answer = q["correct"],
-            student_answer = chosen_option,       # MCQ: exact option text
+            student_answer = chosen_option,
             q_type         = q["q_type"],
             concept        = q["concept"],
             relation       = q["relation"],
             distractor_distances = q["distractor_distances"],  # MCQ
             neo4j_session  = session,
             source_text    = chunk_text,
+            user_id        = "uuid-of-student",   # optional, enables repeat-miss escalation
+            concept_id     = "uuid-of-concept",   # optional, same
         )
     """
 
@@ -198,8 +250,10 @@ class MisconceptionAnalyzer:
             raise EnvironmentError("GROQ_API_KEY not set in .env")
         self.model = model
 
-   
+    # ------------------------------------------------------------------
     # Public entry point
+    # ------------------------------------------------------------------
+
     def evaluate(
         self,
         question_id:          str,
@@ -210,19 +264,21 @@ class MisconceptionAnalyzer:
         concept:              str,
         relation:             str,
         neo4j_session,
-        distractor_distances: dict[str, int] = None,   # MCQ only
+        distractor_distances: dict = None,   # MCQ only
         source_text:          str = "",
         doc_id:               str = "",
+        user_id:              str = "",      # optional — enables repeat-miss
+        concept_id:           str = "",      # optional — enables repeat-miss
     ) -> MisconceptionResult:
         """
         Evaluate one student answer using the KG-first approach.
 
         Steps:
           1. Blank/empty answer → immediate CRITICAL result, no Groq call.
-          2. Correct answer check (exact + normalised) → CORRECT, no Groq call.
-          3. Score deterministically from KG (MCQ: distance; SHORT: triple checks).
-          4. Retrieve KG path between wrong and correct concept (for explanation).
-          5. Call Groq to write the human-readable explanation of the identified gap.
+          2. Correct answer check → CORRECT, no Groq call.
+          3. Score deterministically from KG.
+          4. Retrieve KG path between wrong and correct concept.
+          5. Build explanation (template-first; LLM only on escalation).
           6. Return MisconceptionResult.
         """
         # Step 1 — blank answer
@@ -232,8 +288,7 @@ class MisconceptionAnalyzer:
         # Step 2 — correct answer
         if self._is_correct(student_answer, correct_answer):
             return self._correct_result(
-                question_id, student_answer, correct_answer,
-                question_text, source_text
+                question_id, student_answer, correct_answer
             )
 
         # Step 3 — deterministic scoring
@@ -259,10 +314,19 @@ class MisconceptionAnalyzer:
         except Exception as e:
             logger.debug("KG path lookup failed (non-fatal): %s", e)
 
-        # Step 5 — LLM writes explanation
-        explanation = self._explain(
-            question_text, correct_answer, student_answer,
-            label, kg_path, source_text
+        # Step 5 — Explanation (template-first with LLM escalation)
+        explanation = self._build_explanation(
+            question=question_text,
+            correct=correct_answer,
+            student_answer=student_answer,
+            label=label,
+            severity=severity,
+            q_type=q_type,
+            concept=concept,
+            kg_path=kg_path,
+            source_text=source_text,
+            user_id=user_id,
+            concept_id=concept_id,
         )
 
         return MisconceptionResult(
@@ -279,15 +343,13 @@ class MisconceptionAnalyzer:
             distractor_distance=dist,
         )
 
-   
+    # ------------------------------------------------------------------
     # Step 2 — Correct answer check
-   
+    # ------------------------------------------------------------------
 
     def _is_correct(self, student: str, correct: str) -> bool:
         """
         Normalised string match — case-insensitive, strips punctuation.
-        For MCQ this is an exact option match.
-        For short answer, checks if the correct answer text appears in the response.
         """
         def norm(s):
             return re.sub(r"[^\w\s]", "", s.lower()).strip()
@@ -295,40 +357,27 @@ class MisconceptionAnalyzer:
         s = norm(student)
         c = norm(correct)
 
-        # Exact match
         if s == c:
             return True
-        # Student answer contains the correct answer (short answer leniency)
         if c in s:
             return True
-        # Correct answer contains the student answer (student was brief but right)
         if len(s) > 3 and s in c:
             return True
         return False
 
-   
+    # ------------------------------------------------------------------
     # Step 3a — MCQ scoring
+    # ------------------------------------------------------------------
+
     def _score_mcq(
         self,
         student_answer:       str,
         correct_answer:       str,
-        distractor_distances: dict[str, int],
-    ) -> tuple[float, Optional[int], str]:
-        """
-        Score an MCQ answer purely from graph hop distance.
-
-        Returns (score, distance, misconception_label).
-
-        Distance → score mapping:
-          1 → 0.4  The student picked a directly-connected concept.
-                   They understand the topic area but confused adjacent concepts.
-          2 → 0.2  Two hops away — related domain, wrong specific fact.
-          3+ → 0.0 Far from correct — fundamental gap or guessing.
-        """
+        distractor_distances: dict,
+    ):
+        """Score an MCQ answer purely from graph hop distance."""
         distance = distractor_distances.get(student_answer)
-
         if distance is None:
-            # Option not in our map (shouldn't happen, but handle gracefully)
             distance = 3
 
         score_map = {1: 0.4, 2: 0.2}
@@ -338,46 +387,45 @@ class MisconceptionAnalyzer:
             1: f"Confused closely related concepts: '{student_answer}' vs '{correct_answer}'",
             2: f"Mixed up concepts in the same domain: chose '{student_answer}'",
         }
-        label = label_map.get(distance,
-                               f"Fundamental gap: chose '{student_answer}' (far from correct)")
+        label = label_map.get(
+            distance,
+            f"Fundamental gap: chose '{student_answer}' (far from correct)"
+        )
 
         return score, distance, label
 
+    # ------------------------------------------------------------------
     # Step 3b — Short answer scoring
+    # ------------------------------------------------------------------
+
     def _score_short(
         self,
         student_answer: str,
         correct_answer: str,
         concept:        str,
         relation:       str,
-    ) -> tuple[float, dict[str, bool], str]:
-        """
-        Score a short answer on three independent dimensions:
-
-          Object check (0.60 weight)  — did they get the right answer entity?
-          Relation check (0.25 weight) — did they identify the right relationship?
-          Subject check (0.15 weight) — do they understand what the question is about?
-
-        Returns (score, checks_dict, misconception_label).
-        """
+    ):
+        """Score a short answer on object/relation/subject axes."""
         s_lower   = student_answer.lower()
         c_lower   = correct_answer.lower()
         con_lower = concept.lower()
 
-        # Object check — partial credit for partial matches
+        # Object check
         obj_score = 0.0
-        correct_words = set(re.sub(r"[^\w\s]", "", c_lower).split()) - {"the", "a", "an", "and", "of"}
+        correct_words = set(re.sub(r"[^\w\s]", "", c_lower).split()) - {
+            "the", "a", "an", "and", "of"
+        }
         student_words = set(re.sub(r"[^\w\s]", "", s_lower).split())
         if correct_words:
             overlap = len(correct_words & student_words) / len(correct_words)
             obj_score = min(overlap, 1.0)
         object_ok = obj_score >= 0.5
 
-        # Relation check — keyword heuristics
+        # Relation check
         rel_keywords = _RELATION_KEYWORDS.get(relation.upper(), [])
         relation_ok = any(kw in s_lower for kw in rel_keywords) if rel_keywords else True
 
-        # Subject check — does the answer acknowledge what the question is about?
+        # Subject check
         concept_words = set(re.sub(r"[^\w\s]", "", con_lower).split()) - {"the", "a", "an"}
         subject_ok = any(w in s_lower for w in concept_words) if concept_words else True
 
@@ -393,7 +441,6 @@ class MisconceptionAnalyzer:
             (1.0 if subject_ok else 0.0) * 0.15
         )
 
-        # Build label from which checks failed
         failed = [k for k, v in checks.items() if not v]
         rel_readable = relation.lower().replace("_", " ")
         if not failed:
@@ -409,7 +456,10 @@ class MisconceptionAnalyzer:
 
         return round(score, 2), checks, label
 
+    # ------------------------------------------------------------------
     # Step 4 — KG path between wrong and correct concept
+    # ------------------------------------------------------------------
+
     def _get_kg_path(
         self,
         student_answer: str,
@@ -417,22 +467,8 @@ class MisconceptionAnalyzer:
         concept:        str,
         doc_id:         str,
         session,
-    ) -> list[str]:
-        """
-        Find the shortest path in the KG between:
-          - The correct answer concept (object of the triple)
-          - The student's chosen concept (wrong answer)
-
-        Returns a list of strings describing the path, e.g.:
-          ["Great Bath -[LOCATED_IN]-> Mohenjodaro",
-           "Harappa -[PART_OF]-> Harappan Civilization",
-           "Mohenjodaro -[PART_OF]-> Harappan Civilization"]
-
-        This path is passed to the LLM so it can explain *specifically*
-        what relationship the student confused.
-
-        Non-fatal — returns [] if concepts not found in graph.
-        """
+    ) -> list:
+        """Find the shortest path in the KG between wrong and correct concepts."""
         if not session or not doc_id:
             return []
 
@@ -465,29 +501,179 @@ class MisconceptionAnalyzer:
 
         return path_parts
 
-   
-    # Step 5 — LLM explains the identified gap
-    def _explain(
+    # ------------------------------------------------------------------
+    # Step 5 — Explanation (template-first with LLM escalation)
+    # ------------------------------------------------------------------
+
+    def _build_explanation(
         self,
         question:       str,
         correct:        str,
         student_answer: str,
         label:          str,
-        kg_path:        list[str],
+        severity:       str,
+        q_type:         str,
+        concept:        str,
+        kg_path:        list,
+        source_text:    str,
+        user_id:        str,
+        concept_id:     str,
+    ) -> dict:
+        """
+        Policy:
+          A. Cache lookup — if we've written this explanation before, reuse.
+          B. Template unless one of the escalation signals fires:
+             - severity in (PARTIAL, CRITICAL) AND kg_path is empty
+             - short-answer question (templates aren't specific enough)
+             - student has missed this concept REPEAT_MISS_ESCALATION_THRESHOLD+
+               times before
+          C. LLM is the escalation path. Cache whatever we produce.
+
+        Note on the cache-vs-repeat-miss tension:
+          The cache key is intentionally user-independent so cross-student
+          reuse works. The repeat-miss escalation only fires the FIRST time
+          any student hits the threshold for a given wrong-answer pattern;
+          after that the escalated (LLM-generated) text is served from cache
+          for all subsequent repeat-missers, which is still richer than the
+          template, so it's the right outcome.
+        """
+        # ── A. Cache hit ──────────────────────────────────────────────
+        cached = self._lookup_explanation(label, correct, student_answer, concept, kg_path)
+        if cached:
+            logger.info("[MCAnalyzer] Cache hit (%s)", cached.get("source", "?"))
+            return {
+                "gap_description":     cached.get("gap_description", ""),
+                "correct_explanation": cached.get("correct_explanation", ""),
+            }
+
+        # ── B. Decide: template or LLM? ───────────────────────────────
+        path_missing = len(kg_path) == 0
+        severe_gap = severity in (Severity.PARTIAL, Severity.CRITICAL)
+        is_short = q_type != "mcq"
+
+        prior_misses = 0
+        if user_id and concept_id:
+            prior_misses = self._count_prior_wrong_attempts(user_id, concept_id)
+        repeated_miss = prior_misses >= REPEAT_MISS_ESCALATION_THRESHOLD
+
+        should_escalate = (path_missing and severe_gap) or is_short or repeated_miss
+
+        if not should_escalate:
+            # Template path — the default.
+            explanation = self._template_explanation(
+                concept, correct, student_answer, label, kg_path
+            )
+            self._store_explanation(
+                label, correct, student_answer, concept, kg_path,
+                explanation, source="template"
+            )
+            logger.info("[MCAnalyzer] Template explanation used")
+            return explanation
+
+        # ── C. LLM escalation path ────────────────────────────────────
+        logger.info(
+            "[MCAnalyzer] Escalating to LLM (path_missing=%s, severe_gap=%s, is_short=%s, prior_misses=%d)",
+            path_missing, severe_gap, is_short, prior_misses,
+        )
+        llm_explanation = self._explain_with_llm(
+            question, correct, student_answer, label, kg_path, source_text
+        )
+        self._store_explanation(
+            label, correct, student_answer, concept, kg_path,
+            llm_explanation, source="llm", model=self.model,
+        )
+        return llm_explanation
+
+    # ------------------------------------------------------------------
+    # Template explanation (the DEFAULT path)
+    # ------------------------------------------------------------------
+
+    def _template_explanation(
+        self,
+        concept:        str,
+        correct:        str,
+        student_answer: str,
+        label:          str,
+        kg_path:        list,
+    ) -> dict:
+        """
+        Build a genuinely useful explanation from the KG path alone.
+        Unlike the old "fallback" (which was bland because it was emergency-
+        only), this is the default path and pulls structural context from
+        the graph.
+        """
+        if kg_path:
+            # First relation type is the key link.
+            first_rel_match = re.search(r"-\[([A-Z_]+)\]->", kg_path[0])
+            first_rel = (
+                first_rel_match.group(1).replace("_", " ").lower()
+                if first_rel_match else ""
+            )
+            path_trail = " → ".join(kg_path)
+
+            if first_rel:
+                gap_description = (
+                    f"You chose \"{student_answer}\", which is related to "
+                    f"\"{correct}\" through \"{first_rel}\", but it isn't "
+                    f"the same thing. The correct answer is \"{correct}\"."
+                )
+            else:
+                gap_description = (
+                    f"You chose \"{student_answer}\", which is related to "
+                    f"\"{correct}\" in the graph but is not the correct "
+                    f"answer here. The correct answer is \"{correct}\"."
+                )
+
+            concept_label = f'"{concept}"' if concept else "this question"
+            correct_explanation = (
+                f'"{correct}" is the right answer for {concept_label}. '
+                f"In the knowledge graph the connection is: {path_trail}. "
+                f"Review this chain to see why they are distinct concepts."
+            )
+            return {
+                "gap_description":     gap_description,
+                "correct_explanation": correct_explanation,
+            }
+
+        # No path — say so clearly.
+        gap_description = (
+            f"{label}. \"{student_answer}\" does not appear to be "
+            f"connected to \"{correct}\" in the material you studied."
+        )
+        if concept:
+            correct_explanation = (
+                f"The correct answer is \"{correct}\". Revisit the section "
+                f"of the source document that covers \"{concept}\"."
+            )
+        else:
+            correct_explanation = (
+                f"The correct answer is \"{correct}\". Revisit the relevant "
+                f"section of your notes."
+            )
+        return {
+            "gap_description":     gap_description,
+            "correct_explanation": correct_explanation,
+        }
+
+    # ------------------------------------------------------------------
+    # LLM explanation writer — ESCALATION path only
+    # ------------------------------------------------------------------
+
+    def _explain_with_llm(
+        self,
+        question:       str,
+        correct:        str,
+        student_answer: str,
+        label:          str,
+        kg_path:        list,
         source_text:    str,
     ) -> dict:
         """
-        Call the LLM to write gap_description, correct_explanation.
-        The LLM receives the already-identified misconception label and KG path —
-        it does not re-evaluate correctness. It only writes explanatory text.
-
-        Returns dict with keys: gap_description, correct_explanation.
-        Falls back to a template-based explanation if Groq fails.
+        Ask the LLM to write gap_description + correct_explanation.
+        Falls back to template if the LLM call itself fails, so this
+        function never throws.
         """
-        kg_path_str = (
-            " → ".join(kg_path) if kg_path
-            else "Path not available in graph."
-        )
+        kg_path_str = " → ".join(kg_path) if kg_path else "Path not available in graph."
         source_trimmed = source_text[:600] if source_text else "Not available."
 
         prompt = _USER_TEMPLATE.format(
@@ -496,7 +682,7 @@ class MisconceptionAnalyzer:
             student_answer=student_answer,
             label=label,
             kg_path=kg_path_str,
-            source_text=source_trimmed
+            source_text=source_trimmed,
         )
 
         for attempt in range(1, 3):
@@ -511,7 +697,11 @@ class MisconceptionAnalyzer:
                     max_tokens=400,
                 )
                 raw = response.choices[0].message.content
-                return self._parse_explanation(raw)
+                parsed = self._parse_explanation(raw)
+                if parsed.get("gap_description") and parsed.get("correct_explanation"):
+                    return parsed
+                # LLM returned empty fields — use template instead.
+                return self._template_explanation("", correct, student_answer, label, kg_path)
 
             except Exception as exc:
                 err = str(exc).lower()
@@ -522,8 +712,8 @@ class MisconceptionAnalyzer:
                     logger.warning("Groq explanation error (attempt %d): %s", attempt, exc)
                     time.sleep(2)
 
-        # Fallback — template-based, no LLM needed
-        return self._fallback_explanation(label, correct, student_answer)
+        # LLM failed twice — template it.
+        return self._template_explanation("", correct, student_answer, label, kg_path)
 
     def _parse_explanation(self, raw: str) -> dict:
         """Parse LLM JSON response for explanation fields."""
@@ -545,17 +735,119 @@ class MisconceptionAnalyzer:
         except json.JSONDecodeError:
             return {}
 
-    def _fallback_explanation(
-        self, label: str, correct: str, student_answer: str
-    ) -> dict:
-        """Template-based fallback when LLM is unavailable."""
-        return {
-            "gap_description":     f"{label}. The answer '{student_answer}' does not match the expected concept.",
-            "correct_explanation": f"The correct answer is '{correct}'. Review the relevant section of your notes for more detail."
-        }
+    # ------------------------------------------------------------------
+    # Cache — Supabase-backed, silently disabled without creds
+    # ------------------------------------------------------------------
 
-   
+    def _explanation_hash(
+        self,
+        label:          str,
+        correct:        str,
+        student_answer: str,
+        concept:        str,
+        kg_path:        list,
+    ) -> str:
+        """Stable cache key across users."""
+        def _norm(s: str) -> str:
+            return re.sub(r"\s+", " ", (s or "").lower()).strip()
+        parts = "||".join([
+            _norm(label),
+            _norm(correct),
+            _norm(student_answer),
+            _norm(concept),
+            " >> ".join((p or "").strip() for p in kg_path),
+        ])
+        return hashlib.sha256(parts.encode("utf-8")).hexdigest()
+
+    def _lookup_explanation(
+        self,
+        label:          str,
+        correct:        str,
+        student_answer: str,
+        concept:        str,
+        kg_path:        list,
+    ) -> Optional[dict]:
+        """Return cached explanation if present, else None."""
+        supabase = _get_supabase()
+        if supabase is None:
+            return None
+        try:
+            h = self._explanation_hash(label, correct, student_answer, concept, kg_path)
+            resp = (
+                supabase.table("misconception_explanation_cache")
+                .select("gap_description, correct_explanation, source")
+                .eq("explanation_hash", h)
+                .limit(1)
+                .execute()
+            )
+            rows = getattr(resp, "data", None) or []
+            if not rows:
+                return None
+            # Bump last_hit_at, best-effort.
+            try:
+                supabase.table("misconception_explanation_cache").update(
+                    {"last_hit_at": "now()"}
+                ).eq("explanation_hash", h).execute()
+            except Exception:
+                pass
+            return rows[0]
+        except Exception as exc:
+            logger.debug("[MCCache] Lookup failed (treating as miss): %s", exc)
+            return None
+
+    def _store_explanation(
+        self,
+        label:          str,
+        correct:        str,
+        student_answer: str,
+        concept:        str,
+        kg_path:        list,
+        explanation:    dict,
+        source:         str,
+        model:          Optional[str] = None,
+    ) -> None:
+        """Upsert an explanation into the cache. Non-fatal on failure."""
+        supabase = _get_supabase()
+        if supabase is None:
+            return
+        try:
+            h = self._explanation_hash(label, correct, student_answer, concept, kg_path)
+            row = {
+                "explanation_hash":    h,
+                "gap_description":     explanation.get("gap_description", ""),
+                "correct_explanation": explanation.get("correct_explanation", ""),
+                "source":              source,
+                "model":               model if source == "llm" else None,
+            }
+            supabase.table("misconception_explanation_cache").upsert(
+                row, on_conflict="explanation_hash"
+            ).execute()
+        except Exception as exc:
+            logger.debug("[MCCache] Store failed (non-fatal): %s", exc)
+
+    def _count_prior_wrong_attempts(self, user_id: str, concept_id: str) -> int:
+        """Count prior wrong attempts for the escalation signal."""
+        supabase = _get_supabase()
+        if supabase is None or not user_id or not concept_id:
+            return 0
+        try:
+            resp = (
+                supabase.table("attempts")
+                .select("id", count="exact", head=True)
+                .eq("user_id", user_id)
+                .eq("concept_id", concept_id)
+                .eq("correct", False)
+                .execute()
+            )
+            return int(getattr(resp, "count", 0) or 0)
+        except Exception as exc:
+            logger.debug("[MCCache] Prior-wrong-attempts lookup failed: %s", exc)
+            return 0
+
+    # ------------------------------------------------------------------
     # Fast-path results
+    # ------------------------------------------------------------------
+
     def _blank_result(
         self, question_id: str, student_answer: str, correct_answer: str
     ) -> MisconceptionResult:
@@ -575,13 +867,14 @@ class MisconceptionAnalyzer:
         question_id:    str,
         student_answer: str,
         correct_answer: str,
-        question_text:  str,
-        source_text:    str,
     ) -> MisconceptionResult:
-        """Generate a correct-answer result with a brief explanation."""
-        # For correct answers, get a short explanation without LLM overhead
-        # by using a minimal prompt
-        explanation = self._explain_correct(correct_answer, question_text, source_text)
+        """
+        Correct-answer result — deterministic, no LLM call.
+        The previous implementation made an LLM call even for correct
+        answers to produce a one-sentence affirmation. That was two
+        LLM calls per wrong-then-correct pair; we drop it in favour of a
+        simple deterministic message.
+        """
         return MisconceptionResult(
             question_id=question_id,
             student_answer=student_answer,
@@ -590,35 +883,5 @@ class MisconceptionAnalyzer:
             severity=Severity.CORRECT,
             misconception_label="",
             gap_description="",
-            correct_explanation=explanation
+            correct_explanation=f"\"{correct_answer}\" is correct. Well done!",
         )
-
-    def _explain_correct(
-        self, correct_answer: str, question_text: str, source_text: str
-    ) -> str:
-        """
-        One-sentence reinforcement for a correct answer.
-        Explains WHY it's right from the source — does not echo the answer string.
-        """
-        if not source_text:
-            return "Well done — that's correct."
-
-        prompt = (
-            f"Question: {question_text}\n"
-            f"Correct answer: {correct_answer}\n"
-            f"Source: {source_text[:400]}\n\n"
-            f"Write ONE sentence explaining why this answer is correct, "
-            f"in plain language for a school student. "
-            f"Do not start with 'Correct' and do not repeat the answer word for word. "
-            f"Return ONLY the sentence."
-        )
-        try:
-            response = self._client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.2,
-                max_tokens=80,
-            )
-            return response.choices[0].message.content.strip().strip('"')
-        except Exception:
-            return "Well done — that's correct."
