@@ -1,6 +1,5 @@
 /**
- * Evaluation Engine
- *
+ Evaluation Engine
  * Orchestrates the full assessment flow:
  * 1. Evaluate answer
  * 2. Calculate score based on mode
@@ -40,87 +39,8 @@ import { STAGE_KEYS, PASS_THRESHOLD } from '@/config/constants';
  * Evaluate a student's answer and update mastery.
  * Now includes KG-grounded misconception analysis.
  */
-export async function evaluateAnswer(
-    userId: string,
-    question: Question,
-    submission: AnswerSubmission,
-    mode: AssessmentMode
-): Promise<AnswerResult> {
-    const correct = submission.selected_answer === question.correct_answer;
 
-    const questionResult: QuestionResult = {
-        question_id: question.id,
-        correct,
-        difficulty: question.difficulty,
-        cognitive_level: question.cognitive_level,
-        time_taken: submission.time_taken,
-        confidence: submission.confidence,
-        question_type: question.type,
-    };
-
-    const currentMastery = await getCurrentMastery(userId, question.concept_id);
-    await storeAttempt(userId, question, submission, correct, currentMastery);
-
-    const score = calculateUnifiedScore([questionResult]);
-    const masteryUpdate = updateMastery(currentMastery, score, mode);
-
-    // Preserve the existing stage — evaluateAnswer only updates the score,
-    // stage advancement is exclusively handled by evaluateDiagnostic.
-    const { data: stageRow } = await supabase
-        .from('mastery')
-        .select('current_stage')
-        .eq('user_id', userId)
-        .eq('concept_id', question.concept_id)
-        .single();
-    const existingStage = stageRow?.current_stage ?? 'diagnostic';
-    await saveMasteryWithStage(userId, question.concept_id, masteryUpdate.new_score, existingStage);
-
-    // ── KG-grounded misconception analysis ───────────────────────────────
-    // Primary: deterministic graph-topology scoring
-    // Fallback: LLM-only if graph unavailable (handled inside analyzeAnswer)
-    let misconceptionData: AnswerResult['misconception'];
-
-    try {
-        const analysis = await analyzeAnswer({
-            questionText: question.text,
-            correctAnswer: question.correct_answer,
-            studentAnswer: submission.selected_answer,
-            concept: question.concept_title || '',
-            distanceMap: question.distractor_distances,
-            userId,
-            documentId: question.concept_id,
-            sourceText: '',
-        });
-
-        if (!analysis.isCorrect) {
-            misconceptionData = {
-                severity: analysis.severity,
-                misconceptionLabel: analysis.misconceptionLabel,
-                gapDescription: analysis.gapDescription,
-                correctExplanation: analysis.correctExplanation,
-                kgPath: analysis.kgPath,
-            };
-        }
-    } catch (e) {
-        // Non-fatal — misconception analysis is an enhancement, not core flow
-        console.warn('[Eval] Misconception analysis failed (non-fatal):', (e as Error).message);
-    }
-
-    return {
-        correct,
-        explanation: misconceptionData?.gapDescription
-            ? `${question.explanation}\n\n💡 ${misconceptionData.gapDescription}`
-            : question.explanation,
-        mastery_delta: masteryUpdate.delta,
-        new_mastery: masteryUpdate.new_score,
-        misconception: misconceptionData,
-    };
-}
-
-
-/**
- * Evaluate a full assessment session.
- */
+// Evaluate a full assessment session.
 export async function evaluateDiagnostic(
     userId: string,
     conceptId: string,
@@ -412,55 +332,6 @@ async function saveMasteryWithStage(
             last_updated: new Date().toISOString(),
         });
     }
-}
-
-async function storeAttempt(
-    userId: string,
-    question: Question,
-    submission: AnswerSubmission,
-    correct: boolean,
-    currentMastery: number = 50
-): Promise<void> {
-    const { data: irtRow } = await supabase
-        .from('question_irt')
-        .select('difficulty_param, response_count')
-        .eq('question_id', question.id)
-        .single();
-
-    const currentIRT = irtRow ?? {
-        difficulty_param: getInitialDifficultyParam(question.difficulty),
-        response_count: 0,
-    };
-
-    const theta = masteryToTheta(currentMastery);
-
-    await supabase.from('attempts').insert({
-        user_id: userId,
-        concept_id: question.concept_id,
-        question_id: question.id,
-        correct,
-        difficulty: question.difficulty,
-        cognitive_level: question.cognitive_level,
-        question_type: question.type ?? 'recall',
-        time_taken: submission.time_taken,
-        confidence: submission.confidence,
-        difficulty_param: round4(currentIRT.difficulty_param),
-        student_theta: round4(theta),
-        question_text: question.text,
-        selected_answer: submission.selected_answer,
-        correct_answer: question.correct_answer,
-        explanation: question.explanation,
-    });
-
-    const updatedIRT = updateIRTState(currentIRT, currentMastery, correct);
-    await supabase
-        .from('question_irt')
-        .upsert({
-            question_id: question.id,
-            difficulty_param: updatedIRT.difficulty_param,
-            response_count: updatedIRT.response_count,
-            last_updated: new Date().toISOString(),
-        }, { onConflict: 'question_id' });
 }
 
 function round4(n: number): number {

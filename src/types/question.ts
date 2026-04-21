@@ -27,6 +27,7 @@ export interface QuestionGenerationRequest {
     difficulty: DifficultyLevel;
     context: string;
     relatedConcepts?: string[];
+    user_id?: string;
 }
 
 export interface QuestionResponse {

@@ -147,9 +147,7 @@ export async function generateQuestion(request: QuestionGenerationRequest): Prom
         try {
             const neighbours = await buildGraphDistractors(
                 request.concept_title,
-                // userId is not in QuestionGenerationRequest — extract from concept_id context
-                // We query by documentId so pass concept_id as documentId
-                '', // userId — empty falls back gracefully inside buildGraphDistractors
+                request.user_id ?? '',
                 request.concept_id
             );
 
@@ -329,6 +327,7 @@ export async function generateQuestionsForMode(
                                 type: 'recall',
                                 difficulty: 2,
                                 context: sContext,
+                                user_id: userId,
                             });
                             sq.is_spaced = true;
                             questions.push(sq);
@@ -377,6 +376,7 @@ export async function generateQuestionsForMode(
                 type: configs[i].type,
                 difficulty: configs[i].difficulty,
                 context,
+                user_id: userId,
             });
             questions.push(q);
         } catch (error) {
@@ -387,21 +387,13 @@ export async function generateQuestionsForMode(
     return questions.sort(() => Math.random() - 0.5);
 }
 
-// Keep backward compatibility
-export async function generateDiagnosticQuestions(
-    conceptId: string,
-    conceptTitle: string,
-    count: number = 5
-): Promise<Question[]> {
-    return generateQuestionsForMode(conceptId, conceptTitle, 'diagnostic');
-}
-
 export async function generateAssessmentQuestions(
     conceptId: string,
     conceptTitle: string,
     type: QuestionType,
     difficulty: DifficultyLevel,
-    count: number = 1
+    count: number = 1,
+    userId?: string,
 ): Promise<Question[]> {
     const context = await getConceptContext(conceptId);
     const questions: Question[] = [];
@@ -414,6 +406,7 @@ export async function generateAssessmentQuestions(
                 type,
                 difficulty,
                 context,
+                user_id: userId,
             });
             questions.push(q);
         } catch (error) {
