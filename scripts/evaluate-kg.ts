@@ -24,6 +24,7 @@
  */
 
 import neo4j, { Driver, Session, Integer } from 'neo4j-driver';
+import { runPaulheim } from './paulheim-checks';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -646,12 +647,16 @@ async function main() {
     const verbose = args.includes('--verbose');
     const userId = args.find(a => a.startsWith('--userId='))?.split('=')[1];
     const conceptId = args.find(a => a.startsWith('--conceptId='))?.split('=')[1];
+    const paulheimOnly = args.includes('--paulheim');
+    const paulheimAlso = args.includes('--paulheim-also');
 
     log('header', 'Study Lens — Knowledge Graph Evaluation');
     log('info', `Started at: ${new Date().toLocaleString()}`);
     if (userId) log('info', `Scoped to userId:    ${userId}`);
     if (conceptId) log('info', `Scoped to conceptId: ${conceptId}`);
     if (verbose) log('info', 'Verbose mode enabled');
+    if (paulheimOnly) log('info', 'Running PAULHEIM checks only (--paulheim)');
+    if (paulheimAlso) log('info', 'Appending PAULHEIM checks (--paulheim-also)');
 
     // Connect to Neo4j
     const uri = process.env.NEO4J_URI!;
@@ -679,14 +684,30 @@ async function main() {
     const startMs = Date.now();
 
     try {
-        // Run all checks
-        results.push(await checkStructuralIntegrity(session, userId));
-        results.push(await checkSchemaCompliance(session, userId));
-        results.push(await checkRelationValidity(session, userId));
-        results.push(await checkCompleteness(session, userId));
-        results.push(await checkConsistency(session, userId));
-        results.push(await checkDensity(session, userId));
-        results.push(await checkLinkPrediction(session, userId));
+        // Standard 7-check pipeline (skipped if --paulheim alone is passed)
+        if (!paulheimOnly) {
+            results.push(await checkStructuralIntegrity(session, userId));
+            results.push(await checkSchemaCompliance(session, userId));
+            results.push(await checkRelationValidity(session, userId));
+            results.push(await checkCompleteness(session, userId));
+            results.push(await checkConsistency(session, userId));
+            results.push(await checkDensity(session, userId));
+            results.push(await checkLinkPrediction(session, userId));
+        }
+
+        // Paulheim 3-dimension section (run if --paulheim OR --paulheim-also)
+        if (paulheimOnly || paulheimAlso) {
+            const paulheim = await runPaulheim(session, userId);
+            for (const p of paulheim) {
+                results.push({
+                    name: p.name,
+                    passed: p.passed,
+                    score: p.score,
+                    details: p.details,
+                    issues: p.issues,
+                });
+            }
+        }
     } finally {
         await session.close();
         await driver.close();
