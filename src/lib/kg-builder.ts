@@ -3,7 +3,7 @@ import { runCypher } from './neo4j';
 import { chunkTextDetailed, generateEmbedding } from './embeddings';
 import { ExtractedKnowledge, KnowledgeGraph, ConceptNode, ConceptRelation } from '@/types/concept';
 import { v4 as uuid } from 'uuid';
-import { PROMPTS } from '@/config/prompts';
+import { PROMPTS, UNIFIED_RELATION_LIST } from '@/config/prompts';
 import {
     lookupVerdicts,
     storeVerdictsBatch,
@@ -38,8 +38,127 @@ const VERIFY_STRICT_CONFIDENCE = 0.50;
 const VERIFY_BATCH_SIZE = 10;
 
 // Verification model name — stored in cache for audits / model upgrades.
+// Primary verifier — fast, cheap, used for first-pass judgment.
 const VERIFIER_MODEL = 'llama-3.1-8b-instant';
 
+// Secondary verifier — different model family, used as cross-examination.
+// We accept a triple only if BOTH models accept it independently. This is
+// the no-HiL substitute for Tsaneva et al. (2025) workflow 5's
+// "human-on-disagreement" pattern: instead of asking a person to break
+// the tie, we drop the triple. Trades recall for precision — viable here
+// because our baseline recall (94.7%) leaves room.
+const SECONDARY_VERIFIER_MODEL = 'qwen/qwen3-32b';
+
+// Toggles — flip to false if Groq rate limits bite. The system degrades
+// gracefully back to single-model + no-direction-check (today's behavior).
+const ENABLE_DUAL_VERIFICATION = true;
+const ENABLE_DIRECTION_CHECK = true;
+
+// Direction sanity check tunables.
+// Only re-checked when the primary verdict is 'a' with confidence ≥ this.
+// Lower → more swap calls (more cost, fewer FPs slip through).
+const DIRECTION_CHECK_MIN_CONFIDENCE = 0.9;
+
+// Predicates whose meaning depends on direction. (X PART_OF Y) ≠ (Y PART_OF X).
+// Symmetric predicates (RELATES_TO, CONTRASTS_WITH) are excluded — the swap
+// test would produce false positives there because both directions are valid.
+const ASYMMETRIC_PREDICATES = new Set([
+    'IS_A', 'PART_OF', 'CONTAINS', 'LOCATED_IN', 'FOUND_IN',
+    'PRODUCED_BY', 'SUPPLIED_BY', 'USED_FOR', 'CAUSES', 'LED_TO',
+    'DISCOVERED_BY', 'BUILT_BY', 'TRADED_BY', 'DEFINES',
+    'PRECEDES', 'EXTENSION_OF', 'EXAMPLE_OF', 'FEATURE_OF',
+    'CHARACTERIZED_BY', 'REQUIRES',
+]);
+
+// ─── Structural filter config ─────────────────────────────────────────────
+// Allowed predicate set — anything outside this is dropped pre-verifier.
+// Derived from the unified list so kg-builder and the extractor prompt
+// can't drift out of sync.
+const ALLOWED_PREDICATES = new Set<string>(UNIFIED_RELATION_LIST);
+
+// Cycles among these relations are structural contradictions.
+// Matches scripts/paulheim-checks.ts so the upstream filter and the
+// post-hoc evaluator share one definition of "DAG relation".
+const DAG_RELATIONS = new Set([
+    'IS_A', 'PART_OF', 'PRECEDES', 'REQUIRES', 'EXTENSION_OF',
+]);
+
+/**
+ * In-memory DAG cycle filter.
+ *
+ * Runs on the merged relationship list before writeToNeo4j(). Detects
+ * cycles among DAG relations (IS_A, PART_OF, PRECEDES, REQUIRES,
+ * EXTENSION_OF) via DFS and drops the back edge that closes each cycle.
+ *
+ * This is the upstream counterpart to validatePrerequisiteDAG(), which
+ * runs post-write as a safety net. The two are complementary:
+ *   - filterCyclicEdges  → per-document, in-memory, cheap, preventive
+ *   - validatePrerequisiteDAG → post-write, catches cycles introduced
+ *     by cross-document linking passes that come later
+ *
+ * Back-edge selection matches the post-hoc behaviour: the edge DFS
+ * discovers as closing the cycle is the one removed. If you later want
+ * to prefer higher-confidence edges, this is the place to change it.
+ */
+function filterCyclicEdges(
+    relationships: ExtractedKnowledge['relationships']
+): {
+    kept: ExtractedKnowledge['relationships'];
+    droppedEdges: ExtractedKnowledge['relationships'];
+} {
+    const dagEdges = relationships.filter((r) =>
+        DAG_RELATIONS.has(r.type.toUpperCase())
+    );
+    const otherEdges = relationships.filter(
+        (r) => !DAG_RELATIONS.has(r.type.toUpperCase())
+    );
+
+    if (dagEdges.length === 0) {
+        return { kept: relationships, droppedEdges: [] };
+    }
+
+    // Adjacency keyed by canonical name so "Photosynthesis" and
+    // "photosynthesis" collapse into the same node during DFS.
+    type EdgeRef = ExtractedKnowledge['relationships'][number];
+    const adjacency = new Map<string, Array<{ toKey: string; rel: EdgeRef }>>();
+    for (const rel of dagEdges) {
+        const fromKey = canonicalizeName(rel.from);
+        const toKey = canonicalizeName(rel.to);
+        if (!fromKey || !toKey) continue;
+        if (!adjacency.has(fromKey)) adjacency.set(fromKey, []);
+        adjacency.get(fromKey)!.push({ toKey, rel });
+    }
+
+    const visited = new Set<string>();
+    const inStack = new Set<string>();
+    const droppedSet = new Set<EdgeRef>();
+
+    function dfs(node: string): void {
+        visited.add(node);
+        inStack.add(node);
+
+        for (const { toKey, rel } of adjacency.get(node) || []) {
+            if (droppedSet.has(rel)) continue; // already dropped by earlier cycle
+            if (!visited.has(toKey)) {
+                dfs(toKey);
+            } else if (inStack.has(toKey)) {
+                droppedSet.add(rel); // back edge
+            }
+        }
+
+        inStack.delete(node);
+    }
+
+    for (const node of adjacency.keys()) {
+        if (!visited.has(node)) dfs(node);
+    }
+
+    const keptDagEdges = dagEdges.filter((r) => !droppedSet.has(r));
+    return {
+        kept: [...keptDagEdges, ...otherEdges],
+        droppedEdges: Array.from(droppedSet),
+    };
+}
 
 // ─── Step 1: Extract knowledge from text chunks ───
 
@@ -71,7 +190,22 @@ async function extractKnowledgeFromChunk(
     );
 
     const raw = parseLLMJson<ExtractedKnowledge>(response);
-    const relationships = raw.relationships ?? [];
+    const rawRelationships = raw.relationships ?? [];
+
+    // Pre-verifier structural filter (Workflow 8 — ontology-validator stage).
+    // Drops schema-invalid triples BEFORE they reach the LLM verifier so we
+    // don't waste LLM calls on triples we'd reject anyway.
+    const { kept: relationships, discarded } = structuralFilter(rawRelationships);
+    if (discarded.length > 0) {
+        const byReason = discarded.reduce<Record<string, number>>((acc, d) => {
+            acc[d.reason] = (acc[d.reason] || 0) + 1;
+            return acc;
+        }, {});
+        console.log(
+            `[KG Structural-Filter] Dropped ${discarded.length}/${rawRelationships.length} triple(s):`,
+            byReason
+        );
+    }
 
     if (relationships.length === 0) {
         return { ...raw, relationships: [], _sourceChunk: chunk };
@@ -132,8 +266,17 @@ async function extractKnowledgeFromChunk(
     );
 
     // ── Tier 3: Batch-verify the misses ──────────────────────────────────
+    //
+    // Three steps now:
+    //   3a. Cross-examine with two LLMs (dualVerifyBatch). Both must accept.
+    //   3b. Direction sanity check on accepted asymmetric triples
+    //       (applyDirectionSanityCheck). Drops triples the verifier
+    //       can't direction-distinguish.
+    //   3c. Cache the FINAL kept/rejected decision so re-uploads skip
+    //       all of the above.
     if (needsLLM.length > 0) {
-        const newVerdicts = await verifyTriplesBatch(
+        // 3a. Dual-model verification.
+        const newVerdicts = await dualVerifyBatch(
             needsLLM.map(({ rel }) => ({
                 subject: rel.from,
                 predicate: rel.type,
@@ -142,40 +285,195 @@ async function extractKnowledgeFromChunk(
             chunk
         );
 
-        const toCache: Array<{ triple: TripleKey; verdict: CachedVerdict }> = [];
+        // Build a mutable candidates list so the direction check can flip
+        // `kept` to false in place.
+        const candidates: Array<{
+            rel: typeof needsLLM[number]['rel'];
+            key: TripleKey;
+            verdict: Omit<CachedVerdict, 'kept'>;
+            kept: boolean;
+        }> = [];
 
         for (let i = 0; i < needsLLM.length; i++) {
             const { rel, key } = needsLLM[i];
             const v = newVerdicts[i];
-
-            // Null = parse/network failure; don't cache, retry next upload.
             if (!v) {
                 console.warn(
                     `[KG Verify] Verification failed for: (${rel.from}, ${rel.type}, ${rel.to}) — discarding`
                 );
                 continue;
             }
+            candidates.push({ rel, key, verdict: v, kept: isValidVerdict(v) });
+        }
 
-            const kept = isValidVerdict(v);
-            const fullVerdict: CachedVerdict = { ...v, kept };
-            toCache.push({ triple: key, verdict: fullVerdict });
+        // 3b. Direction sanity check (mutates `kept` in place).
+        await applyDirectionSanityCheck(candidates, chunk);
 
-            if (kept) {
-                verified.push(rel);
+        // 3c. Persist the final decisions and apply to `verified`.
+        const toCache: Array<{ triple: TripleKey; verdict: CachedVerdict }> = [];
+        for (const c of candidates) {
+            const fullVerdict: CachedVerdict = { ...c.verdict, kept: c.kept };
+            toCache.push({ triple: c.key, verdict: fullVerdict });
+
+            if (c.kept) {
+                verified.push(c.rel);
             } else {
                 console.log(
-                    `[KG Verify] Discarded: (${rel.from}, ${rel.type}, ${rel.to}) — verdict=${v.verdict}, confidence=${v.confidence}`
+                    `[KG Verify] Discarded: (${c.rel.from}, ${c.rel.type}, ${c.rel.to}) — verdict=${c.verdict.verdict}, confidence=${c.verdict.confidence}`
                 );
             }
         }
 
-        // Fire-and-forget persist — don't block on cache writes.
-        void storeVerdictsBatch(toCache, VERIFIER_MODEL);
+        // Cache key includes both model names so audits can tell which
+        // policy version produced each cached verdict.
+        const cacheModelTag = ENABLE_DUAL_VERIFICATION
+            ? `${VERIFIER_MODEL}+${SECONDARY_VERIFIER_MODEL}`
+            : VERIFIER_MODEL;
+        void storeVerdictsBatch(toCache, cacheModelTag);
     }
 
     return { ...raw, relationships: verified, _sourceChunk: chunk };
 }
 
+/**
+ * Cross-examination verification. Runs two different LLMs on the same
+ * triples in parallel and AND's their decisions:
+ *   - both accept → accepted (with min confidence + more conservative verdict)
+ *   - either rejects → rejected
+ *   - either fails → null (caller drops)
+ *
+ * This is the fully-automated stand-in for the Tsaneva et al. (2025)
+ * "human-on-disagreement" pattern. Where the paper sends contested
+ * triples to a human, we silently drop them. Costs ~2x LLM calls on
+ * cache miss; the cache amortises this across re-uploads.
+ *
+ * Falls back to single-model verification when ENABLE_DUAL_VERIFICATION
+ * is false, so this is a safe default change.
+ */
+async function dualVerifyBatch(
+    triples: Array<{ subject: string; predicate: string; object: string }>,
+    sourceChunk: string
+): Promise<Array<Omit<CachedVerdict, 'kept'> | null>> {
+    if (!ENABLE_DUAL_VERIFICATION) {
+        return verifyTriplesBatch(triples, sourceChunk, VERIFIER_MODEL);
+    }
+
+    const [primary, secondary] = await Promise.all([
+        verifyTriplesBatch(triples, sourceChunk, VERIFIER_MODEL),
+        verifyTriplesBatch(triples, sourceChunk, SECONDARY_VERIFIER_MODEL),
+    ]);
+
+    // Verdict ordering for "more conservative" selection: c < b < a
+    const verdictRank: Record<string, number> = { a: 2, b: 1, c: 0 };
+
+    return triples.map((_, i) => {
+        const p = primary[i];
+        const s = secondary[i];
+
+        // If either verifier failed, treat the triple as un-verified.
+        // Dropping is safer than half-verifying.
+        if (!p || !s) {
+            if (p || s) {
+                console.warn(
+                    `[KG Verify] One of two verifiers failed on triple ${i + 1} — discarding`
+                );
+            }
+            return null;
+        }
+
+        // Pick the more conservative verdict and the lower confidence.
+        const moreConservative =
+            verdictRank[p.verdict] <= verdictRank[s.verdict] ? p : s;
+
+        return {
+            verdict: moreConservative.verdict,
+            confidence: Math.min(p.confidence, s.confidence),
+        };
+    });
+}
+
+/**
+ * Direction sanity check. For high-confidence accepts on asymmetric
+ * predicates, also verify the REVERSED triple. If the verifier
+ * confidently accepts both (X rel Y) AND (Y rel X), the verifier
+ * isn't actually distinguishing direction — it's just confirming
+ * co-occurrence. Drop the triple in that case.
+ *
+ * This addresses the most common verifier FP mode observed in
+ * eval-output/verifier-eval.json: the verifier rubber-stamps direction-
+ * reversed extractions like (Mohenjodaro FOUND_IN Cloth) because both
+ * entities appear in the chunk.
+ *
+ * Mutates `candidates[i].kept` to false where the swap test fails.
+ * Uses only the primary model (not dual) — the secondary model already
+ * voted in the prior step, so this is purely about catching the
+ * direction-blindness pattern, not adding a third opinion.
+ */
+async function applyDirectionSanityCheck(
+    candidates: Array<{
+        rel: ExtractedKnowledge['relationships'][number];
+        verdict: Omit<CachedVerdict, 'kept'>;
+        kept: boolean;
+    }>,
+    sourceChunk: string
+): Promise<void> {
+    if (!ENABLE_DIRECTION_CHECK) return;
+
+    // Filter to accepts that are eligible for the swap test.
+    const toRecheck: Array<{ idx: number; rel: typeof candidates[0]['rel'] }> = [];
+    for (let i = 0; i < candidates.length; i++) {
+        const c = candidates[i];
+        if (!c.kept) continue;
+        if (c.verdict.verdict !== 'a') continue;
+        if (c.verdict.confidence < DIRECTION_CHECK_MIN_CONFIDENCE) continue;
+        if (!ASYMMETRIC_PREDICATES.has(c.rel.type.toUpperCase())) continue;
+        toRecheck.push({ idx: i, rel: c.rel });
+    }
+
+    if (toRecheck.length === 0) return;
+
+    console.log(
+        `[KG Direction] Running swap test on ${toRecheck.length} high-conf asymmetric triple(s)`
+    );
+
+    // Build the reversed versions and verify them in one batch.
+    const reversedTriples = toRecheck.map(({ rel }) => ({
+        subject: rel.to,
+        predicate: rel.type,
+        object: rel.from,
+    }));
+
+    const reverseVerdicts = await verifyTriplesBatch(
+        reversedTriples,
+        sourceChunk,
+        VERIFIER_MODEL
+    );
+
+    // Where the reverse ALSO gets confidently accepted, the verifier is
+    // direction-blind on this triple. Drop the original.
+    let droppedCount = 0;
+    for (let i = 0; i < toRecheck.length; i++) {
+        const rv = reverseVerdicts[i];
+        if (
+            rv &&
+            rv.verdict === 'a' &&
+            rv.confidence >= DIRECTION_CHECK_MIN_CONFIDENCE
+        ) {
+            const c = candidates[toRecheck[i].idx];
+            c.kept = false;
+            droppedCount++;
+            console.log(
+                `[KG Direction] Dropped (verifier accepts both directions): (${c.rel.from}) -[${c.rel.type}]-> (${c.rel.to})`
+            );
+        }
+    }
+
+    if (droppedCount > 0) {
+        console.log(
+            `[KG Direction] Dropped ${droppedCount}/${toRecheck.length} for direction-blindness`
+        );
+    }
+}
 
 /**
  * Batch-verify up to N triples against a source passage in ONE LLM call.
@@ -186,7 +484,8 @@ async function extractKnowledgeFromChunk(
  */
 async function verifyTriplesBatch(
     triples: Array<{ subject: string; predicate: string; object: string }>,
-    sourceChunk: string
+    sourceChunk: string,
+    model: string = VERIFIER_MODEL
 ): Promise<Array<Omit<CachedVerdict, 'kept'> | null>> {
     const results: Array<Omit<CachedVerdict, 'kept'> | null> = new Array(triples.length).fill(null);
     if (triples.length === 0) return results;
@@ -229,7 +528,7 @@ ${tripleLines}
 Judge each triple independently against the passage above.`,
                     },
                 ],
-                { jsonMode: true, temperature: 0.1 }
+                { jsonMode: true, temperature: 0.1, model }
             );
 
             const parsed = parseLLMJson<{
@@ -252,7 +551,7 @@ Judge each triple independently against the passage above.`,
             }
         } catch (err) {
             console.warn(
-                `[KG Verify] Batch verify call failed — leaving ${batch.length} triple(s) unverified for this run:`,
+                `[KG Verify/${model}] Batch verify call failed — leaving ${batch.length} triple(s) unverified for this run:`,
                 (err as Error).message
             );
             // Leave the slots as null; caller discards those triples.
@@ -277,6 +576,62 @@ function canonicalizeName(name: string): string {
         .replace(/\b(the|a|an|of|and|in|on|process|concept|principle|phenomenon|theory|law|effect|method|system|type|form|kind|class|category)\b/g, '')
         .replace(/\s+/g, ' ')               // collapse whitespace
         .trim();
+}
+
+/**
+ * Pre-verifier structural filter.
+ *
+ * Drops triples that are schema-invalid before they reach the LLM verifier.
+ * This is the ontology-validator stage from SCICERO (Tsaneva et al., 2025,
+ * workflow 8): rule-based filter → LLM verifier, not the other way around.
+ *
+ * Rejection reasons:
+ *   - empty_endpoint    → subject or object is empty / whitespace
+ *   - self_loop         → from and to canonicalise to the same node
+ *   - unknown_predicate → type is not in ALLOWED_PREDICATES
+ *
+ * Returning the discarded list (not just a count) lets the caller log
+ * which triples were rejected for which reason — useful for the
+ * VERIFIER-EVAL harness and Paulheim reporting.
+ */
+interface StructuralFilterResult {
+    kept: ExtractedKnowledge['relationships'];
+    discarded: Array<{
+        rel: ExtractedKnowledge['relationships'][number];
+        reason: string;
+    }>;
+}
+
+function structuralFilter(
+    relationships: ExtractedKnowledge['relationships']
+): StructuralFilterResult {
+    const kept: ExtractedKnowledge['relationships'] = [];
+    const discarded: StructuralFilterResult['discarded'] = [];
+
+    for (const rel of relationships) {
+        const from = (rel.from || '').trim();
+        const to = (rel.to || '').trim();
+        const type = (rel.type || '').toUpperCase().replace(/\s+/g, '_');
+
+        if (!from || !to) {
+            discarded.push({ rel, reason: 'empty_endpoint' });
+            continue;
+        }
+
+        if (canonicalizeName(from) === canonicalizeName(to)) {
+            discarded.push({ rel, reason: 'self_loop' });
+            continue;
+        }
+
+        if (!ALLOWED_PREDICATES.has(type)) {
+            discarded.push({ rel, reason: `unknown_predicate:${type}` });
+            continue;
+        }
+
+        kept.push({ from, to, type });
+    }
+
+    return { kept, discarded };
 }
 
 function mergeKnowledge(chunks: Array<ExtractedKnowledge & { _sourceChunk?: string }>): ExtractedKnowledge & { _sourceChunk: string } {
@@ -854,7 +1209,23 @@ export async function buildKnowledgeGraph(
     console.log(
         `[KG Builder] Merged: ${merged.concepts.length} concepts, ${merged.relationships.length} relationships`
     );
-
+    // 3b. In-memory DAG cycle filter (Workflow 8 — pre-write structural check).
+    //     Catches cycles among IS_A / PART_OF / PRECEDES / REQUIRES / EXTENSION_OF
+    //     before they enter Neo4j. validatePrerequisiteDAG() still runs
+    //     post-write as a safety net for cycles introduced by cross-document
+    //     linking passes.
+    const { kept: acyclicRels, droppedEdges: cyclicEdges } = filterCyclicEdges(
+        merged.relationships
+    );
+    if (cyclicEdges.length > 0) {
+        console.log(
+            `[KG DAG-Filter] Dropped ${cyclicEdges.length} cyclic edge(s) before write:`
+        );
+        for (const e of cyclicEdges) {
+            console.log(`  ✘ (${e.from}) -[${e.type}]-> (${e.to})`);
+        }
+    }
+    merged.relationships = acyclicRels;
     // 4. Write to Neo4j
     const graph = await writeToNeo4j(userId, documentId, merged);
     console.log(`[KG Builder] Knowledge graph created with ${graph.nodes.length} nodes`);

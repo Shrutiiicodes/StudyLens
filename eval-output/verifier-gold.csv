@@ -1,0 +1,3911 @@
+triple_id,chunk_id,chunk_text,subject,predicate,object,verifier_verdict,verifier_confidence,verifier_model,extractor_model,production_accepted,human_label_binary,human_label_verdict,human_notes
+t0001,1," 24
+OUR PASTS–I
+Sa	Sa	Sa	Sa	Saving an old building	ving an old building	ving an old building	ving an old building	ving an old building
+Jaspal and Harpreet were playing cricket in the lane
+outside their home when they noticed the people who
+were admiring the dilapidated old building that the
+children called the haunted house.
+“Look at the architecture!” said one of the men.
+“Have you seen the fine wood carving?” asked one of the
+women.
+“We must write to the Minister so that she makes
+arrangements to repair and preserve this beautiful house.”
+Why, they wondered, would anybody be interested in
+the old, run down house?
+The stor	The stor	The stor	The stor	The story of Har	y of Har	y of Har	y of Har	y of Harappa	appa	appa	appa	appa
+Very often, old buildings have a story to tell. Nearly
+a hundred and fifty years ago, when railway lines
+were being laid down for the first time in the
+Punjab, engineers stumbled upon the site of
+Harappa in present-day Pakistan. To them, it
+seemed like a mound th",Preservation of Historical Buildings,EXAMPLE_OF,Haunting House Example,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,"garbled extraction artifact (""Haunting House Example"")"
+t0002,1," 24
+OUR PASTS–I
+Sa	Sa	Sa	Sa	Saving an old building	ving an old building	ving an old building	ving an old building	ving an old building
+Jaspal and Harpreet were playing cricket in the lane
+outside their home when they noticed the people who
+were admiring the dilapidated old building that the
+children called the haunted house.
+“Look at the architecture!” said one of the men.
+“Have you seen the fine wood carving?” asked one of the
+women.
+“We must write to the Minister so that she makes
+arrangements to repair and preserve this beautiful house.”
+Why, they wondered, would anybody be interested in
+the old, run down house?
+The stor	The stor	The stor	The stor	The story of Har	y of Har	y of Har	y of Har	y of Harappa	appa	appa	appa	appa
+Very often, old buildings have a story to tell. Nearly
+a hundred and fifty years ago, when railway lines
+were being laid down for the first time in the
+Punjab, engineers stumbled upon the site of
+Harappa in present-day Pakistan. To them, it
+seemed like a mound th",Harappa,PART_OF,Indus Valley Civilization,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,Indus Valley = Harappan civ by synonymy; not explicit in chunk but defensible
+t0003,1," 24
+OUR PASTS–I
+Sa	Sa	Sa	Sa	Saving an old building	ving an old building	ving an old building	ving an old building	ving an old building
+Jaspal and Harpreet were playing cricket in the lane
+outside their home when they noticed the people who
+were admiring the dilapidated old building that the
+children called the haunted house.
+“Look at the architecture!” said one of the men.
+“Have you seen the fine wood carving?” asked one of the
+women.
+“We must write to the Minister so that she makes
+arrangements to repair and preserve this beautiful house.”
+Why, they wondered, would anybody be interested in
+the old, run down house?
+The stor	The stor	The stor	The stor	The story of Har	y of Har	y of Har	y of Har	y of Harappa	appa	appa	appa	appa
+Very often, old buildings have a story to tell. Nearly
+a hundred and fifty years ago, when railway lines
+were being laid down for the first time in the
+Punjab, engineers stumbled upon the site of
+Harappa in present-day Pakistan. To them, it
+seemed like a mound th",Archaeological Discovery,DISCOVERED_BY,Harappa,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"direction wrong: Harappa was discovered, it did not discover"
+t0004,1," 24
+OUR PASTS–I
+Sa	Sa	Sa	Sa	Saving an old building	ving an old building	ving an old building	ving an old building	ving an old building
+Jaspal and Harpreet were playing cricket in the lane
+outside their home when they noticed the people who
+were admiring the dilapidated old building that the
+children called the haunted house.
+“Look at the architecture!” said one of the men.
+“Have you seen the fine wood carving?” asked one of the
+women.
+“We must write to the Minister so that she makes
+arrangements to repair and preserve this beautiful house.”
+Why, they wondered, would anybody be interested in
+the old, run down house?
+The stor	The stor	The stor	The stor	The story of Har	y of Har	y of Har	y of Har	y of Harappa	appa	appa	appa	appa
+Very often, old buildings have a story to tell. Nearly
+a hundred and fifty years ago, when railway lines
+were being laid down for the first time in the
+Punjab, engineers stumbled upon the site of
+Harappa in present-day Pakistan. To them, it
+seemed like a mound th",Old Buildings,CONTAINS,Historical Stories,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,"""old buildings have a story to tell"" — metaphorical but supported"
+t0005,1," 24
+OUR PASTS–I
+Sa	Sa	Sa	Sa	Saving an old building	ving an old building	ving an old building	ving an old building	ving an old building
+Jaspal and Harpreet were playing cricket in the lane
+outside their home when they noticed the people who
+were admiring the dilapidated old building that the
+children called the haunted house.
+“Look at the architecture!” said one of the men.
+“Have you seen the fine wood carving?” asked one of the
+women.
+“We must write to the Minister so that she makes
+arrangements to repair and preserve this beautiful house.”
+Why, they wondered, would anybody be interested in
+the old, run down house?
+The stor	The stor	The stor	The stor	The story of Har	y of Har	y of Har	y of Har	y of Harappa	appa	appa	appa	appa
+Very often, old buildings have a story to tell. Nearly
+a hundred and fifty years ago, when railway lines
+were being laid down for the first time in the
+Punjab, engineers stumbled upon the site of
+Harappa in present-day Pakistan. To them, it
+seemed like a mound th",Railway Engineers,DISCOVERED_BY,Harappa,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"direction wrong: engineers discovered Harappa, not vice versa"
+t0006,2,"ng laid down for the first time in the
+Punjab, engineers stumbled upon the site of
+Harappa in present-day Pakistan. To them, it
+seemed like a mound that was a rich source of
+ready made, high quality bricks. So they carried
+off thousands of bricks from the walls of the old
+buildings of the city to build railway lines. Many
+buildings were completely destroyed.
+Then, about eighty years ago, archaeologists
+found the site, and realised that this was one of
+the oldest cities in the subcontinent. As this was
+the first city to be discovered, all other sites from
+where similar buildings (and other things) were
+found were described as Harappan. These cities
+developed about 4700 years ago.
+Very often, old buildings are pulled down to
+make way for new construction. Do you think it
+is important to preserve old buildings?
+CHAPTER 3
+IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What",Engineers,CAUSES,Harappa,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,engineers did not cause Harappa
+t0007,2,"ng laid down for the first time in the
+Punjab, engineers stumbled upon the site of
+Harappa in present-day Pakistan. To them, it
+seemed like a mound that was a rich source of
+ready made, high quality bricks. So they carried
+off thousands of bricks from the walls of the old
+buildings of the city to build railway lines. Many
+buildings were completely destroyed.
+Then, about eighty years ago, archaeologists
+found the site, and realised that this was one of
+the oldest cities in the subcontinent. As this was
+the first city to be discovered, all other sites from
+where similar buildings (and other things) were
+found were described as Harappan. These cities
+developed about 4700 years ago.
+Very often, old buildings are pulled down to
+make way for new construction. Do you think it
+is important to preserve old buildings?
+CHAPTER 3
+IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What",Archaeologists,DISCOVERED_BY,Harappa,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,direction wrong: archaeologists discovered Harappa
+t0008,2,"ng laid down for the first time in the
+Punjab, engineers stumbled upon the site of
+Harappa in present-day Pakistan. To them, it
+seemed like a mound that was a rich source of
+ready made, high quality bricks. So they carried
+off thousands of bricks from the walls of the old
+buildings of the city to build railway lines. Many
+buildings were completely destroyed.
+Then, about eighty years ago, archaeologists
+found the site, and realised that this was one of
+the oldest cities in the subcontinent. As this was
+the first city to be discovered, all other sites from
+where similar buildings (and other things) were
+found were described as Harappan. These cities
+developed about 4700 years ago.
+Very often, old buildings are pulled down to
+make way for new construction. Do you think it
+is important to preserve old buildings?
+CHAPTER 3
+IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What",Harappa,IS_A,Harappan Civilization,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,Harappa is namesake site of Harappan civilization
+t0009,2,"ng laid down for the first time in the
+Punjab, engineers stumbled upon the site of
+Harappa in present-day Pakistan. To them, it
+seemed like a mound that was a rich source of
+ready made, high quality bricks. So they carried
+off thousands of bricks from the walls of the old
+buildings of the city to build railway lines. Many
+buildings were completely destroyed.
+Then, about eighty years ago, archaeologists
+found the site, and realised that this was one of
+the oldest cities in the subcontinent. As this was
+the first city to be discovered, all other sites from
+where similar buildings (and other things) were
+found were described as Harappan. These cities
+developed about 4700 years ago.
+Very often, old buildings are pulled down to
+make way for new construction. Do you think it
+is important to preserve old buildings?
+CHAPTER 3
+IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What",Destruction of buildings,CONTRASTS_WITH,Cultural Preservation,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,preservation vs destruction is implicit contrast
+t0010,2,"ng laid down for the first time in the
+Punjab, engineers stumbled upon the site of
+Harappa in present-day Pakistan. To them, it
+seemed like a mound that was a rich source of
+ready made, high quality bricks. So they carried
+off thousands of bricks from the walls of the old
+buildings of the city to build railway lines. Many
+buildings were completely destroyed.
+Then, about eighty years ago, archaeologists
+found the site, and realised that this was one of
+the oldest cities in the subcontinent. As this was
+the first city to be discovered, all other sites from
+where similar buildings (and other things) were
+found were described as Harappan. These cities
+developed about 4700 years ago.
+Very often, old buildings are pulled down to
+make way for new construction. Do you think it
+is important to preserve old buildings?
+CHAPTER 3
+IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What",Harappan Civilization,PART_OF,Indus Valley Civilization,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,IVC not mentioned in chunk; also they are synonyms not parts
+t0011,3,"ES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What w	What was special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?
+Many of these cities were divided into two or more
+parts. Usually, the part to the west was smaller
+but higher. Archaeologists describe this as the
+citadel. Generally, the part to the east was larger
+but lower. This is called the lower town. Very often
+walls of baked brick were built around each part.
+The bricks were so well baked that they have
+lasted for thousands of years. The bricks were
+laid in an interlocking pattern and that made the
+walls strong.
+In 	some 	cities, 	special
+buildings were constructed
+on the citadel. For example,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	w",Citadel,PART_OF,City Structure,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0012,3,"ES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What w	What was special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?
+Many of these cities were divided into two or more
+parts. Usually, the part to the west was smaller
+but higher. Archaeologists describe this as the
+citadel. Generally, the part to the east was larger
+but lower. This is called the lower town. Very often
+walls of baked brick were built around each part.
+The bricks were so well baked that they have
+lasted for thousands of years. The bricks were
+laid in an interlocking pattern and that made the
+walls strong.
+In 	some 	cities, 	special
+buildings were constructed
+on the citadel. For example,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	w",Lower Town,PART_OF,City Structure,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0013,3,"ES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What w	What was special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?
+Many of these cities were divided into two or more
+parts. Usually, the part to the west was smaller
+but higher. Archaeologists describe this as the
+citadel. Generally, the part to the east was larger
+but lower. This is called the lower town. Very often
+walls of baked brick were built around each part.
+The bricks were so well baked that they have
+lasted for thousands of years. The bricks were
+laid in an interlocking pattern and that made the
+walls strong.
+In 	some 	cities, 	special
+buildings were constructed
+on the citadel. For example,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	w",Great Bath,LOCATED_IN,Citadel,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0014,3,"ES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What w	What was special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?
+Many of these cities were divided into two or more
+parts. Usually, the part to the west was smaller
+but higher. Archaeologists describe this as the
+citadel. Generally, the part to the east was larger
+but lower. This is called the lower town. Very often
+walls of baked brick were built around each part.
+The bricks were so well baked that they have
+lasted for thousands of years. The bricks were
+laid in an interlocking pattern and that made the
+walls strong.
+In 	some 	cities, 	special
+buildings were constructed
+on the citadel. For example,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	w",Baked Brick Walls,CONTAINS,Citadel,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"direction wrong: citadel has walls, walls do not contain citadel"
+t0015,3,"ES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What w	What was special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?
+Many of these cities were divided into two or more
+parts. Usually, the part to the west was smaller
+but higher. Archaeologists describe this as the
+citadel. Generally, the part to the east was larger
+but lower. This is called the lower town. Very often
+walls of baked brick were built around each part.
+The bricks were so well baked that they have
+lasted for thousands of years. The bricks were
+laid in an interlocking pattern and that made the
+walls strong.
+In 	some 	cities, 	special
+buildings were constructed
+on the citadel. For example,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	w",Baked Brick Walls,CONTAINS,Lower Town,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,direction wrong
+t0016,3,"ES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What w	What was special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?
+Many of these cities were divided into two or more
+parts. Usually, the part to the west was smaller
+but higher. Archaeologists describe this as the
+citadel. Generally, the part to the east was larger
+but lower. This is called the lower town. Very often
+walls of baked brick were built around each part.
+The bricks were so well baked that they have
+lasted for thousands of years. The bricks were
+laid in an interlocking pattern and that made the
+walls strong.
+In 	some 	cities, 	special
+buildings were constructed
+on the citadel. For example,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	w",Interlocking Brick Pattern,CHARACTERIZED_BY,Baked Brick Walls,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,direction wrong: walls have interlocking pattern
+t0017,3,"ES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What w	What was special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?
+Many of these cities were divided into two or more
+parts. Usually, the part to the west was smaller
+but higher. Archaeologists describe this as the
+citadel. Generally, the part to the east was larger
+but lower. This is called the lower town. Very often
+walls of baked brick were built around each part.
+The bricks were so well baked that they have
+lasted for thousands of years. The bricks were
+laid in an interlocking pattern and that made the
+walls strong.
+In 	some 	cities, 	special
+buildings were constructed
+on the citadel. For example,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	w",Mohenjodaro,CONTAINS,Citadel,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,Mohenjodaro has a citadel with Great Bath on it
+t0018,3,"ES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What w	What was special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?
+Many of these cities were divided into two or more
+parts. Usually, the part to the west was smaller
+but higher. Archaeologists describe this as the
+citadel. Generally, the part to the east was larger
+but lower. This is called the lower town. Very often
+walls of baked brick were built around each part.
+The bricks were so well baked that they have
+lasted for thousands of years. The bricks were
+laid in an interlocking pattern and that made the
+walls strong.
+In 	some 	cities, 	special
+buildings were constructed
+on the citadel. For example,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	w",Mohenjodaro,CONTAINS,Lower Town,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,y,b,Mohenjodaro follows the city = citadel + lower town pattern
+t0019,3,"ES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES	IN THE EARLIEST CITIES
+2019–20
+
+-- 1 of 11 --
+
+25 
+What w	What w	What w	What w	What was special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?	as special about these cities?
+Many of these cities were divided into two or more
+parts. Usually, the part to the west was smaller
+but higher. Archaeologists describe this as the
+citadel. Generally, the part to the east was larger
+but lower. This is called the lower town. Very often
+walls of baked brick were built around each part.
+The bricks were so well baked that they have
+lasted for thousands of years. The bricks were
+laid in an interlocking pattern and that made the
+walls strong.
+In 	some 	cities, 	special
+buildings were constructed
+on the citadel. For example,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	w",Mohenjodaro,CONTAINS,Great Bath,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0020,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Great Bath,PART_OF,Mohenjodaro,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0021,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Fire Altars,PART_OF,Kalibangan,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0022,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Fire Altars,PART_OF,Lothal,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0023,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Storehouses,PART_OF,Mohenjodaro,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0024,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Storehouses,PART_OF,Harappa,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0025,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Storehouses,PART_OF,Lothal,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0026,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Indus Valley Civilization Artifacts,FOUND_IN,Mohenjodaro,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,artifacts found in almost all these cities
+t0027,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Indus Valley Civilization Artifacts,FOUND_IN,Kalibangan,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0028,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Indus Valley Civilization Artifacts,FOUND_IN,Lothal,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0029,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Geographical Regions,LOCATED_IN,Indus Valley Civilization,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"direction wrong: IVC located in regions, not regions in IVC"
+t0030,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Great Bath,USED_FOR,Ritual Practices,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,y,b,"""important people took a dip on special occasions"" implies ritual use"
+t0031,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Fire Altars,USED_FOR,Religious Practices,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,y,b,"""sacrifices may have been performed"" implies religious use"
+t0032,4,"ple,
+in 	Mohenjodaro, 	a 	very
+special 	tank, 	which
+archaeologists call the Great
+Bath, was built in this area.
+This was lined with bricks,
+coated 	with 	plaster, 	and
+made water-tight with a layer
+of natural tar. There were
+steps leading down to it from
+two sides, while there were
+rooms on all sides. Water was
+probably brought in from a
+well, and drained out after
+use. 	Perhaps 	important
+people took a dip in this tank
+on special occasions.
+Other 	cities, 	such 	as
+Kalibangan and Lothal had
+fire altars, where sacrifices
+may have been performed.
+And 	some 	cities 	like
+Mohenjodaro, Harappa, and
+Lothal had elaborate store
+houses.
+These cities were found in
+the Punjab and Sind in
+Pakistan, and in Gujarat,
+Rajasthan, Haryana and
+the Punjab in India.
+Archaeologists have found
+a set of unique objects in
+almost all these cities: red
+pottery painted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in",Storehouses,USED_FOR,Resource Management,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,storehouses imply resource storage/management
+t0033,5,"inted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in the Subcontinent
+2019–20
+
+-- 2 of 11 --
+
+ 26
+OUR PASTS–I
+Houses, dr	Houses, dr	Houses, dr	Houses, dr	Houses, drains and str	ains and str	ains and str	ains and str	ains and streets	eets	eets	eets	eets
+Generally, houses were either one or two storeys
+high, with rooms built around a courtyard. Most
+houses had a separate bathing area, and some
+had wells to supply water.
+Many of these cities had covered drains. Notice
+how carefully these were laid out,
+in straight lines. Although you
+cannot see it, each drain had a
+gentle slope so that water could flow
+through it. Very often, drains in
+houses were connected to those on
+the streets and smaller drains led
+into bigger ones. As the drains were
+covered, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same t",City planning in Harappan civilization,CONTAINS,Houses in Harappan cities,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0034,5,"inted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in the Subcontinent
+2019–20
+
+-- 2 of 11 --
+
+ 26
+OUR PASTS–I
+Houses, dr	Houses, dr	Houses, dr	Houses, dr	Houses, drains and str	ains and str	ains and str	ains and str	ains and streets	eets	eets	eets	eets
+Generally, houses were either one or two storeys
+high, with rooms built around a courtyard. Most
+houses had a separate bathing area, and some
+had wells to supply water.
+Many of these cities had covered drains. Notice
+how carefully these were laid out,
+in straight lines. Although you
+cannot see it, each drain had a
+gentle slope so that water could flow
+through it. Very often, drains in
+houses were connected to those on
+the streets and smaller drains led
+into bigger ones. As the drains were
+covered, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same t",City planning in Harappan civilization,CONTAINS,Drainage system in Harappan cities,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0035,5,"inted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in the Subcontinent
+2019–20
+
+-- 2 of 11 --
+
+ 26
+OUR PASTS–I
+Houses, dr	Houses, dr	Houses, dr	Houses, dr	Houses, drains and str	ains and str	ains and str	ains and str	ains and streets	eets	eets	eets	eets
+Generally, houses were either one or two storeys
+high, with rooms built around a courtyard. Most
+houses had a separate bathing area, and some
+had wells to supply water.
+Many of these cities had covered drains. Notice
+how carefully these were laid out,
+in straight lines. Although you
+cannot see it, each drain had a
+gentle slope so that water could flow
+through it. Very often, drains in
+houses were connected to those on
+the streets and smaller drains led
+into bigger ones. As the drains were
+covered, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same t",City planning in Harappan civilization,CONTAINS,Street layout in Harappan cities,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0036,5,"inted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in the Subcontinent
+2019–20
+
+-- 2 of 11 --
+
+ 26
+OUR PASTS–I
+Houses, dr	Houses, dr	Houses, dr	Houses, dr	Houses, drains and str	ains and str	ains and str	ains and str	ains and streets	eets	eets	eets	eets
+Generally, houses were either one or two storeys
+high, with rooms built around a courtyard. Most
+houses had a separate bathing area, and some
+had wells to supply water.
+Many of these cities had covered drains. Notice
+how carefully these were laid out,
+in straight lines. Although you
+cannot see it, each drain had a
+gentle slope so that water could flow
+through it. Very often, drains in
+houses were connected to those on
+the streets and smaller drains led
+into bigger ones. As the drains were
+covered, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same t",Houses in Harappan cities,REQUIRES,Drainage system in Harappan cities,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,REQUIRES is too strong; drains connected to houses but not required
+t0037,5,"inted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in the Subcontinent
+2019–20
+
+-- 2 of 11 --
+
+ 26
+OUR PASTS–I
+Houses, dr	Houses, dr	Houses, dr	Houses, dr	Houses, drains and str	ains and str	ains and str	ains and str	ains and streets	eets	eets	eets	eets
+Generally, houses were either one or two storeys
+high, with rooms built around a courtyard. Most
+houses had a separate bathing area, and some
+had wells to supply water.
+Many of these cities had covered drains. Notice
+how carefully these were laid out,
+in straight lines. Although you
+cannot see it, each drain had a
+gentle slope so that water could flow
+through it. Very often, drains in
+houses were connected to those on
+the streets and smaller drains led
+into bigger ones. As the drains were
+covered, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same t",Drainage system in Harappan cities,REQUIRES,Street layout in Harappan cities,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,REQUIRES overclaim
+t0038,5,"inted with
+designs in black, stone
+weights, seals, special
+beads, copper tools, and
+paralleled sided long stone
+blades.
+MAP : 3
+The Earliest Cities
+in the Subcontinent
+2019–20
+
+-- 2 of 11 --
+
+ 26
+OUR PASTS–I
+Houses, dr	Houses, dr	Houses, dr	Houses, dr	Houses, drains and str	ains and str	ains and str	ains and str	ains and streets	eets	eets	eets	eets
+Generally, houses were either one or two storeys
+high, with rooms built around a courtyard. Most
+houses had a separate bathing area, and some
+had wells to supply water.
+Many of these cities had covered drains. Notice
+how carefully these were laid out,
+in straight lines. Although you
+cannot see it, each drain had a
+gentle slope so that water could flow
+through it. Very often, drains in
+houses were connected to those on
+the streets and smaller drains led
+into bigger ones. As the drains were
+covered, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same t",Houses in Harappan cities,CONTAINS,Use of wells for water supply,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,"""some had wells to supply water"""
+t0039,6,"red, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same time.
+List 	at 	least 	two 	dif ferences
+between the houses described here
+and those that you studied about
+in Chapter 2.
+The Great Bath
+How bricks were
+arranged to build walls
+in Harappan cities
+2019–20
+
+-- 3 of 11 --
+
+27 
+Life in the city	Life in the city	Life in the city	Life in the city	Life in the city
+A Harappan city was a very busy place.
+There 	were 	people 	who 	planned 	the
+construction of special buildings in the city.
+These were probably the rulers. It is likely
+that the rulers sent people to distant lands
+to get metal, precious stones, and other
+things that they wanted. They may have
+kept the most valuable objects, such as
+ornaments of gold and silver, or beautiful
+beads, for themselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survi",Harappan cities,CONTAINS,Houses,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0040,6,"red, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same time.
+List 	at 	least 	two 	dif ferences
+between the houses described here
+and those that you studied about
+in Chapter 2.
+The Great Bath
+How bricks were
+arranged to build walls
+in Harappan cities
+2019–20
+
+-- 3 of 11 --
+
+27 
+Life in the city	Life in the city	Life in the city	Life in the city	Life in the city
+A Harappan city was a very busy place.
+There 	were 	people 	who 	planned 	the
+construction of special buildings in the city.
+These were probably the rulers. It is likely
+that the rulers sent people to distant lands
+to get metal, precious stones, and other
+things that they wanted. They may have
+kept the most valuable objects, such as
+ornaments of gold and silver, or beautiful
+beads, for themselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survi",Harappan cities,CONTAINS,Drains,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0041,6,"red, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same time.
+List 	at 	least 	two 	dif ferences
+between the houses described here
+and those that you studied about
+in Chapter 2.
+The Great Bath
+How bricks were
+arranged to build walls
+in Harappan cities
+2019–20
+
+-- 3 of 11 --
+
+27 
+Life in the city	Life in the city	Life in the city	Life in the city	Life in the city
+A Harappan city was a very busy place.
+There 	were 	people 	who 	planned 	the
+construction of special buildings in the city.
+These were probably the rulers. It is likely
+that the rulers sent people to distant lands
+to get metal, precious stones, and other
+things that they wanted. They may have
+kept the most valuable objects, such as
+ornaments of gold and silver, or beautiful
+beads, for themselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survi",Harappan cities,CONTAINS,Great Bath,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,"Great Bath in Mohenjodaro, a Harappan city — transitive"
+t0042,6,"red, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same time.
+List 	at 	least 	two 	dif ferences
+between the houses described here
+and those that you studied about
+in Chapter 2.
+The Great Bath
+How bricks were
+arranged to build walls
+in Harappan cities
+2019–20
+
+-- 3 of 11 --
+
+27 
+Life in the city	Life in the city	Life in the city	Life in the city	Life in the city
+A Harappan city was a very busy place.
+There 	were 	people 	who 	planned 	the
+construction of special buildings in the city.
+These were probably the rulers. It is likely
+that the rulers sent people to distant lands
+to get metal, precious stones, and other
+things that they wanted. They may have
+kept the most valuable objects, such as
+ornaments of gold and silver, or beautiful
+beads, for themselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survi",Houses,USES,Brick arrangement,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,predicate USES non-standard; relationship not stated
+t0043,6,"red, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same time.
+List 	at 	least 	two 	dif ferences
+between the houses described here
+and those that you studied about
+in Chapter 2.
+The Great Bath
+How bricks were
+arranged to build walls
+in Harappan cities
+2019–20
+
+-- 3 of 11 --
+
+27 
+Life in the city	Life in the city	Life in the city	Life in the city	Life in the city
+A Harappan city was a very busy place.
+There 	were 	people 	who 	planned 	the
+construction of special buildings in the city.
+These were probably the rulers. It is likely
+that the rulers sent people to distant lands
+to get metal, precious stones, and other
+things that they wanted. They may have
+kept the most valuable objects, such as
+ornaments of gold and silver, or beautiful
+beads, for themselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survi",Rulers,BUILT_BY,Houses,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,"not stated; rulers planned special buildings, did not build houses directly"
+t0044,6,"red, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same time.
+List 	at 	least 	two 	dif ferences
+between the houses described here
+and those that you studied about
+in Chapter 2.
+The Great Bath
+How bricks were
+arranged to build walls
+in Harappan cities
+2019–20
+
+-- 3 of 11 --
+
+27 
+Life in the city	Life in the city	Life in the city	Life in the city	Life in the city
+A Harappan city was a very busy place.
+There 	were 	people 	who 	planned 	the
+construction of special buildings in the city.
+These were probably the rulers. It is likely
+that the rulers sent people to distant lands
+to get metal, precious stones, and other
+things that they wanted. They may have
+kept the most valuable objects, such as
+ornaments of gold and silver, or beautiful
+beads, for themselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survi",Rulers,BUILT_BY,Great Bath,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,not stated this way
+t0045,6,"red, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same time.
+List 	at 	least 	two 	dif ferences
+between the houses described here
+and those that you studied about
+in Chapter 2.
+The Great Bath
+How bricks were
+arranged to build walls
+in Harappan cities
+2019–20
+
+-- 3 of 11 --
+
+27 
+Life in the city	Life in the city	Life in the city	Life in the city	Life in the city
+A Harappan city was a very busy place.
+There 	were 	people 	who 	planned 	the
+construction of special buildings in the city.
+These were probably the rulers. It is likely
+that the rulers sent people to distant lands
+to get metal, precious stones, and other
+things that they wanted. They may have
+kept the most valuable objects, such as
+ornaments of gold and silver, or beautiful
+beads, for themselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survi",Scribes,PRODUCED_BY,Seals,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"direction wrong: scribes produced seals, not the other way"
+t0046,6,"red, inspection holes were
+provided at intervals to clean them.
+All three — houses, drains and
+streets — were probably planned
+and built at the same time.
+List 	at 	least 	two 	dif ferences
+between the houses described here
+and those that you studied about
+in Chapter 2.
+The Great Bath
+How bricks were
+arranged to build walls
+in Harappan cities
+2019–20
+
+-- 3 of 11 --
+
+27 
+Life in the city	Life in the city	Life in the city	Life in the city	Life in the city
+A Harappan city was a very busy place.
+There 	were 	people 	who 	planned 	the
+construction of special buildings in the city.
+These were probably the rulers. It is likely
+that the rulers sent people to distant lands
+to get metal, precious stones, and other
+things that they wanted. They may have
+kept the most valuable objects, such as
+ornaments of gold and silver, or beautiful
+beads, for themselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survi",Rulers,ENGAGED_IN,Trade for metals and stones,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,predicate ENGAGED_IN non-standard; content (rulers sent people for metals/stones) supported
+t0047,7,"emselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survived.
+Besides, there were men and women,
+crafts persons, making all kinds of things
+— either in their own homes, or in special
+workshops. People were travelling to
+distant 	lands 	or 	retur ning 	with 	raw
+materials and, perhaps, stories. Many
+terracotta toys have been found and
+children must have played with these.
+Make a list of the people who lived in the city.
+Were any of these people listed as living in
+villages such as Mehrgarh?
+IN THE EARLIEST
+CITIES
+Top : A street in
+Mohenjodaro with a
+drain.
+Above : A well.
+Far Left : A Harappan
+seal. The signs on the top
+of the seal are part of a
+script. This is the earliest
+form of writing known in
+the subcontinent.
+Scholars have tried to
+read these signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr",Scribes,FOUND_IN,Mohenjodaro,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,scribes existed in Harappan cities generally; not specifically Mohenjodaro
+t0048,7,"emselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survived.
+Besides, there were men and women,
+crafts persons, making all kinds of things
+— either in their own homes, or in special
+workshops. People were travelling to
+distant 	lands 	or 	retur ning 	with 	raw
+materials and, perhaps, stories. Many
+terracotta toys have been found and
+children must have played with these.
+Make a list of the people who lived in the city.
+Were any of these people listed as living in
+villages such as Mehrgarh?
+IN THE EARLIEST
+CITIES
+Top : A street in
+Mohenjodaro with a
+drain.
+Above : A well.
+Far Left : A Harappan
+seal. The signs on the top
+of the seal are part of a
+script. This is the earliest
+form of writing known in
+the subcontinent.
+Scholars have tried to
+read these signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr",Craftspersons,FOUND_IN,Mohenjodaro,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,craftspersons in Harappan cities; Mohenjodaro is the primary example
+t0049,7,"emselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survived.
+Besides, there were men and women,
+crafts persons, making all kinds of things
+— either in their own homes, or in special
+workshops. People were travelling to
+distant 	lands 	or 	retur ning 	with 	raw
+materials and, perhaps, stories. Many
+terracotta toys have been found and
+children must have played with these.
+Make a list of the people who lived in the city.
+Were any of these people listed as living in
+villages such as Mehrgarh?
+IN THE EARLIEST
+CITIES
+Top : A street in
+Mohenjodaro with a
+drain.
+Above : A well.
+Far Left : A Harappan
+seal. The signs on the top
+of the seal are part of a
+script. This is the earliest
+form of writing known in
+the subcontinent.
+Scholars have tried to
+read these signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr",Travelers,FOUND_IN,Mohenjodaro,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,travelers went TO distant lands; location not specified as Mohenjodaro
+t0050,7,"emselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survived.
+Besides, there were men and women,
+crafts persons, making all kinds of things
+— either in their own homes, or in special
+workshops. People were travelling to
+distant 	lands 	or 	retur ning 	with 	raw
+materials and, perhaps, stories. Many
+terracotta toys have been found and
+children must have played with these.
+Make a list of the people who lived in the city.
+Were any of these people listed as living in
+villages such as Mehrgarh?
+IN THE EARLIEST
+CITIES
+Top : A street in
+Mohenjodaro with a
+drain.
+Above : A well.
+Far Left : A Harappan
+seal. The signs on the top
+of the seal are part of a
+script. This is the earliest
+form of writing known in
+the subcontinent.
+Scholars have tried to
+read these signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr",Terracotta Toys,FOUND_IN,Mohenjodaro,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,terracotta toys found in context of Mohenjodaro imagery
+t0051,7,"emselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survived.
+Besides, there were men and women,
+crafts persons, making all kinds of things
+— either in their own homes, or in special
+workshops. People were travelling to
+distant 	lands 	or 	retur ning 	with 	raw
+materials and, perhaps, stories. Many
+terracotta toys have been found and
+children must have played with these.
+Make a list of the people who lived in the city.
+Were any of these people listed as living in
+villages such as Mehrgarh?
+IN THE EARLIEST
+CITIES
+Top : A street in
+Mohenjodaro with a
+drain.
+Above : A well.
+Far Left : A Harappan
+seal. The signs on the top
+of the seal are part of a
+script. This is the earliest
+form of writing known in
+the subcontinent.
+Scholars have tried to
+read these signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr",Harappan Seal,FOUND_IN,Mohenjodaro,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,Harappan seal depicted in Mohenjodaro context
+t0052,7,"emselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survived.
+Besides, there were men and women,
+crafts persons, making all kinds of things
+— either in their own homes, or in special
+workshops. People were travelling to
+distant 	lands 	or 	retur ning 	with 	raw
+materials and, perhaps, stories. Many
+terracotta toys have been found and
+children must have played with these.
+Make a list of the people who lived in the city.
+Were any of these people listed as living in
+villages such as Mehrgarh?
+IN THE EARLIEST
+CITIES
+Top : A street in
+Mohenjodaro with a
+drain.
+Above : A well.
+Far Left : A Harappan
+seal. The signs on the top
+of the seal are part of a
+script. This is the earliest
+form of writing known in
+the subcontinent.
+Scholars have tried to
+read these signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr",Mehrgarh,CONTRASTS_WITH,Mohenjodaro,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,"chunk asks a question, does not assert contrast"
+t0053,7,"emselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survived.
+Besides, there were men and women,
+crafts persons, making all kinds of things
+— either in their own homes, or in special
+workshops. People were travelling to
+distant 	lands 	or 	retur ning 	with 	raw
+materials and, perhaps, stories. Many
+terracotta toys have been found and
+children must have played with these.
+Make a list of the people who lived in the city.
+Were any of these people listed as living in
+villages such as Mehrgarh?
+IN THE EARLIEST
+CITIES
+Top : A street in
+Mohenjodaro with a
+drain.
+Above : A well.
+Far Left : A Harappan
+seal. The signs on the top
+of the seal are part of a
+script. This is the earliest
+form of writing known in
+the subcontinent.
+Scholars have tried to
+read these signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr",Scribes,USED_FOR,Script,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"direction wrong: scribes USE script, not script used for scribes"
+t0054,7,"emselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survived.
+Besides, there were men and women,
+crafts persons, making all kinds of things
+— either in their own homes, or in special
+workshops. People were travelling to
+distant 	lands 	or 	retur ning 	with 	raw
+materials and, perhaps, stories. Many
+terracotta toys have been found and
+children must have played with these.
+Make a list of the people who lived in the city.
+Were any of these people listed as living in
+villages such as Mehrgarh?
+IN THE EARLIEST
+CITIES
+Top : A street in
+Mohenjodaro with a
+drain.
+Above : A well.
+Far Left : A Harappan
+seal. The signs on the top
+of the seal are part of a
+script. This is the earliest
+form of writing known in
+the subcontinent.
+Scholars have tried to
+read these signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr",Craftspersons,PRODUCED_BY,Terracotta Toys,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,direction wrong: craftspersons produce toys
+t0055,7,"emselves. And there were
+scribes, people who knew how to write, who
+helped prepare the seals, and perhaps
+wrote on other materials that have not
+survived.
+Besides, there were men and women,
+crafts persons, making all kinds of things
+— either in their own homes, or in special
+workshops. People were travelling to
+distant 	lands 	or 	retur ning 	with 	raw
+materials and, perhaps, stories. Many
+terracotta toys have been found and
+children must have played with these.
+Make a list of the people who lived in the city.
+Were any of these people listed as living in
+villages such as Mehrgarh?
+IN THE EARLIEST
+CITIES
+Top : A street in
+Mohenjodaro with a
+drain.
+Above : A well.
+Far Left : A Harappan
+seal. The signs on the top
+of the seal are part of a
+script. This is the earliest
+form of writing known in
+the subcontinent.
+Scholars have tried to
+read these signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr",Travelers,SUPPLIED_BY,Raw Materials,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,direction wrong: travelers supply raw materials
+t0056,8,"e signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr	w cr	w crafts in the city	afts in the city	afts in the city	afts in the city	afts in the city
+Let us look at some of the objects that were made
+and found in Harappan cities. Most of the things
+that have been found by archaeologists are made
+of stone, shell and metal, including copper, bronze,
+gold and silver. Copper and bronze were used to
+make tools, weapons, ornaments and vessels.
+Gold and silver were used to make ornaments
+and vessels.
+Perhaps the most striking finds are those of
+beads, weights, and blades.
+The Harappans also made seals out of stone.
+These are generally rectangular (See illustration
+on page 27) and usually have an animal carved
+on them.
+The Harappans also made pots with beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+wei",Harappan cities,USED_FOR,Stone,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"direction wrong: stone used IN cities, not cities used for stone"
+t0057,8,"e signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr	w cr	w crafts in the city	afts in the city	afts in the city	afts in the city	afts in the city
+Let us look at some of the objects that were made
+and found in Harappan cities. Most of the things
+that have been found by archaeologists are made
+of stone, shell and metal, including copper, bronze,
+gold and silver. Copper and bronze were used to
+make tools, weapons, ornaments and vessels.
+Gold and silver were used to make ornaments
+and vessels.
+Perhaps the most striking finds are those of
+beads, weights, and blades.
+The Harappans also made seals out of stone.
+These are generally rectangular (See illustration
+on page 27) and usually have an animal carved
+on them.
+The Harappans also made pots with beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+wei",Harappan cities,USED_FOR,Metal,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,direction wrong
+t0058,8,"e signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr	w cr	w crafts in the city	afts in the city	afts in the city	afts in the city	afts in the city
+Let us look at some of the objects that were made
+and found in Harappan cities. Most of the things
+that have been found by archaeologists are made
+of stone, shell and metal, including copper, bronze,
+gold and silver. Copper and bronze were used to
+make tools, weapons, ornaments and vessels.
+Gold and silver were used to make ornaments
+and vessels.
+Perhaps the most striking finds are those of
+beads, weights, and blades.
+The Harappans also made seals out of stone.
+These are generally rectangular (See illustration
+on page 27) and usually have an animal carved
+on them.
+The Harappans also made pots with beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+wei",Harappan cities,PRODUCED,Pottery,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,y,a,predicate PRODUCED non-standard (would be filtered); content supported
+t0059,8,"e signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr	w cr	w crafts in the city	afts in the city	afts in the city	afts in the city	afts in the city
+Let us look at some of the objects that were made
+and found in Harappan cities. Most of the things
+that have been found by archaeologists are made
+of stone, shell and metal, including copper, bronze,
+gold and silver. Copper and bronze were used to
+make tools, weapons, ornaments and vessels.
+Gold and silver were used to make ornaments
+and vessels.
+Perhaps the most striking finds are those of
+beads, weights, and blades.
+The Harappans also made seals out of stone.
+These are generally rectangular (See illustration
+on page 27) and usually have an animal carved
+on them.
+The Harappans also made pots with beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+wei",Harappan cities,PRODUCED,Seals,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,"predicate PRODUCED non-standard; content (""Harappans made seals"") supported"
+t0060,8,"e signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr	w cr	w crafts in the city	afts in the city	afts in the city	afts in the city	afts in the city
+Let us look at some of the objects that were made
+and found in Harappan cities. Most of the things
+that have been found by archaeologists are made
+of stone, shell and metal, including copper, bronze,
+gold and silver. Copper and bronze were used to
+make tools, weapons, ornaments and vessels.
+Gold and silver were used to make ornaments
+and vessels.
+Perhaps the most striking finds are those of
+beads, weights, and blades.
+The Harappans also made seals out of stone.
+These are generally rectangular (See illustration
+on page 27) and usually have an animal carved
+on them.
+The Harappans also made pots with beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+wei",Metal,USED_FOR,Tools,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0061,8,"e signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr	w cr	w crafts in the city	afts in the city	afts in the city	afts in the city	afts in the city
+Let us look at some of the objects that were made
+and found in Harappan cities. Most of the things
+that have been found by archaeologists are made
+of stone, shell and metal, including copper, bronze,
+gold and silver. Copper and bronze were used to
+make tools, weapons, ornaments and vessels.
+Gold and silver were used to make ornaments
+and vessels.
+Perhaps the most striking finds are those of
+beads, weights, and blades.
+The Harappans also made seals out of stone.
+These are generally rectangular (See illustration
+on page 27) and usually have an animal carved
+on them.
+The Harappans also made pots with beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+wei",Metal,USED_FOR,Weapons,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0062,8,"e signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr	w cr	w crafts in the city	afts in the city	afts in the city	afts in the city	afts in the city
+Let us look at some of the objects that were made
+and found in Harappan cities. Most of the things
+that have been found by archaeologists are made
+of stone, shell and metal, including copper, bronze,
+gold and silver. Copper and bronze were used to
+make tools, weapons, ornaments and vessels.
+Gold and silver were used to make ornaments
+and vessels.
+Perhaps the most striking finds are those of
+beads, weights, and blades.
+The Harappans also made seals out of stone.
+These are generally rectangular (See illustration
+on page 27) and usually have an animal carved
+on them.
+The Harappans also made pots with beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+wei",Metal,USED_FOR,Ornaments,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0063,8,"e signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr	w cr	w crafts in the city	afts in the city	afts in the city	afts in the city	afts in the city
+Let us look at some of the objects that were made
+and found in Harappan cities. Most of the things
+that have been found by archaeologists are made
+of stone, shell and metal, including copper, bronze,
+gold and silver. Copper and bronze were used to
+make tools, weapons, ornaments and vessels.
+Gold and silver were used to make ornaments
+and vessels.
+Perhaps the most striking finds are those of
+beads, weights, and blades.
+The Harappans also made seals out of stone.
+These are generally rectangular (See illustration
+on page 27) and usually have an animal carved
+on them.
+The Harappans also made pots with beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+wei",Seals,FEATURE_OF,Animal carvings,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,direction wrong: animal carvings are feature of seals
+t0064,8,"e signs but we
+still do not know exactly
+what they mean.
+Left : Terracotta toys.
+2019–20
+
+-- 4 of 11 --
+
+ 28
+OUR PASTS–I
+Ne	Ne	Ne	Ne	New cr	w cr	w cr	w cr	w crafts in the city	afts in the city	afts in the city	afts in the city	afts in the city
+Let us look at some of the objects that were made
+and found in Harappan cities. Most of the things
+that have been found by archaeologists are made
+of stone, shell and metal, including copper, bronze,
+gold and silver. Copper and bronze were used to
+make tools, weapons, ornaments and vessels.
+Gold and silver were used to make ornaments
+and vessels.
+Perhaps the most striking finds are those of
+beads, weights, and blades.
+The Harappans also made seals out of stone.
+These are generally rectangular (See illustration
+on page 27) and usually have an animal carved
+on them.
+The Harappans also made pots with beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+wei",Pottery,CHARACTERIZED_BY,Black designs,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0065,9,"beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+weights?
+Cotton was probably grown
+at Mehrgarh from about 7000
+years ago. Actual pieces of
+cloth were found attached
+to the lid of a silver vase and
+some 	copper 	objects 	at
+Mohenjodaro. Archaeologists
+have also found spindle whorls,
+Top : Stone weights.
+Notice how carefully and
+precisely these weights
+are shaped. These were
+made of chert, a kind of
+stone. These were
+probably used to weigh
+precious stones or
+metals.
+Right : Beads.
+Many of these were
+made out of carnelian, a
+beautiful red stone. The
+stone was cut, shaped,
+polished and finally a
+hole was bored through
+the centre so that a
+string could be passed
+through it.
+Far right : Stone blades.
+Bottom Right :
+Embroidered cloth.
+A stone statue of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. Th",Stone,IS_A,Stone weights,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"nonsensical direction: stone weights made of stone, not stone IS_A weights"
+t0066,9,"beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+weights?
+Cotton was probably grown
+at Mehrgarh from about 7000
+years ago. Actual pieces of
+cloth were found attached
+to the lid of a silver vase and
+some 	copper 	objects 	at
+Mohenjodaro. Archaeologists
+have also found spindle whorls,
+Top : Stone weights.
+Notice how carefully and
+precisely these weights
+are shaped. These were
+made of chert, a kind of
+stone. These were
+probably used to weigh
+precious stones or
+metals.
+Right : Beads.
+Many of these were
+made out of carnelian, a
+beautiful red stone. The
+stone was cut, shaped,
+polished and finally a
+hole was bored through
+the centre so that a
+string could be passed
+through it.
+Far right : Stone blades.
+Bottom Right :
+Embroidered cloth.
+A stone statue of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. Th",Stone,IS_A,Carnelian beads,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,same — beads made of carnelian
+t0067,9,"beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+weights?
+Cotton was probably grown
+at Mehrgarh from about 7000
+years ago. Actual pieces of
+cloth were found attached
+to the lid of a silver vase and
+some 	copper 	objects 	at
+Mohenjodaro. Archaeologists
+have also found spindle whorls,
+Top : Stone weights.
+Notice how carefully and
+precisely these weights
+are shaped. These were
+made of chert, a kind of
+stone. These were
+probably used to weigh
+precious stones or
+metals.
+Right : Beads.
+Many of these were
+made out of carnelian, a
+beautiful red stone. The
+stone was cut, shaped,
+polished and finally a
+hole was bored through
+the centre so that a
+string could be passed
+through it.
+Far right : Stone blades.
+Bottom Right :
+Embroidered cloth.
+A stone statue of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. Th",Cotton,PRODUCED_BY,Embroidered cloth,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,"nonsensical: cotton used to make cloth, not produced by cloth"
+t0068,9,"beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+weights?
+Cotton was probably grown
+at Mehrgarh from about 7000
+years ago. Actual pieces of
+cloth were found attached
+to the lid of a silver vase and
+some 	copper 	objects 	at
+Mohenjodaro. Archaeologists
+have also found spindle whorls,
+Top : Stone weights.
+Notice how carefully and
+precisely these weights
+are shaped. These were
+made of chert, a kind of
+stone. These were
+probably used to weigh
+precious stones or
+metals.
+Right : Beads.
+Many of these were
+made out of carnelian, a
+beautiful red stone. The
+stone was cut, shaped,
+polished and finally a
+hole was bored through
+the centre so that a
+string could be passed
+through it.
+Far right : Stone blades.
+Bottom Right :
+Embroidered cloth.
+A stone statue of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. Th",Spindle Whorls,USED_FOR,Textile production,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0069,9,"beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+weights?
+Cotton was probably grown
+at Mehrgarh from about 7000
+years ago. Actual pieces of
+cloth were found attached
+to the lid of a silver vase and
+some 	copper 	objects 	at
+Mohenjodaro. Archaeologists
+have also found spindle whorls,
+Top : Stone weights.
+Notice how carefully and
+precisely these weights
+are shaped. These were
+made of chert, a kind of
+stone. These were
+probably used to weigh
+precious stones or
+metals.
+Right : Beads.
+Many of these were
+made out of carnelian, a
+beautiful red stone. The
+stone was cut, shaped,
+polished and finally a
+hole was bored through
+the centre so that a
+string could be passed
+through it.
+Far right : Stone blades.
+Bottom Right :
+Embroidered cloth.
+A stone statue of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. Th",Mohenjodaro,FOUND_IN,Silver vase,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,direction wrong: silver vase found at Mohenjodaro
+t0070,9,"beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+weights?
+Cotton was probably grown
+at Mehrgarh from about 7000
+years ago. Actual pieces of
+cloth were found attached
+to the lid of a silver vase and
+some 	copper 	objects 	at
+Mohenjodaro. Archaeologists
+have also found spindle whorls,
+Top : Stone weights.
+Notice how carefully and
+precisely these weights
+are shaped. These were
+made of chert, a kind of
+stone. These were
+probably used to weigh
+precious stones or
+metals.
+Right : Beads.
+Many of these were
+made out of carnelian, a
+beautiful red stone. The
+stone was cut, shaped,
+polished and finally a
+hole was bored through
+the centre so that a
+string could be passed
+through it.
+Far right : Stone blades.
+Bottom Right :
+Embroidered cloth.
+A stone statue of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. Th",Mohenjodaro,FOUND_IN,Embroidered cloth,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,direction wrong: embroidered cloth found at Mohenjodaro
+t0071,9,"beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+weights?
+Cotton was probably grown
+at Mehrgarh from about 7000
+years ago. Actual pieces of
+cloth were found attached
+to the lid of a silver vase and
+some 	copper 	objects 	at
+Mohenjodaro. Archaeologists
+have also found spindle whorls,
+Top : Stone weights.
+Notice how carefully and
+precisely these weights
+are shaped. These were
+made of chert, a kind of
+stone. These were
+probably used to weigh
+precious stones or
+metals.
+Right : Beads.
+Many of these were
+made out of carnelian, a
+beautiful red stone. The
+stone was cut, shaped,
+polished and finally a
+hole was bored through
+the centre so that a
+string could be passed
+through it.
+Far right : Stone blades.
+Bottom Right :
+Embroidered cloth.
+A stone statue of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. Th",Mehrgarh,LOCATED_IN,Cotton cultivation,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,nonsensical: Mehrgarh not located inside cotton cultivation
+t0072,9,"beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+weights?
+Cotton was probably grown
+at Mehrgarh from about 7000
+years ago. Actual pieces of
+cloth were found attached
+to the lid of a silver vase and
+some 	copper 	objects 	at
+Mohenjodaro. Archaeologists
+have also found spindle whorls,
+Top : Stone weights.
+Notice how carefully and
+precisely these weights
+are shaped. These were
+made of chert, a kind of
+stone. These were
+probably used to weigh
+precious stones or
+metals.
+Right : Beads.
+Many of these were
+made out of carnelian, a
+beautiful red stone. The
+stone was cut, shaped,
+polished and finally a
+hole was bored through
+the centre so that a
+string could be passed
+through it.
+Far right : Stone blades.
+Bottom Right :
+Embroidered cloth.
+A stone statue of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. Th",Chert,MADE_OF,Stone weights,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,direction wrong: stone weights MADE_OF chert; predicate also non-standard
+t0073,9,"beautiful
+black designs, such as the one
+shown on page 6.
+Was metal used in the villages
+you learnt about in Chapter 2?
+Was 	stone 	used 	to 	make
+weights?
+Cotton was probably grown
+at Mehrgarh from about 7000
+years ago. Actual pieces of
+cloth were found attached
+to the lid of a silver vase and
+some 	copper 	objects 	at
+Mohenjodaro. Archaeologists
+have also found spindle whorls,
+Top : Stone weights.
+Notice how carefully and
+precisely these weights
+are shaped. These were
+made of chert, a kind of
+stone. These were
+probably used to weigh
+precious stones or
+metals.
+Right : Beads.
+Many of these were
+made out of carnelian, a
+beautiful red stone. The
+stone was cut, shaped,
+polished and finally a
+hole was bored through
+the centre so that a
+string could be passed
+through it.
+Far right : Stone blades.
+Bottom Right :
+Embroidered cloth.
+A stone statue of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. Th",Carnelian,MADE_OF,Beads,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,direction wrong: beads MADE_OF carnelian; predicate non-standard
+t0074,10,"e of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. These were used
+to spin thread.
+Many of the things that were produced were
+probably the work of specialists. A specialist is a
+person who is trained to do only one kind of work,
+for example, cutting stone, or polishing beads, or
+carving seals. Look at the illustration (page 28)
+and see how well the face is carved and how
+carefully the beard is shown. This must have been
+the work of an expert crafts person.
+Not everybody could have been a specialist. We
+do not know whether only men were specialists
+or only women were specialists. Perhaps some
+women and men may have been specialists.
+In sear	In sear	In sear	In sear	In search of r	ch of r	ch of r	ch of r	ch of raaaaaw materials	w materials	w materials	w materials	w materials
+Raw materials are substances that are either
+found naturally (such as wood, or ores of metals)
+or produced by farmers or",Embroidered Garment,FOUND_IN,Mohenjodaro,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,embroidered garment depicted on statue from Mohenjodaro
+t0075,10,"e of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. These were used
+to spin thread.
+Many of the things that were produced were
+probably the work of specialists. A specialist is a
+person who is trained to do only one kind of work,
+for example, cutting stone, or polishing beads, or
+carving seals. Look at the illustration (page 28)
+and see how well the face is carved and how
+carefully the beard is shown. This must have been
+the work of an expert crafts person.
+Not everybody could have been a specialist. We
+do not know whether only men were specialists
+or only women were specialists. Perhaps some
+women and men may have been specialists.
+In sear	In sear	In sear	In sear	In search of r	ch of r	ch of r	ch of r	ch of raaaaaw materials	w materials	w materials	w materials	w materials
+Raw materials are substances that are either
+found naturally (such as wood, or ores of metals)
+or produced by farmers or",Specialist,EXAMPLE_OF,Expert Crafts Person,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,specialists = expert crafts persons is reasonable equivalence
+t0076,10,"e of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. These were used
+to spin thread.
+Many of the things that were produced were
+probably the work of specialists. A specialist is a
+person who is trained to do only one kind of work,
+for example, cutting stone, or polishing beads, or
+carving seals. Look at the illustration (page 28)
+and see how well the face is carved and how
+carefully the beard is shown. This must have been
+the work of an expert crafts person.
+Not everybody could have been a specialist. We
+do not know whether only men were specialists
+or only women were specialists. Perhaps some
+women and men may have been specialists.
+In sear	In sear	In sear	In sear	In search of r	ch of r	ch of r	ch of r	ch of raaaaaw materials	w materials	w materials	w materials	w materials
+Raw materials are substances that are either
+found naturally (such as wood, or ores of metals)
+or produced by farmers or",Specialist,USED,Raw Materials,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,predicate USED non-standard; relationship not stated
+t0077,10,"e of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. These were used
+to spin thread.
+Many of the things that were produced were
+probably the work of specialists. A specialist is a
+person who is trained to do only one kind of work,
+for example, cutting stone, or polishing beads, or
+carving seals. Look at the illustration (page 28)
+and see how well the face is carved and how
+carefully the beard is shown. This must have been
+the work of an expert crafts person.
+Not everybody could have been a specialist. We
+do not know whether only men were specialists
+or only women were specialists. Perhaps some
+women and men may have been specialists.
+In sear	In sear	In sear	In sear	In search of r	ch of r	ch of r	ch of r	ch of raaaaaw materials	w materials	w materials	w materials	w materials
+Raw materials are substances that are either
+found naturally (such as wood, or ores of metals)
+or produced by farmers or",Terracotta,USED_FOR,Spinning Tools,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,y,a,"""made of terracotta and faience. These were used to spin thread"" — verifier wrongly rejected"
+t0078,10,"e of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. These were used
+to spin thread.
+Many of the things that were produced were
+probably the work of specialists. A specialist is a
+person who is trained to do only one kind of work,
+for example, cutting stone, or polishing beads, or
+carving seals. Look at the illustration (page 28)
+and see how well the face is carved and how
+carefully the beard is shown. This must have been
+the work of an expert crafts person.
+Not everybody could have been a specialist. We
+do not know whether only men were specialists
+or only women were specialists. Perhaps some
+women and men may have been specialists.
+In sear	In sear	In sear	In sear	In search of r	ch of r	ch of r	ch of r	ch of raaaaaw materials	w materials	w materials	w materials	w materials
+Raw materials are substances that are either
+found naturally (such as wood, or ores of metals)
+or produced by farmers or",Faience,USED_FOR,Spinning Tools,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,y,a,same — verifier wrongly rejected
+t0079,10,"e of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. These were used
+to spin thread.
+Many of the things that were produced were
+probably the work of specialists. A specialist is a
+person who is trained to do only one kind of work,
+for example, cutting stone, or polishing beads, or
+carving seals. Look at the illustration (page 28)
+and see how well the face is carved and how
+carefully the beard is shown. This must have been
+the work of an expert crafts person.
+Not everybody could have been a specialist. We
+do not know whether only men were specialists
+or only women were specialists. Perhaps some
+women and men may have been specialists.
+In sear	In sear	In sear	In sear	In search of r	ch of r	ch of r	ch of r	ch of raaaaaw materials	w materials	w materials	w materials	w materials
+Raw materials are substances that are either
+found naturally (such as wood, or ores of metals)
+or produced by farmers or",Mohenjodaro,CONTAINS,Embroidered Garment,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,
+t0080,10,"e of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. These were used
+to spin thread.
+Many of the things that were produced were
+probably the work of specialists. A specialist is a
+person who is trained to do only one kind of work,
+for example, cutting stone, or polishing beads, or
+carving seals. Look at the illustration (page 28)
+and see how well the face is carved and how
+carefully the beard is shown. This must have been
+the work of an expert crafts person.
+Not everybody could have been a specialist. We
+do not know whether only men were specialists
+or only women were specialists. Perhaps some
+women and men may have been specialists.
+In sear	In sear	In sear	In sear	In search of r	ch of r	ch of r	ch of r	ch of raaaaaw materials	w materials	w materials	w materials	w materials
+Raw materials are substances that are either
+found naturally (such as wood, or ores of metals)
+or produced by farmers or",Specialist,LOCATED_IN,Mohenjodaro,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,not explicitly stated
+t0081,10,"e of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. These were used
+to spin thread.
+Many of the things that were produced were
+probably the work of specialists. A specialist is a
+person who is trained to do only one kind of work,
+for example, cutting stone, or polishing beads, or
+carving seals. Look at the illustration (page 28)
+and see how well the face is carved and how
+carefully the beard is shown. This must have been
+the work of an expert crafts person.
+Not everybody could have been a specialist. We
+do not know whether only men were specialists
+or only women were specialists. Perhaps some
+women and men may have been specialists.
+In sear	In sear	In sear	In sear	In search of r	ch of r	ch of r	ch of r	ch of raaaaaw materials	w materials	w materials	w materials	w materials
+Raw materials are substances that are either
+found naturally (such as wood, or ores of metals)
+or produced by farmers or",Expert Crafts Person,FOUND_IN,Mohenjodaro,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,expert craftsperson worked on statue from Mohenjodaro — implied
+t0082,10,"e of an
+important man found
+from Mohenjodaro
+shows him wearing an
+embroidered garment.
+2019–20
+
+-- 5 of 11 --
+
+29 
+made of terracotta and faience. These were used
+to spin thread.
+Many of the things that were produced were
+probably the work of specialists. A specialist is a
+person who is trained to do only one kind of work,
+for example, cutting stone, or polishing beads, or
+carving seals. Look at the illustration (page 28)
+and see how well the face is carved and how
+carefully the beard is shown. This must have been
+the work of an expert crafts person.
+Not everybody could have been a specialist. We
+do not know whether only men were specialists
+or only women were specialists. Perhaps some
+women and men may have been specialists.
+In sear	In sear	In sear	In sear	In search of r	ch of r	ch of r	ch of r	ch of raaaaaw materials	w materials	w materials	w materials	w materials
+Raw materials are substances that are either
+found naturally (such as wood, or ores of metals)
+or produced by farmers or",Raw Materials,FOUND_IN,Mohenjodaro,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,"raw materials came from distant places, not found in Mohenjodaro"
+t0083,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Faience,USED_FOR,beads,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0084,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Faience,USED_FOR,bangles,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0085,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Faience,USED_FOR,earrings,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0086,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Faience,USED_FOR,tiny vessels,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0087,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Faience,CHARACTERIZED_BY,blue glaze,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0088,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Faience,CHARACTERIZED_BY,sea green glaze,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0089,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Harappan transport,EXAMPLE_OF,wheeled vehicles,c,1,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,chunk hints at wheeled vehicles as toys/seal imagery; EXAMPLE_OF direction is awkward
+t0090,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Bronze,CONTAINS,copper,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,"""tin mixed with copper to produce bronze"" — bronze contains both"
+t0091,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Bronze,CONTAINS,tin,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,
+t0092,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Gold,SUPPLIED_BY,Karnataka,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0093,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Tin,SUPPLIED_BY,Afghanistan/Iran,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0094,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Precious stones,SUPPLIED_BY,Gujarat/Iran/Afghanistan,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0095,12,"The colours
+of the glaze were usually blue or sea green.
+Faience was used to make beads, bangles,
+earrings, and tiny vessels.
+IN THE EARLIEST
+CITIES
+2019–20
+
+-- 6 of 11 --
+
+ 30
+OUR PASTS–I
+How were goods carried
+from one place to
+another?
+Look at the illustrations.
+One shows a toy and the
+other is a seal.
+Can you suggest what
+the modes of transport
+used by the Harappans
+were? 	Did you come
+across illustrations of
+wheeled vehicles in
+earlier lessons?
+West Asia. Tin, which was mixed with
+copper to produce bronze, may have been
+brought from present-day Afghanistan
+and Iran. Gold could have come all the
+way from present-day Karnataka, and
+precious 	stones 	from 	present-day
+Gujarat, Iran and Afghanistan.
+FFFFFood f	ood f	ood f	ood f	ood for people in the cities	or people in the cities	or people in the cities	or people in the cities	or people in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders suppl",Urban food production,CONTRASTS_WITH,rural food production,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,countryside vs city contrast is implicit
+t0096,13,"e in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders supplied food to crafts
+persons, scribes and rulers in the cities. We know
+from remains of plants that the Harappans grew
+wheat, barley, pulses, peas, rice, sesame, linseed
+and mustard.
+A new tool, the plough, was used to dig the
+earth for turning the soil and planting seeds. While
+real ploughs, which were probably made of wood,
+have not survived, toy models have been found.
+As this region does not receive heavy rainfall, some
+form of irrigation may have been used. This means
+that 	water 	was 	stored 	and
+supplied to the fields when the
+plants were growing.
+The Harappans reared cattle, sheep,
+goat and buffalo. Water and pastures were
+available around settlements. However, in the dry
+summer months large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in",Cities,REQUIRES,Countryside,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,farmers supplied food to city dwellers — REQUIRES is strong but defensible
+t0097,13,"e in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders supplied food to crafts
+persons, scribes and rulers in the cities. We know
+from remains of plants that the Harappans grew
+wheat, barley, pulses, peas, rice, sesame, linseed
+and mustard.
+A new tool, the plough, was used to dig the
+earth for turning the soil and planting seeds. While
+real ploughs, which were probably made of wood,
+have not survived, toy models have been found.
+As this region does not receive heavy rainfall, some
+form of irrigation may have been used. This means
+that 	water 	was 	stored 	and
+supplied to the fields when the
+plants were growing.
+The Harappans reared cattle, sheep,
+goat and buffalo. Water and pastures were
+available around settlements. However, in the dry
+summer months large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in",Plough,USED_FOR,Harappan Crops,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0098,13,"e in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders supplied food to crafts
+persons, scribes and rulers in the cities. We know
+from remains of plants that the Harappans grew
+wheat, barley, pulses, peas, rice, sesame, linseed
+and mustard.
+A new tool, the plough, was used to dig the
+earth for turning the soil and planting seeds. While
+real ploughs, which were probably made of wood,
+have not survived, toy models have been found.
+As this region does not receive heavy rainfall, some
+form of irrigation may have been used. This means
+that 	water 	was 	stored 	and
+supplied to the fields when the
+plants were growing.
+The Harappans reared cattle, sheep,
+goat and buffalo. Water and pastures were
+available around settlements. However, in the dry
+summer months large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in",Irrigation,USED_FOR,Harappan Crops,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0099,13,"e in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders supplied food to crafts
+persons, scribes and rulers in the cities. We know
+from remains of plants that the Harappans grew
+wheat, barley, pulses, peas, rice, sesame, linseed
+and mustard.
+A new tool, the plough, was used to dig the
+earth for turning the soil and planting seeds. While
+real ploughs, which were probably made of wood,
+have not survived, toy models have been found.
+As this region does not receive heavy rainfall, some
+form of irrigation may have been used. This means
+that 	water 	was 	stored 	and
+supplied to the fields when the
+plants were growing.
+The Harappans reared cattle, sheep,
+goat and buffalo. Water and pastures were
+available around settlements. However, in the dry
+summer months large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in",Harappan Livestock,PART_OF,Countryside,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,livestock reared in countryside
+t0100,13,"e in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders supplied food to crafts
+persons, scribes and rulers in the cities. We know
+from remains of plants that the Harappans grew
+wheat, barley, pulses, peas, rice, sesame, linseed
+and mustard.
+A new tool, the plough, was used to dig the
+earth for turning the soil and planting seeds. While
+real ploughs, which were probably made of wood,
+have not survived, toy models have been found.
+As this region does not receive heavy rainfall, some
+form of irrigation may have been used. This means
+that 	water 	was 	stored 	and
+supplied to the fields when the
+plants were growing.
+The Harappans reared cattle, sheep,
+goat and buffalo. Water and pastures were
+available around settlements. However, in the dry
+summer months large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in",Toy plough,EXAMPLE_OF,Plough,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,
+t0101,13,"e in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders supplied food to crafts
+persons, scribes and rulers in the cities. We know
+from remains of plants that the Harappans grew
+wheat, barley, pulses, peas, rice, sesame, linseed
+and mustard.
+A new tool, the plough, was used to dig the
+earth for turning the soil and planting seeds. While
+real ploughs, which were probably made of wood,
+have not survived, toy models have been found.
+As this region does not receive heavy rainfall, some
+form of irrigation may have been used. This means
+that 	water 	was 	stored 	and
+supplied to the fields when the
+plants were growing.
+The Harappans reared cattle, sheep,
+goat and buffalo. Water and pastures were
+available around settlements. However, in the dry
+summer months large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in",Low rainfall,CAUSES,Irrigation,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,y,a,"""As this region does not receive heavy rainfall, some form of irrigation may have been used"" — causal — verifier wrongly rejected"
+t0102,13,"e in the cities
+While many people lived in the cities, others living
+in the countryside grew crops and reared animals.
+These farmers and herders supplied food to crafts
+persons, scribes and rulers in the cities. We know
+from remains of plants that the Harappans grew
+wheat, barley, pulses, peas, rice, sesame, linseed
+and mustard.
+A new tool, the plough, was used to dig the
+earth for turning the soil and planting seeds. While
+real ploughs, which were probably made of wood,
+have not survived, toy models have been found.
+As this region does not receive heavy rainfall, some
+form of irrigation may have been used. This means
+that 	water 	was 	stored 	and
+supplied to the fields when the
+plants were growing.
+The Harappans reared cattle, sheep,
+goat and buffalo. Water and pastures were
+available around settlements. However, in the dry
+summer months large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in",Dry summer months,CAUSES,Harappan Livestock,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"dry months cause migration of livestock, not livestock itself"
+t0103,14,"large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in many farming
+communities, only men
+use the plough. We do
+not know whether the
+Harappans followed
+such customs or not.
+2019–20
+
+-- 7 of 11 --
+
+31 
+ber, caught fish and hunted wild animals like the
+antelope.
+A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Harappan to	appan to	appan to	appan to	appan towns in Gujar	wns in Gujar	wns in Gujar	wns in Gujar	wns in Gujarat	at	at	at	at
+The city of Dholavira was located on Khadir Beyt
+(also spelled as Bet) in the Rann of Kutch, where
+there was fresh water and fertile soil. Unlike some
+of the other Harappan cities, which were divided
+into two parts, Dholavira was divided into three
+parts, and each part was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies",Harappan Society,USED_FOR,Agricultural Practices,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,nonsensical
+t0104,14,"large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in many farming
+communities, only men
+use the plough. We do
+not know whether the
+Harappans followed
+such customs or not.
+2019–20
+
+-- 7 of 11 --
+
+31 
+ber, caught fish and hunted wild animals like the
+antelope.
+A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Harappan to	appan to	appan to	appan to	appan towns in Gujar	wns in Gujar	wns in Gujar	wns in Gujar	wns in Gujarat	at	at	at	at
+The city of Dholavira was located on Khadir Beyt
+(also spelled as Bet) in the Rann of Kutch, where
+there was fresh water and fertile soil. Unlike some
+of the other Harappan cities, which were divided
+into two parts, Dholavira was divided into three
+parts, and each part was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies",Harappan Society,FOUND_IN,Dholavira,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"direction wrong: Dholavira is part of Harappan society, not vice versa"
+t0105,14,"large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in many farming
+communities, only men
+use the plough. We do
+not know whether the
+Harappans followed
+such customs or not.
+2019–20
+
+-- 7 of 11 --
+
+31 
+ber, caught fish and hunted wild animals like the
+antelope.
+A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Harappan to	appan to	appan to	appan to	appan towns in Gujar	wns in Gujar	wns in Gujar	wns in Gujar	wns in Gujarat	at	at	at	at
+The city of Dholavira was located on Khadir Beyt
+(also spelled as Bet) in the Rann of Kutch, where
+there was fresh water and fertile soil. Unlike some
+of the other Harappan cities, which were divided
+into two parts, Dholavira was divided into three
+parts, and each part was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies",Dholavira,EXAMPLE_OF,City Planning,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,"three-part division, stone walls, gateways all evidence city planning"
+t0106,14,"large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in many farming
+communities, only men
+use the plough. We do
+not know whether the
+Harappans followed
+such customs or not.
+2019–20
+
+-- 7 of 11 --
+
+31 
+ber, caught fish and hunted wild animals like the
+antelope.
+A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Harappan to	appan to	appan to	appan to	appan towns in Gujar	wns in Gujar	wns in Gujar	wns in Gujar	wns in Gujarat	at	at	at	at
+The city of Dholavira was located on Khadir Beyt
+(also spelled as Bet) in the Rann of Kutch, where
+there was fresh water and fertile soil. Unlike some
+of the other Harappan cities, which were divided
+into two parts, Dholavira was divided into three
+parts, and each part was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies",City Planning,CHARACTERIZED_BY,Public Ceremonies,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"public ceremonies are activities held in planned area, not characterisation of planning itself"
+t0107,14,"large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in many farming
+communities, only men
+use the plough. We do
+not know whether the
+Harappans followed
+such customs or not.
+2019–20
+
+-- 7 of 11 --
+
+31 
+ber, caught fish and hunted wild animals like the
+antelope.
+A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Harappan to	appan to	appan to	appan to	appan towns in Gujar	wns in Gujar	wns in Gujar	wns in Gujar	wns in Gujarat	at	at	at	at
+The city of Dholavira was located on Khadir Beyt
+(also spelled as Bet) in the Rann of Kutch, where
+there was fresh water and fertile soil. Unlike some
+of the other Harappan cities, which were divided
+into two parts, Dholavira was divided into three
+parts, and each part was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies",Agricultural Practices,CONTAINS,Toy Plough,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"direction wrong: toy plough represents agricultural practices, not contained in them"
+t0108,14,"large herds of animals were
+probably taken to greater distances in search of
+grass and water. They also collected fruits like
+A toy plough.
+Today, in many farming
+communities, only men
+use the plough. We do
+not know whether the
+Harappans followed
+such customs or not.
+2019–20
+
+-- 7 of 11 --
+
+31 
+ber, caught fish and hunted wild animals like the
+antelope.
+A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Har	A closer look — Harappan to	appan to	appan to	appan to	appan towns in Gujar	wns in Gujar	wns in Gujar	wns in Gujar	wns in Gujarat	at	at	at	at
+The city of Dholavira was located on Khadir Beyt
+(also spelled as Bet) in the Rann of Kutch, where
+there was fresh water and fertile soil. Unlike some
+of the other Harappan cities, which were divided
+into two parts, Dholavira was divided into three
+parts, and each part was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies",Harappan Society,CONTRASTS_WITH,Gender Roles in Plough Use,c,1,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,"chunk explicitly says ""we do not know"" about gender roles"
+t0109,15,"was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies could be held. Other
+finds include large letters of the Harappan script
+that were carved out of white stone and perhaps
+inlaid in wood. This is a unique find as generally
+Harappan writing has been found on small
+objects such as seals.
+The city of Lothal stood beside a tributary of
+the Sabarmati, in Gujarat, close to the Gulf of
+Khambat. It was situated near areas where raw
+materials such as semi-precious stones were
+easily available. This was an important centre for
+making objects out of stone, shell and metal.
+There was also a store house in the city. Many
+seals and sealings (the impression of seals on
+clay) were found in this storehouse.
+A dockyard at Lothal.
+This huge tank may have
+been a dockyard, where
+boats and ships came in
+from the sea and through
+the river channel. Goods
+were probably loaded
+and unloaded here.
+2019–20
+
+-- 8 of 11",Lothal,LOCATED_IN,Sabarmati River Tributary,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,b,"""stood beside a tributary of Sabarmati"""
+t0110,15,"was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies could be held. Other
+finds include large letters of the Harappan script
+that were carved out of white stone and perhaps
+inlaid in wood. This is a unique find as generally
+Harappan writing has been found on small
+objects such as seals.
+The city of Lothal stood beside a tributary of
+the Sabarmati, in Gujarat, close to the Gulf of
+Khambat. It was situated near areas where raw
+materials such as semi-precious stones were
+easily available. This was an important centre for
+making objects out of stone, shell and metal.
+There was also a store house in the city. Many
+seals and sealings (the impression of seals on
+clay) were found in this storehouse.
+A dockyard at Lothal.
+This huge tank may have
+been a dockyard, where
+boats and ships came in
+from the sea and through
+the river channel. Goods
+were probably loaded
+and unloaded here.
+2019–20
+
+-- 8 of 11",Lothal,CLOSE_TO,Gulf of Khambat,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,predicate CLOSE_TO non-standard; content supported
+t0111,15,"was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies could be held. Other
+finds include large letters of the Harappan script
+that were carved out of white stone and perhaps
+inlaid in wood. This is a unique find as generally
+Harappan writing has been found on small
+objects such as seals.
+The city of Lothal stood beside a tributary of
+the Sabarmati, in Gujarat, close to the Gulf of
+Khambat. It was situated near areas where raw
+materials such as semi-precious stones were
+easily available. This was an important centre for
+making objects out of stone, shell and metal.
+There was also a store house in the city. Many
+seals and sealings (the impression of seals on
+clay) were found in this storehouse.
+A dockyard at Lothal.
+This huge tank may have
+been a dockyard, where
+boats and ships came in
+from the sea and through
+the river channel. Goods
+were probably loaded
+and unloaded here.
+2019–20
+
+-- 8 of 11",Lothal,CONTAINS,Stone Walls,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"stone walls described belong to Dholavira in prior paragraph, not Lothal"
+t0112,15,"was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies could be held. Other
+finds include large letters of the Harappan script
+that were carved out of white stone and perhaps
+inlaid in wood. This is a unique find as generally
+Harappan writing has been found on small
+objects such as seals.
+The city of Lothal stood beside a tributary of
+the Sabarmati, in Gujarat, close to the Gulf of
+Khambat. It was situated near areas where raw
+materials such as semi-precious stones were
+easily available. This was an important centre for
+making objects out of stone, shell and metal.
+There was also a store house in the city. Many
+seals and sealings (the impression of seals on
+clay) were found in this storehouse.
+A dockyard at Lothal.
+This huge tank may have
+been a dockyard, where
+boats and ships came in
+from the sea and through
+the river channel. Goods
+were probably loaded
+and unloaded here.
+2019–20
+
+-- 8 of 11",Lothal,CONTAINS,Public Ceremonies Area,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"public ceremonies area belongs to Dholavira, not Lothal"
+t0113,15,"was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies could be held. Other
+finds include large letters of the Harappan script
+that were carved out of white stone and perhaps
+inlaid in wood. This is a unique find as generally
+Harappan writing has been found on small
+objects such as seals.
+The city of Lothal stood beside a tributary of
+the Sabarmati, in Gujarat, close to the Gulf of
+Khambat. It was situated near areas where raw
+materials such as semi-precious stones were
+easily available. This was an important centre for
+making objects out of stone, shell and metal.
+There was also a store house in the city. Many
+seals and sealings (the impression of seals on
+clay) were found in this storehouse.
+A dockyard at Lothal.
+This huge tank may have
+been a dockyard, where
+boats and ships came in
+from the sea and through
+the river channel. Goods
+were probably loaded
+and unloaded here.
+2019–20
+
+-- 8 of 11",Harappan Script,EXAMPLE_OF,Large Letters on White Stone,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,"direction wrong: large letters are example of Harappan script, not vice versa"
+t0114,15,"was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies could be held. Other
+finds include large letters of the Harappan script
+that were carved out of white stone and perhaps
+inlaid in wood. This is a unique find as generally
+Harappan writing has been found on small
+objects such as seals.
+The city of Lothal stood beside a tributary of
+the Sabarmati, in Gujarat, close to the Gulf of
+Khambat. It was situated near areas where raw
+materials such as semi-precious stones were
+easily available. This was an important centre for
+making objects out of stone, shell and metal.
+There was also a store house in the city. Many
+seals and sealings (the impression of seals on
+clay) were found in this storehouse.
+A dockyard at Lothal.
+This huge tank may have
+been a dockyard, where
+boats and ships came in
+from the sea and through
+the river channel. Goods
+were probably loaded
+and unloaded here.
+2019–20
+
+-- 8 of 11",Harappan Script,CONTRASTS_WITH,Seals,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,n,c,script found ON seals; CONTRASTS_WITH mischaracterises the relationship
+t0115,15,"was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies could be held. Other
+finds include large letters of the Harappan script
+that were carved out of white stone and perhaps
+inlaid in wood. This is a unique find as generally
+Harappan writing has been found on small
+objects such as seals.
+The city of Lothal stood beside a tributary of
+the Sabarmati, in Gujarat, close to the Gulf of
+Khambat. It was situated near areas where raw
+materials such as semi-precious stones were
+easily available. This was an important centre for
+making objects out of stone, shell and metal.
+There was also a store house in the city. Many
+seals and sealings (the impression of seals on
+clay) were found in this storehouse.
+A dockyard at Lothal.
+This huge tank may have
+been a dockyard, where
+boats and ships came in
+from the sea and through
+the river channel. Goods
+were probably loaded
+and unloaded here.
+2019–20
+
+-- 8 of 11",Lothal,PRODUCED_BY,Raw Materials,c,0,llama-3.1-8b-instant,qwen/qwen3-32b,FALSE,n,c,nonsensical direction
+t0116,15,"was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies could be held. Other
+finds include large letters of the Harappan script
+that were carved out of white stone and perhaps
+inlaid in wood. This is a unique find as generally
+Harappan writing has been found on small
+objects such as seals.
+The city of Lothal stood beside a tributary of
+the Sabarmati, in Gujarat, close to the Gulf of
+Khambat. It was situated near areas where raw
+materials such as semi-precious stones were
+easily available. This was an important centre for
+making objects out of stone, shell and metal.
+There was also a store house in the city. Many
+seals and sealings (the impression of seals on
+clay) were found in this storehouse.
+A dockyard at Lothal.
+This huge tank may have
+been a dockyard, where
+boats and ships came in
+from the sea and through
+the river channel. Goods
+were probably loaded
+and unloaded here.
+2019–20
+
+-- 8 of 11",Lothal,CONTAINS,Storehouse,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,"""There was also a store house in the city"" (Lothal)"
+t0117,15,"was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies could be held. Other
+finds include large letters of the Harappan script
+that were carved out of white stone and perhaps
+inlaid in wood. This is a unique find as generally
+Harappan writing has been found on small
+objects such as seals.
+The city of Lothal stood beside a tributary of
+the Sabarmati, in Gujarat, close to the Gulf of
+Khambat. It was situated near areas where raw
+materials such as semi-precious stones were
+easily available. This was an important centre for
+making objects out of stone, shell and metal.
+There was also a store house in the city. Many
+seals and sealings (the impression of seals on
+clay) were found in this storehouse.
+A dockyard at Lothal.
+This huge tank may have
+been a dockyard, where
+boats and ships came in
+from the sea and through
+the river channel. Goods
+were probably loaded
+and unloaded here.
+2019–20
+
+-- 8 of 11",Storehouse,CONTAINS,Seals,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,"""Many seals and sealings...were found in this storehouse"""
+t0118,15,"was surrounded with massive
+stone walls, with entrances through gateways.
+There was also a large open area in the settlement,
+where public ceremonies could be held. Other
+finds include large letters of the Harappan script
+that were carved out of white stone and perhaps
+inlaid in wood. This is a unique find as generally
+Harappan writing has been found on small
+objects such as seals.
+The city of Lothal stood beside a tributary of
+the Sabarmati, in Gujarat, close to the Gulf of
+Khambat. It was situated near areas where raw
+materials such as semi-precious stones were
+easily available. This was an important centre for
+making objects out of stone, shell and metal.
+There was also a store house in the city. Many
+seals and sealings (the impression of seals on
+clay) were found in this storehouse.
+A dockyard at Lothal.
+This huge tank may have
+been a dockyard, where
+boats and ships came in
+from the sea and through
+the river channel. Goods
+were probably loaded
+and unloaded here.
+2019–20
+
+-- 8 of 11",Dockyard,USED_FOR,Trade,a,1,llama-3.1-8b-instant,qwen/qwen3-32b,TRUE,y,a,boats loaded/unloaded at dockyard implies trade

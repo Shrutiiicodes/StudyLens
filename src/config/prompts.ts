@@ -6,14 +6,18 @@
  */
 
 // ─── Unified relation type list (shared between KG extractor and backend) ───
-const UNIFIED_RELATIONS = [
+export const UNIFIED_RELATION_LIST = [
   'IS_A', 'REQUIRES', 'PART_OF', 'USED_FOR', 'RELATES_TO',
   'CAUSES', 'DEFINES', 'CONTRASTS_WITH', 'EXAMPLE_OF', 'FEATURE_OF',
   'PRECEDES', 'EXTENSION_OF',
   'FOUND_IN', 'LOCATED_IN', 'CONTAINS', 'CHARACTERIZED_BY',
   'DISCOVERED_BY', 'BUILT_BY', 'PRODUCED_BY', 'SUPPLIED_BY',
   'TRADED_BY', 'LED_TO',
-].join(' | ');
+] as const;
+
+export type AllowedRelation = typeof UNIFIED_RELATION_LIST[number];
+
+const UNIFIED_RELATIONS = UNIFIED_RELATION_LIST.join(' | ');
 
 export const PROMPTS = {
   KG_EXTRACTOR: {
