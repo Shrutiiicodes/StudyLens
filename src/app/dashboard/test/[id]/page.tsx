@@ -4,20 +4,8 @@ import { PASS_THRESHOLD } from '@/config/constants';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import QuestionCard from '@/components/QuestionCard';
+import { Question } from '@/types/question';
 import { Search, FileEdit, Trophy, AlertTriangle, Target, Library, BookOpen, RefreshCw, LayoutDashboard, TrendingUp, Activity, Gauge, Zap, ChevronDown, ChevronUp } from 'lucide-react';
-
-interface QuestionData {
-    id: string;
-    text: string;
-    options: string[];
-    correct_answer: string;
-    explanation: string;
-    type: string;
-    difficulty: number;
-    concept_id: string;
-    cognitive_level: number;
-    is_spaced?: boolean;
-}
 
 // Updated interface — standard ITS metrics added
 interface SessionMetrics {
@@ -285,7 +273,7 @@ export default function TestPage() {
     const conceptId = params.id as string;
     const mode = searchParams.get('mode') || 'diagnostic';
 
-    const [questions, setQuestions] = useState<QuestionData[]>([]);
+    const [questions, setQuestions] = useState<Question[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [currentIndex, setCurrentIndex] = useState(0);

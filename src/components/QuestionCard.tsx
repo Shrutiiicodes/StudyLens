@@ -2,17 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle } from 'lucide-react';
+import { Question } from '@/types/question';
 
 interface QuestionCardProps {
-    question: {
-        id: string;
-        text: string;
-        options: string[];
-        correct_answer: string;
-        explanation: string;
-        type: string;
-        difficulty: number;
-    };
+    question: Question;
     onAnswer: (answer: string, timeTaken: number, confidence: number) => void;
     showResult?: boolean;
     questionNumber?: number;
@@ -198,16 +191,16 @@ export default function QuestionCard({
                     background: isCorrect ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)',
                     border: `1px solid ${isCorrect ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
                 }}>
-                        <div style={{
-                            fontWeight: 600,
-                            marginBottom: '8px',
-                            color: isCorrect ? 'var(--accent-success)' : 'var(--accent-danger)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                        }}>
-                            {isCorrect ? <><CheckCircle size={18} /> Correct!</> : <><XCircle size={18} /> Incorrect</>}
-                        </div>
+                    <div style={{
+                        fontWeight: 600,
+                        marginBottom: '8px',
+                        color: isCorrect ? 'var(--accent-success)' : 'var(--accent-danger)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                    }}>
+                        {isCorrect ? <><CheckCircle size={18} /> Correct!</> : <><XCircle size={18} /> Incorrect</>}
+                    </div>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6 }}>
                         {question.explanation}
                     </p>

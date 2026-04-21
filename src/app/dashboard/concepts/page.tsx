@@ -34,8 +34,8 @@ interface ProgressData {
 // Icons for each stage — injected at render-time since JSX can't live in constants.ts.
 const STAGE_ICONS: Record<string, React.ReactNode> = {
     diagnostic: <Search size={14} />,
-    practice:   <FileEdit size={14} />,
-    mastery:    <Trophy size={14} />,
+    practice: <FileEdit size={14} />,
+    mastery: <Trophy size={14} />,
 };
 
 // Re-export STAGE_DEFS with icons merged in for local use.
