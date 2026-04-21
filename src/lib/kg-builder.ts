@@ -1,23 +1,63 @@
 import { chatCompletion, parseLLMJson } from './groq';
 import { runCypher } from './neo4j';
-import { chunkText, generateEmbedding } from './embeddings';
+import { chunkTextDetailed, generateEmbedding } from './embeddings';
 import { ExtractedKnowledge, KnowledgeGraph, ConceptNode, ConceptRelation } from '@/types/concept';
 import { v4 as uuid } from 'uuid';
 import { PROMPTS } from '@/config/prompts';
+import {
+    lookupVerdicts,
+    storeVerdictsBatch,
+    type TripleKey,
+    type CachedVerdict,
+    computeTripleHash,
+} from './triple-cache';
 
 /**
  * Knowledge Graph Builder
- * 
+ *
  * Pipeline:
- * 1. Chunk the document text
+ * 1. Chunk the document text (with per-chunk confidence scores)
  * 2. Extract concepts, definitions, relationships from each chunk via LLM
+ *    - Skip verification on high-confidence chunks (score ≥ 0.70)
+ *    - Consult Supabase cache for previously-verified triples
+ *    - Batch-verify remaining triples (10 per LLM call)
  * 3. Merge and deduplicate extracted knowledge
  * 4. Build Neo4j knowledge graph
  */
 
+// ─── Verification tunables ────────────────────────────────────────────────
+
+// Chunks at or above this confidence are trusted without LLM verification.
+// Matches the Python backend behaviour (ingestion/pipeline.py).
+const VERIFY_SKIP_CONFIDENCE = 0.70;
+
+// Chunks below this are treated as low-confidence — stricter thresholds apply.
+const VERIFY_STRICT_CONFIDENCE = 0.50;
+
+// Triples sent to the verifier per LLM call.
+const VERIFY_BATCH_SIZE = 10;
+
+// Verification model name — stored in cache for audits / model upgrades.
+const VERIFIER_MODEL = 'llama-3.1-8b-instant';
+
+
 // ─── Step 1: Extract knowledge from text chunks ───
 
-async function extractKnowledgeFromChunk(chunk: string): Promise<ExtractedKnowledge> {
+/**
+ * Extract concepts + relationships from one chunk, then verify relationships.
+ *
+ * Three-tier verification strategy:
+ *   1. High-confidence chunks (score ≥ 0.70) → trust all triples, no LLM call.
+ *   2. Cache hits → reuse prior verdict, no LLM call.
+ *   3. Cache misses → one BATCHED LLM call per 10 triples (not one per triple).
+ *
+ * Per-triple confidence threshold is raised (0.65/0.80 → 0.88/0.92) on
+ * low-confidence chunks so noisy passages don't slip junk triples into the KG.
+ */
+async function extractKnowledgeFromChunk(
+    chunk: string,
+    chunkConfidence: number = 1.0
+): Promise<ExtractedKnowledge> {
     const exemplars = `SciERC Style: 
     { "from": "Neurons", "to": "Signals", "type": "USED_FOR" }
     { "from": "Brain", "to": "Nervous System", "type": "PART_OF" }`;
@@ -31,104 +71,197 @@ async function extractKnowledgeFromChunk(chunk: string): Promise<ExtractedKnowle
     );
 
     const raw = parseLLMJson<ExtractedKnowledge>(response);
+    const relationships = raw.relationships ?? [];
 
-    // Verify each relationship against the source chunk
-    const verifiedRelationships: ExtractedKnowledge['relationships'] = [];
+    if (relationships.length === 0) {
+        return { ...raw, relationships: [], _sourceChunk: chunk };
+    }
 
-    for (const rel of raw.relationships) {
+    // ── Tier 1: Skip verification on high-confidence chunks ──────────────
+    if (chunkConfidence >= VERIFY_SKIP_CONFIDENCE) {
+        console.log(
+            `[KG Verify] Chunk confidence ${chunkConfidence.toFixed(2)} ≥ ${VERIFY_SKIP_CONFIDENCE} — trusting all ${relationships.length} triples without LLM verification`
+        );
+        return { ...raw, relationships, _sourceChunk: chunk };
+    }
+
+    // ── Confidence thresholds scale with chunk quality ───────────────────
+    const isLowConfChunk = chunkConfidence < VERIFY_STRICT_CONFIDENCE;
+    const aThreshold = isLowConfChunk ? 0.88 : 0.65;
+    const bThreshold = isLowConfChunk ? 0.92 : 0.80;
+
+    const isValidVerdict = (v: Pick<CachedVerdict, 'verdict' | 'confidence'>): boolean =>
+        (v.verdict === 'a' && v.confidence >= aThreshold) ||
+        (v.verdict === 'b' && v.confidence >= bThreshold);
+
+    // ── Tier 2: Cache lookup ─────────────────────────────────────────────
+    const tripleKeys: TripleKey[] = relationships.map((rel) => ({
+        subject: rel.from,
+        predicate: rel.type,
+        object: rel.to,
+        chunkText: chunk,
+    }));
+
+    const cachedVerdicts = await lookupVerdicts(tripleKeys);
+    const verified: ExtractedKnowledge['relationships'] = [];
+    const needsLLM: Array<{ rel: typeof relationships[number]; key: TripleKey }> = [];
+
+    for (let i = 0; i < relationships.length; i++) {
+        const rel = relationships[i];
+        const key = tripleKeys[i];
+        const hash = computeTripleHash(key);
+        const hit = cachedVerdicts.get(hash);
+        if (hit) {
+            // Re-apply the current tier's threshold rather than trusting the
+            // cached `kept` flag — a strict-chunk run shouldn't inherit
+            // acceptance from a looser-chunk run.
+            if (isValidVerdict(hit)) {
+                verified.push(rel);
+            } else {
+                console.log(
+                    `[KG Verify] Cache-rejected: (${rel.from}, ${rel.type}, ${rel.to}) — verdict=${hit.verdict}, confidence=${hit.confidence}`
+                );
+            }
+        } else {
+            needsLLM.push({ rel, key });
+        }
+    }
+
+    console.log(
+        `[KG Verify] Chunk conf=${chunkConfidence.toFixed(2)}: ${cachedVerdicts.size}/${relationships.length} cache hits, ${needsLLM.length} need LLM`
+    );
+
+    // ── Tier 3: Batch-verify the misses ──────────────────────────────────
+    if (needsLLM.length > 0) {
+        const newVerdicts = await verifyTriplesBatch(
+            needsLLM.map(({ rel }) => ({
+                subject: rel.from,
+                predicate: rel.type,
+                object: rel.to,
+            })),
+            chunk
+        );
+
+        const toCache: Array<{ triple: TripleKey; verdict: CachedVerdict }> = [];
+
+        for (let i = 0; i < needsLLM.length; i++) {
+            const { rel, key } = needsLLM[i];
+            const v = newVerdicts[i];
+
+            // Null = parse/network failure; don't cache, retry next upload.
+            if (!v) {
+                console.warn(
+                    `[KG Verify] Verification failed for: (${rel.from}, ${rel.type}, ${rel.to}) — discarding`
+                );
+                continue;
+            }
+
+            const kept = isValidVerdict(v);
+            const fullVerdict: CachedVerdict = { ...v, kept };
+            toCache.push({ triple: key, verdict: fullVerdict });
+
+            if (kept) {
+                verified.push(rel);
+            } else {
+                console.log(
+                    `[KG Verify] Discarded: (${rel.from}, ${rel.type}, ${rel.to}) — verdict=${v.verdict}, confidence=${v.confidence}`
+                );
+            }
+        }
+
+        // Fire-and-forget persist — don't block on cache writes.
+        void storeVerdictsBatch(toCache, VERIFIER_MODEL);
+    }
+
+    return { ...raw, relationships: verified, _sourceChunk: chunk };
+}
+
+
+/**
+ * Batch-verify up to N triples against a source passage in ONE LLM call.
+ * Replaces the per-triple loop that made 1 call per relationship.
+ *
+ * Returns an array aligned to input order — element i is the verdict for
+ * input triple i, or null on parse failure.
+ */
+async function verifyTriplesBatch(
+    triples: Array<{ subject: string; predicate: string; object: string }>,
+    sourceChunk: string
+): Promise<Array<Omit<CachedVerdict, 'kept'> | null>> {
+    const results: Array<Omit<CachedVerdict, 'kept'> | null> = new Array(triples.length).fill(null);
+    if (triples.length === 0) return results;
+
+    // Sub-batch so one massive chunk doesn't produce a monstrous prompt.
+    for (let start = 0; start < triples.length; start += VERIFY_BATCH_SIZE) {
+        const batch = triples.slice(start, start + VERIFY_BATCH_SIZE);
+
+        const tripleLines = batch
+            .map((t, i) => `${i + 1}. (${t.subject}, ${t.predicate}, ${t.object})`)
+            .join('\n');
+
         try {
-            const verifyResponse = await chatCompletion(
+            const response = await chatCompletion(
                 [
                     {
                         role: 'system',
                         content: `You are a fact-verification assistant for educational content.
-Given a source passage and a factual triple, determine if the triple is
-directly and explicitly supported by the passage.
+Given a source passage and a list of factual triples, judge each triple
+INDEPENDENTLY against the passage.
 
-Respond ONLY with JSON: {"verdict": "a" | "b" | "c", "confidence": 0.0-1.0}
-
-Verdicts:
+For each triple, decide:
 (a) Directly and explicitly stated in the passage
 (b) Implied or inferred — not directly stated
-(c) Not supported or contradicted`
+(c) Not supported or contradicted
+
+Respond ONLY with JSON matching this schema:
+{"verdicts": [{"index": 1, "verdict": "a"|"b"|"c", "confidence": 0.0-1.0}, ...]}
+
+The verdicts array MUST contain exactly one entry per input triple,
+with index values matching the input numbering (1-based).`,
                     },
                     {
                         role: 'user',
-                        content: `Passage: "${chunk}"
+                        content: `Passage: "${sourceChunk}"
 
-Triple to verify: (${rel.from}, ${rel.type}, ${rel.to})
+Triples to verify:
+${tripleLines}
 
-Is this triple directly supported by the passage?`
-                    }
+Judge each triple independently against the passage above.`,
+                    },
                 ],
                 { jsonMode: true, temperature: 0.1 }
             );
 
-            const result = parseLLMJson<{ verdict: string; confidence: number }>(verifyResponse);
+            const parsed = parseLLMJson<{
+                verdicts: Array<{ index: number; verdict: string; confidence: number }>;
+            }>(response);
 
-            // Allow directly stated (a) OR strongly implied (b) with relaxed threshold
-            // to prevent over-discarding and orphan nodes
-            const isValid =
-                (result.verdict === 'a' && result.confidence >= 0.65) ||
-                (result.verdict === 'b' && result.confidence >= 0.80);
+            for (const item of parsed.verdicts ?? []) {
+                const targetIdx = start + (item.index - 1);
+                if (targetIdx < start || targetIdx >= start + batch.length) continue;
 
-            if (isValid) {
-                verifiedRelationships.push(rel);
-            } else {
-                console.log(`[KG Verify] Discarded: (${rel.from}, ${rel.type}, ${rel.to}) — verdict=${result.verdict}, confidence=${result.confidence}`);
+                const verdict = item.verdict;
+                if (verdict !== 'a' && verdict !== 'b' && verdict !== 'c') continue;
+
+                const confidence =
+                    typeof item.confidence === 'number' && isFinite(item.confidence)
+                        ? Math.max(0, Math.min(1, item.confidence))
+                        : 0;
+
+                results[targetIdx] = { verdict, confidence };
             }
         } catch (err) {
-            // If verification call fails, discard the triple to be safe
-            console.warn(`[KG Verify] Verification failed for triple, discarding:`, rel, err);
+            console.warn(
+                `[KG Verify] Batch verify call failed — leaving ${batch.length} triple(s) unverified for this run:`,
+                (err as Error).message
+            );
+            // Leave the slots as null; caller discards those triples.
         }
     }
 
-    return {
-        ...raw,
-        relationships: verifiedRelationships,
-        _sourceChunk: chunk,
-    };
+    return results;
 }
 
-async function verifyTriple(
-    triple: { subject: string; predicate: string; object: string },
-    sourceChunk: string
-): Promise<{ keep: boolean; confidence: number }> {
-    const response = await chatCompletion([
-        {
-            role: 'system',
-            content: `You are a fact-verification assistant for educational content.
-Given a source passage and a factual triple, determine if the triple is 
-directly and explicitly supported by the passage.
-
-Respond ONLY with JSON:
-{"verdict": "a" | "b" | "c", "confidence": 0.0-1.0}
-
-Verdicts:
-(a) Directly and explicitly stated in the passage
-(b) Implied or inferred — not directly stated  
-(c) Not supported or contradicted`
-        },
-        {
-            role: 'user',
-            content: `Passage: "${sourceChunk}"
-
-Triple to verify: (${triple.subject}, ${triple.predicate}, ${triple.object})
-
-Is this triple directly supported by the passage?`
-        }
-    ], { jsonMode: true, temperature: 0.1 });
-
-    try {
-        const result = parseLLMJson<{ verdict: string; confidence: number }>(response);
-        return {
-            keep: result.verdict === 'a' && result.confidence >= 0.80,
-            confidence: result.confidence
-        };
-    } catch {
-        return { keep: false, confidence: 0 };
-    }
-}
 
 // ─── Step 2: Merge extracted knowledge ───
 
@@ -690,15 +823,26 @@ export async function buildKnowledgeGraph(
     documentId: string,
     text: string
 ): Promise<KnowledgeGraph> {
-    // 1. Chunk the text
-    const chunks = chunkText(text);
+    // 1. Chunk the text — use detailed variant so confidence scores flow through.
+    const chunks = chunkTextDetailed(text);
     console.log(`[KG Builder] Created ${chunks.length} chunks from document`);
 
-    // 2. Extract knowledge from each chunk
+    // Log a quick confidence histogram so upload logs are inspectable.
+    const highConf = chunks.filter((c) => c.confidenceScore >= VERIFY_SKIP_CONFIDENCE).length;
+    const lowConf = chunks.filter((c) => c.confidenceScore < VERIFY_STRICT_CONFIDENCE).length;
+    const mediumConf = chunks.length - highConf - lowConf;
+    console.log(
+        `[KG Builder] Chunk confidence: ${highConf} high / ${mediumConf} medium / ${lowConf} low`
+    );
+
+    // 2. Extract knowledge from each chunk — pass confidence score through.
     const extractedChunks: ExtractedKnowledge[] = [];
     for (const chunk of chunks) {
         try {
-            const knowledge = await extractKnowledgeFromChunk(chunk);
+            const knowledge = await extractKnowledgeFromChunk(
+                chunk.text,
+                chunk.confidenceScore
+            );
             extractedChunks.push(knowledge);
         } catch (error) {
             console.error('[KG Builder] Failed to extract from chunk:', error);
