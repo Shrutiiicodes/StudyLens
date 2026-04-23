@@ -3,36 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Protocol
-
-
-ALLOWED_PREDICATES = {
-  "REQUIRES",
-  "IS_A",
-  "CAUSES",
-  "PART_OF",
-  "DEFINES",
-  "CONTRASTS_WITH",
-  "EXAMPLE_OF",
-  "FOUND_IN",
-  "OCCURS_DURING",
-  "USED_FOR",
-  "CHARACTERIZED_BY",
-  "VISIBLE_IN",
-  "CONTAINS",
-  "LOCATED_IN",
-  "COMPARED_WITH",
-  "FEATURE_OF",
-  "PRECEDES",
-  "EXTENSION_OF",
-  "DISCOVERED_BY",
-  "BUILT_BY",
-  "PRODUCED_BY",
-  "SUPPLIED_BY",
-  "TRADED_BY",
-  "LED_TO",
-  "RELATES_TO",
-}
-
+from graph.predicates import ALLOWED_PREDICATES
 
 @dataclass
 class Triple:

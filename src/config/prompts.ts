@@ -4,20 +4,16 @@
  * Centralized store for all AI instructions.
  * Prevents hardcoding prompts inside business logic.
  */
+import {
+  PREDICATE_NAMES,
+  PREDICATE_LIST_PIPE,
+  PREDICATE_RUBRIC,
+} from './predicates';
 
-// ─── Unified relation type list (shared between KG extractor and backend) ───
-export const UNIFIED_RELATION_LIST = [
-  'IS_A', 'REQUIRES', 'PART_OF', 'USED_FOR', 'RELATES_TO',
-  'CAUSES', 'DEFINES', 'CONTRASTS_WITH', 'EXAMPLE_OF', 'FEATURE_OF',
-  'PRECEDES', 'EXTENSION_OF',
-  'FOUND_IN', 'LOCATED_IN', 'CONTAINS', 'CHARACTERIZED_BY',
-  'DISCOVERED_BY', 'BUILT_BY', 'PRODUCED_BY', 'SUPPLIED_BY',
-  'TRADED_BY', 'LED_TO',
-] as const;
-
-export type AllowedRelation = typeof UNIFIED_RELATION_LIST[number];
-
-const UNIFIED_RELATIONS = UNIFIED_RELATION_LIST.join(' | ');
+// Re-export for backward compatibility — anything importing
+// UNIFIED_RELATION_LIST from this file keeps working.
+export const UNIFIED_RELATION_LIST = PREDICATE_NAMES;
+export type AllowedRelation = (typeof PREDICATE_NAMES)[number];
 
 export const PROMPTS = {
   KG_EXTRACTOR: {
@@ -30,31 +26,10 @@ Given a text chunk, extract all critical concepts, their definitions, and their 
 - Extract all Relationships between entities.
 
 ### Allowed Relationship Types:
-"type" must be exactly one of: ${UNIFIED_RELATIONS}
+"type" must be exactly one of: ${PREDICATE_LIST_PIPE}
 
 Choose the most specific relation:
-- IS_A          → taxonomic classification ("Photosynthesis IS_A biological process")
-- REQUIRES      → prerequisite ("Calculus REQUIRES algebra")
-- PART_OF       → composition ("Nucleus PART_OF cell")
-- USED_FOR      → function/purpose ("Chlorophyll USED_FOR light absorption")
-- CAUSES        → cause-effect ("Deforestation CAUSES erosion")
-- DEFINES       → definitional link ("Newton's law DEFINES force")
-- CONTRASTS_WITH → comparison ("Mitosis CONTRASTS_WITH meiosis")
-- EXAMPLE_OF    → exemplification ("Iron EXAMPLE_OF metal")
-- FEATURE_OF    → property ("Hardness FEATURE_OF diamond")
-- PRECEDES      → temporal sequence ("Prophase PRECEDES metaphase")
-- EXTENSION_OF  → advanced concept of ("Calculus EXTENSION_OF algebra")
-- FOUND_IN      → location/discovery ("Mitochondria FOUND_IN eukaryotes")
-- LOCATED_IN    → spatial location ("Himalayas LOCATED_IN Asia")
-- CONTAINS      → containment ("Cell CONTAINS nucleus")
-- CHARACTERIZED_BY → characterization ("Desert CHARACTERIZED_BY low rainfall")
-- DISCOVERED_BY → historical attribution ("Penicillin DISCOVERED_BY Fleming")
-- BUILT_BY      → construction ("Taj Mahal BUILT_BY Shah Jahan")
-- PRODUCED_BY   → production ("Silk PRODUCED_BY silkworm")
-- SUPPLIED_BY   → supply chain ("Cotton SUPPLIED_BY farmers")
-- TRADED_BY     → commerce ("Spices TRADED_BY merchants")
-- LED_TO        → historical causation ("WW1 LED_TO Great Depression")
-- RELATES_TO    → generic fallback (use sparingly)
+${PREDICATE_RUBRIC}
 
 ### Schema:
 Your response must be a JSON object:

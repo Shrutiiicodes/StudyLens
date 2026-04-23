@@ -257,7 +257,6 @@ async def ingest(request: IngestRequest):
 async def get_questions(
     doc_id: str,
     difficulty: str = Query(None, pattern="^(easy|medium|hard)$"),
-    q_type: str = Query(None, alias="type", pattern="^(mcq|short)$"),
     limit: int = Query(50, ge=1, le=200),
 ):
     """
@@ -273,7 +272,7 @@ async def get_questions(
 
     with get_client().session() as session:
         repo = QuestionRepository(session)
-        questions = repo.find_by_document(doc_id, difficulty=difficulty, q_type=q_type, limit=limit)
+        questions = repo.find_by_document(doc_id, difficulty=difficulty, limit=limit)
 
     if not questions:
         raise HTTPException(
@@ -306,13 +305,14 @@ async def submit_answer(request: AnswerRequest):
         chunks = get_service().get_chunk_with_context(question["source_chunk"], depth=1)
         source_text = " ".join(c.get("text", "") for c in chunks)
 
-    # For MCQ use chosen_option; for short use student_answer
-    q_type = question.get("q_type", "short")
-    eval_answer = (
-        request.chosen_option
-        if q_type == "mcq" and request.chosen_option
-        else request.student_answer
-    )
+# MCQ-only: prefer chosen_option, fall back to student_answer if missing.
+    q_type = question.get("q_type", "mcq")
+    if q_type != "mcq":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only MCQ questions supported (got q_type={q_type!r})"
+        )
+    eval_answer = request.chosen_option or request.student_answer
 
     # Parse distractor_distances from stored JSON string
     dd_raw = question.get("distractor_distances", "{}")
@@ -389,10 +389,11 @@ async def submit_all_answers(request: SubmitAllRequest):
             chunks = service.get_chunk_with_context(question["source_chunk"], depth=1)
             source_text = " ".join(c.get("text", "") for c in chunks)
 
-        q_type = question.get("q_type", "short")
-        eval_answer = (
-            chosen_option if q_type == "mcq" and chosen_option else student_ans
-        )
+        q_type = question.get("q_type", "mcq")
+        if q_type != "mcq":
+            logger.warning("Question '%s' has q_type=%r — skipping", qid, q_type)
+            continue
+        eval_answer = chosen_option or student_ans
 
         # Parse distractor_distances
         dd_raw = question.get("distractor_distances", "{}")

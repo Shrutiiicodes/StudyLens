@@ -1,0 +1,179 @@
+{
+    "predicates": [
+        {
+            "name": "IS_A",
+            "description": "taxonomic classification",
+            "example": "Photosynthesis IS_A biological process",
+            "asymmetric": true,
+            "dag": true
+        },
+        {
+            "name": "REQUIRES",
+            "description": "prerequisite",
+            "example": "Calculus REQUIRES algebra",
+            "asymmetric": true,
+            "dag": true
+        },
+        {
+            "name": "PART_OF",
+            "description": "composition",
+            "example": "Nucleus PART_OF cell",
+            "asymmetric": true,
+            "dag": true
+        },
+        {
+            "name": "USED_FOR",
+            "description": "function/purpose",
+            "example": "Chlorophyll USED_FOR light absorption",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "RELATES_TO",
+            "description": "generic fallback (use sparingly)",
+            "example": "",
+            "asymmetric": false,
+            "dag": false
+        },
+        {
+            "name": "CAUSES",
+            "description": "cause-effect",
+            "example": "Deforestation CAUSES erosion",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "DEFINES",
+            "description": "definitional link",
+            "example": "Newton's law DEFINES force",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "CONTRASTS_WITH",
+            "description": "symmetric comparison",
+            "example": "Mitosis CONTRASTS_WITH meiosis",
+            "asymmetric": false,
+            "dag": false
+        },
+        {
+            "name": "EXAMPLE_OF",
+            "description": "exemplification",
+            "example": "Iron EXAMPLE_OF metal",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "FEATURE_OF",
+            "description": "property",
+            "example": "Hardness FEATURE_OF diamond",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "PRECEDES",
+            "description": "temporal sequence",
+            "example": "Prophase PRECEDES metaphase",
+            "asymmetric": true,
+            "dag": true
+        },
+        {
+            "name": "EXTENSION_OF",
+            "description": "advanced concept of",
+            "example": "Calculus EXTENSION_OF algebra",
+            "asymmetric": true,
+            "dag": true
+        },
+        {
+            "name": "FOUND_IN",
+            "description": "location/discovery",
+            "example": "Mitochondria FOUND_IN eukaryotes",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "LOCATED_IN",
+            "description": "spatial location",
+            "example": "Himalayas LOCATED_IN Asia",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "CONTAINS",
+            "description": "containment",
+            "example": "Cell CONTAINS nucleus",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "CHARACTERIZED_BY",
+            "description": "characterization",
+            "example": "Desert CHARACTERIZED_BY low rainfall",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "DISCOVERED_BY",
+            "description": "historical attribution",
+            "example": "Penicillin DISCOVERED_BY Fleming",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "BUILT_BY",
+            "description": "construction",
+            "example": "Taj Mahal BUILT_BY Shah Jahan",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "PRODUCED_BY",
+            "description": "production",
+            "example": "Silk PRODUCED_BY silkworm",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "SUPPLIED_BY",
+            "description": "supply chain",
+            "example": "Cotton SUPPLIED_BY farmers",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "TRADED_BY",
+            "description": "commerce",
+            "example": "Spices TRADED_BY merchants",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "LED_TO",
+            "description": "historical causation",
+            "example": "WW1 LED_TO Great Depression",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "OCCURS_DURING",
+            "description": "temporal containment",
+            "example": "Mitosis OCCURS_DURING cell cycle",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "VISIBLE_IN",
+            "description": "observable in context",
+            "example": "Spindle fibres VISIBLE_IN metaphase",
+            "asymmetric": true,
+            "dag": false
+        },
+        {
+            "name": "COMPARED_WITH",
+            "description": "symmetric comparison alternative",
+            "example": "Newton's mechanics COMPARED_WITH relativity",
+            "asymmetric": false,
+            "dag": false
+        }
+    ]
+}

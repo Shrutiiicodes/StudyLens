@@ -27,7 +27,7 @@ MCQ generation flow (per triple)
     Options = 3 graph distractors + correct answer, shuffled.
     distractor_distances records which option came from which hop.
 
-4.  If graph cannot supply ≥3 distractors → SHORT answer.
+4.  If graph cannot supply ≥3 distractors → DROP the question.
     No LLM fallback. No invented distractors.
     Question type is determined entirely by graph density.
 
@@ -327,7 +327,7 @@ class Question:
 
     q_type is assigned AFTER graph distractor selection:
       "mcq"   → graph supplied ≥3 distractors
-      "short" → graph could not supply ≥3 distractors
+      "dropped" → graph could not supply ≥3 distractors
 
     distractor_distances: {distractor_text: hop_distance}
       distance=1 hardest (student confusion = subtle misconception)
@@ -352,7 +352,7 @@ class Question:
             return False
         if self.q_type == "mcq":
             return len(self.options) == 4 and self.correct in self.options
-        return self.q_type == "short"
+        return self.q_type == "mcq"
 
 
 # ── Prompts for complex multi-triple questions ────────────────────────────────
@@ -570,7 +570,6 @@ class QuestionGenerator:
 
         questions   = []
         mcq_count   = 0
-        short_count = 0
         dropped     = 0
 
         for raw in raw_results:
@@ -583,7 +582,7 @@ class QuestionGenerator:
                 if q.q_type == "mcq":
                     mcq_count += 1
                 else:
-                    short_count += 1
+                    dropped += 1
             else:
                 dropped += 1
 
@@ -602,12 +601,12 @@ class QuestionGenerator:
             if q.q_type == "mcq":
                 mcq_count += 1
             else:
-                short_count += 1
+                dropped += 1
         questions.extend(complex_qs)
 
         logger.info(
-            "Generated %d questions total: %d MCQ, %d short, %d dropped (%d complex)",
-            len(questions), mcq_count, short_count, dropped, len(complex_qs),
+            "Generated %d questions total: %d MCQ, %d dropped (%d complex)",
+            len(questions), mcq_count, dropped, len(complex_qs),
         )
         return questions
 
@@ -742,8 +741,6 @@ class QuestionGenerator:
         up to 3 hops.
 
         Returns {concept_name: [{name: str, distance: int}, ...]}
-        Concepts with 0 neighbours get an empty list — these will become
-        SHORT questions regardless of what the LLM returns.
         """
         from graph.concept_repository import ConceptRepository
         repo     = ConceptRepository(session)
@@ -927,10 +924,10 @@ class QuestionGenerator:
 
         if len(chosen) < 3:
             logger.debug(
-                "Concept '%s': only %d semantically valid distractors → SHORT",
+                "Concept '%s': only %d semantically valid distractors → DROPPED",
                 concept, len(chosen),
             )
-            return Question(q_type="short", **base_kwargs)
+            return None
 
         dist_values = list(distances.values())
         if max(dist_values) <= 1:

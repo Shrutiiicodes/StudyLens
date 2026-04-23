@@ -19,6 +19,7 @@ import neo4j, { Driver, Session, Integer } from 'neo4j-driver';
 import Groq from 'groq-sdk';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PREDICATE_LIST_PIPE } from '@/config/predicates';
 
 const GROQ_MODEL = 'qwen/qwen3-32b';
 
@@ -347,7 +348,7 @@ Given an orphan concept and a list of candidate concepts, identify which candida
 are meaningfully related to the orphan and suggest up to 3 relationships.
 
 Only emit relationships clearly meaningful for a CBSE student.
-Allowed types: IS_A | CAUSES | REQUIRES | PART_OF | CONTRASTS_WITH | EXAMPLE_OF | USED_FOR | FEATURE_OF | PRECEDES | EXTENSION_OF | RELATES_TO
+Allowed types: ${PREDICATE_LIST_PIPE}
 
 Respond ONLY with JSON:
 {

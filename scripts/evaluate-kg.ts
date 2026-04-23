@@ -27,6 +27,7 @@ import neo4j, { Driver, Session, Integer } from 'neo4j-driver';
 import { runPaulheim } from './paulheim-checks';
 import * as fs from 'fs';
 import * as path from 'path';
+import { ALLOWED_PREDICATES } from '../src/config/predicates';
 
 // ── Load .env.local ──────────────────────────────────────────
 function loadEnv() {
@@ -286,11 +287,22 @@ async function checkRelationValidity(session: Session, userId?: string): Promise
 
     const params = userId ? { userId } : {};
 
-    // Valid relation types from kg-builder.ts
-    const validTypes = new Set([
-        'EXPLAINS', 'HAS_EXAMPLE', 'PREREQUISITE', 'CAUSES_CONFUSION_WITH',
-        'RELATED_TO', 'PART_OF', 'USED_FOR', 'DEFINES', 'EXAMPLES', 'FORMULAS',
-        'MISCONCEPTIONS', 'PREREQUISITE_OF', 'RELATES_TO',
+    // Structural/schema relations — these are not ontology predicates but
+    // are legitimate Neo4j edge types used for graph wiring. Kept separate
+    // so the check can distinguish "semantic junk" from "infrastructure".
+    const STRUCTURAL_RELATIONS = new Set([
+        'PART_OF',          // (:Chunk)-[:PART_OF]->(:Document), also a Concept predicate
+        'NEXT_CHUNK',       // (:Chunk)-[:NEXT_CHUNK]->(:Chunk)
+        'MENTIONS',         // (:Chunk)-[:MENTIONS]->(:Concept)
+        'TESTS',            // (:Question)-[:TESTS]->(:Concept)
+        'SOURCED_FROM',     // (:Question)-[:SOURCED_FROM]->(:Chunk)
+        'ANSWERS',          // (:Attempt)-[:ANSWERS]->(:Question)
+        'HAS_MISCONCEPTION',// (:Attempt)-[:HAS_MISCONCEPTION]->(:Question)
+    ]);
+
+    const validTypes = new Set<string>([
+        ...ALLOWED_PREDICATES,
+        ...STRUCTURAL_RELATIONS,
     ]);
 
     // Get all relation types in the graph
@@ -310,11 +322,16 @@ async function checkRelationValidity(session: Session, userId?: string): Promise
     const issues: string[] = [];
     const rows: string[][] = [];
 
+    let invalidTypeCount = 0;
     for (const rt of relTypes) {
-        const isValid = validTypes.has(rt.type) || rt.type.length > 0; // dynamic types allowed
+        const isValid = validTypes.has(rt.type);
         const count = toNum(rt.count);
         rows.push([rt.type, String(count), isValid ? `${C.green}✔${C.reset}` : `${C.red}✘${C.reset}`]);
-        log('debug', `  ${rt.type}: ${count} instances`);
+        if (!isValid) {
+            invalidTypeCount += count;
+            issues.push(`Unknown relation type '${rt.type}' (${count} edges)`);
+        }
+        log('debug', `  ${rt.type}: ${count} instances${isValid ? '' : ' [UNKNOWN]'}`);
     }
 
     const loopCount = toNum(selfLoops?.count);

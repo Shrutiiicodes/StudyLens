@@ -103,7 +103,6 @@ class QuestionRepository:
         self,
         doc_id: str,
         difficulty: Optional[str] = None,
-        q_type: Optional[str] = None,
         limit: int = 50,
     ) -> list[dict]:
         """
@@ -112,7 +111,6 @@ class QuestionRepository:
         Args:
             doc_id     : Document to query.
             difficulty : Filter by "easy" | "medium" | "hard" (optional).
-            q_type     : Filter by "mcq" | "short" (optional).
             limit      : Max number of questions to return.
 
         Returns:

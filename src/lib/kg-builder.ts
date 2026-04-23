@@ -59,29 +59,7 @@ const ENABLE_DIRECTION_CHECK = true;
 // Lower → more swap calls (more cost, fewer FPs slip through).
 const DIRECTION_CHECK_MIN_CONFIDENCE = 0.9;
 
-// Predicates whose meaning depends on direction. (X PART_OF Y) ≠ (Y PART_OF X).
-// Symmetric predicates (RELATES_TO, CONTRASTS_WITH) are excluded — the swap
-// test would produce false positives there because both directions are valid.
-const ASYMMETRIC_PREDICATES = new Set([
-    'IS_A', 'PART_OF', 'CONTAINS', 'LOCATED_IN', 'FOUND_IN',
-    'PRODUCED_BY', 'SUPPLIED_BY', 'USED_FOR', 'CAUSES', 'LED_TO',
-    'DISCOVERED_BY', 'BUILT_BY', 'TRADED_BY', 'DEFINES',
-    'PRECEDES', 'EXTENSION_OF', 'EXAMPLE_OF', 'FEATURE_OF',
-    'CHARACTERIZED_BY', 'REQUIRES',
-]);
-
-// ─── Structural filter config ─────────────────────────────────────────────
-// Allowed predicate set — anything outside this is dropped pre-verifier.
-// Derived from the unified list so kg-builder and the extractor prompt
-// can't drift out of sync.
-const ALLOWED_PREDICATES = new Set<string>(UNIFIED_RELATION_LIST);
-
-// Cycles among these relations are structural contradictions.
-// Matches scripts/paulheim-checks.ts so the upstream filter and the
-// post-hoc evaluator share one definition of "DAG relation".
-const DAG_RELATIONS = new Set([
-    'IS_A', 'PART_OF', 'PRECEDES', 'REQUIRES', 'EXTENSION_OF',
-]);
+import { ALLOWED_PREDICATES, ASYMMETRIC_PREDICATES, DAG_RELATIONS } from '@/config/predicates';
 
 /**
  * In-memory DAG cycle filter.

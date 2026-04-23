@@ -42,7 +42,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import Groq from 'groq-sdk';
-
+import { PREDICATE_LIST_PIPE } from '@/config/predicates';
 // ── Load .env.local ──────────────────────────────────────────
 function loadEnv() {
     const envPath = path.join(__dirname, '..', '.env.local');
@@ -185,10 +185,7 @@ Respond ONLY with valid JSON of the form:
   "relationships": [{ "from": "...", "to": "...", "type": "..." }]
 }
 
-Allowed relationship types: IS_A | REQUIRES | PART_OF | USED_FOR | RELATES_TO |
-CAUSES | DEFINES | CONTRASTS_WITH | EXAMPLE_OF | FEATURE_OF | PRECEDES |
-EXTENSION_OF | FOUND_IN | LOCATED_IN | CONTAINS | CHARACTERIZED_BY |
-DISCOVERED_BY | BUILT_BY | PRODUCED_BY | SUPPLIED_BY | TRADED_BY | LED_TO`;
+Allowed relationship types: ${PREDICATE_LIST_PIPE}`;
 
 const VERIFIER_SYSTEM = `You are a fact-verification assistant for educational content.
 Given a source passage and a factual triple, determine if the triple is

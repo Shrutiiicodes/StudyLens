@@ -31,8 +31,7 @@ import re
 import time
 from dataclasses import dataclass
 from typing import Optional
-
-from graph.triple_verifier import ALLOWED_PREDICATES
+from graph.predicates import ALLOWED_PREDICATES, predicate_rubric
 
 logger = logging.getLogger(__name__)
 

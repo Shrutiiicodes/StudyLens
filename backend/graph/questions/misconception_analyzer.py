@@ -143,25 +143,6 @@ class MisconceptionResult:
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# Relation keyword heuristics for short-answer relation check
-# ──────────────────────────────────────────────────────────────────────────
-
-_RELATION_KEYWORDS = {
-    "LOCATED_IN":    ["located", "found", "in", "at", "city", "place", "site"],
-    "FOUND_IN":      ["found", "discovered", "located", "in", "at"],
-    "USED_FOR":      ["used", "purpose", "function", "for", "served"],
-    "SUPPLIED_BY":   ["supplied", "provided", "sent", "came from", "source"],
-    "PART_OF":       ["part of", "belongs to", "component", "section", "member"],
-    "BUILT_BY":      ["built", "constructed", "made", "created", "erected"],
-    "DISCOVERED_BY": ["discovered", "found", "excavated", "unearthed"],
-    "PRODUCED_BY":   ["produced", "made", "created", "manufactured"],
-    "TRADED_BY":     ["traded", "exchanged", "sold", "bought", "commerce"],
-    "CAUSED_BY":     ["caused", "led to", "resulted from", "because", "due to"],
-    "LED_TO":        ["led to", "caused", "resulted in", "brought about"],
-}
-
-
-# ──────────────────────────────────────────────────────────────────────────
 # Escalation tunables
 # ──────────────────────────────────────────────────────────────────────────
 
@@ -292,16 +273,14 @@ class MisconceptionAnalyzer:
             )
 
         # Step 3 — deterministic scoring
-        if q_type == "mcq":
-            score, dist, label = self._score_mcq(
-                student_answer, correct_answer, distractor_distances or {}
+        if q_type != "mcq":
+            raise ValueError(
+                f"Only MCQ questions are supported (got q_type={q_type!r}). "
+                "Short-answer support was removed."
             )
-            checks = {}
-        else:
-            score, checks, label = self._score_short(
-                student_answer, correct_answer, concept, relation
-            )
-            dist = None
+        score, distance, label = self._score_mcq(
+            student_answer, correct_answer, distractor_distances or {}
+        )
 
         severity = Severity.from_score(score)
 
@@ -393,68 +372,6 @@ class MisconceptionAnalyzer:
         )
 
         return score, distance, label
-
-    # ------------------------------------------------------------------
-    # Step 3b — Short answer scoring
-    # ------------------------------------------------------------------
-
-    def _score_short(
-        self,
-        student_answer: str,
-        correct_answer: str,
-        concept:        str,
-        relation:       str,
-    ):
-        """Score a short answer on object/relation/subject axes."""
-        s_lower   = student_answer.lower()
-        c_lower   = correct_answer.lower()
-        con_lower = concept.lower()
-
-        # Object check
-        obj_score = 0.0
-        correct_words = set(re.sub(r"[^\w\s]", "", c_lower).split()) - {
-            "the", "a", "an", "and", "of"
-        }
-        student_words = set(re.sub(r"[^\w\s]", "", s_lower).split())
-        if correct_words:
-            overlap = len(correct_words & student_words) / len(correct_words)
-            obj_score = min(overlap, 1.0)
-        object_ok = obj_score >= 0.5
-
-        # Relation check
-        rel_keywords = _RELATION_KEYWORDS.get(relation.upper(), [])
-        relation_ok = any(kw in s_lower for kw in rel_keywords) if rel_keywords else True
-
-        # Subject check
-        concept_words = set(re.sub(r"[^\w\s]", "", con_lower).split()) - {"the", "a", "an"}
-        subject_ok = any(w in s_lower for w in concept_words) if concept_words else True
-
-        checks = {
-            "object":   object_ok,
-            "relation": relation_ok,
-            "subject":  subject_ok,
-        }
-
-        score = (
-            (obj_score * 0.60) +
-            (1.0 if relation_ok else 0.0) * 0.25 +
-            (1.0 if subject_ok else 0.0) * 0.15
-        )
-
-        failed = [k for k, v in checks.items() if not v]
-        rel_readable = relation.lower().replace("_", " ")
-        if not failed:
-            label = "Minor wording issue — answer is essentially correct"
-        elif failed == ["object"]:
-            label = f"Wrong answer for {concept} — did not identify the correct {rel_readable}"
-        elif failed == ["relation"]:
-            label = f"Correct topic but wrong relationship type — expected {rel_readable}"
-        elif "object" in failed and "relation" in failed:
-            label = f"Fundamental gap on {concept} — wrong answer and wrong relationship"
-        else:
-            label = f"Incomplete answer on {concept} — missing: {', '.join(failed)}"
-
-        return round(score, 2), checks, label
 
     # ------------------------------------------------------------------
     # Step 4 — KG path between wrong and correct concept
@@ -549,14 +466,13 @@ class MisconceptionAnalyzer:
         # ── B. Decide: template or LLM? ───────────────────────────────
         path_missing = len(kg_path) == 0
         severe_gap = severity in (Severity.PARTIAL, Severity.CRITICAL)
-        is_short = q_type != "mcq"
 
         prior_misses = 0
         if user_id and concept_id:
             prior_misses = self._count_prior_wrong_attempts(user_id, concept_id)
         repeated_miss = prior_misses >= REPEAT_MISS_ESCALATION_THRESHOLD
 
-        should_escalate = (path_missing and severe_gap) or is_short or repeated_miss
+        should_escalate = (path_missing and severe_gap) or repeated_miss
 
         if not should_escalate:
             # Template path — the default.
