@@ -486,20 +486,59 @@ export async function generateQuestionsForMode(
                     .join('\n');
         }
     }
+    // ── Pick a diverse subset of concepts for question generation ─────────
+    // Different questions must focus on different parts of the KG, otherwise
+    // the LLM just picks the most salient relationship every time.
+    type ContextConcept = {
+        name: string;
+        definition: string;
+        relationships: Array<{ relation: string; target: string; targetDef: string }>;
+    };
 
+    let parsedContext: ContextConcept[] = [];
+    try {
+        parsedContext = JSON.parse(context);
+    } catch {
+        parsedContext = [];
+    }
+
+    // Prefer concepts that HAVE relationships (richer context for question gen)
+    const richConcepts = parsedContext.filter(c => (c.relationships?.length ?? 0) > 0);
+    const pool = richConcepts.length >= configs.length ? richConcepts : parsedContext;
+
+    // Shuffle so each session doesn't pick the same 5 concepts
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+
+    /** Return a focused context JSON for the i-th question. */
+    function getFocusedContext(i: number): { title: string; context: string } {
+        if (shuffled.length === 0) {
+            return { title: conceptTitle, context };  // fallback: full context
+        }
+        const primary = shuffled[i % shuffled.length];
+        // Include the primary concept + the top-level concept for grounding
+        const topLevel = parsedContext.find(c =>
+            c.name.toLowerCase() === conceptTitle.toLowerCase()
+        );
+        const slice = topLevel && topLevel !== primary
+            ? [primary, topLevel]
+            : [primary];
+        return {
+            title: primary.name,
+            context: JSON.stringify(slice),
+        };
+    }
     for (let i = 0; i < configs.length; i++) {
         try {
-            // First config slot in mastery mode with a weak-spot profile is
-            // user-specific and must bypass the shared pool.
             const isUserSpecific = i === 0 && weakSpotContext !== null;
+            const focused = getFocusedContext(i);
 
             const q = await generateOrSampleQuestion(
                 {
                     concept_id: conceptId,
-                    concept_title: conceptTitle,
+                    concept_title: isUserSpecific ? conceptTitle : focused.title,
                     type: configs[i].type,
                     difficulty: configs[i].difficulty,
-                    context: isUserSpecific ? weakSpotContext! : context,
+                    context: isUserSpecific ? weakSpotContext! : focused.context,
                     user_id: userId,
                 },
                 {

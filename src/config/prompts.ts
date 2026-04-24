@@ -62,7 +62,10 @@ Your task is to generate a ${difficultyLabel} question of the following type: ${
 - Use ONLY the provided context.
 - Be age-appropriate for Grade 4-10 students.
 - Follow the JSON format strictly.
-- Do NOT embed answers or answer clues in wrong options. <!-- "answer clues" = leaked correctness signals in distractors, unrelated to the hint system -->
+- Do NOT embed answers or answer clues in wrong options.
+- CRITICAL: Pick a SPECIFIC, NARROW topic from the context. Do NOT ask about general byproducts, general outcomes, or "main" things — pick a particular relationship, component, or mechanism.
+- If the context has many concepts (>10), pick a less-obvious one. Avoid the top-level concept (e.g., "Photosynthesis" itself) — ask about something it requires, contains, or relates to.
+- Each question must focus on a DIFFERENT concept or relationship from any others in this session.
 
 Response Format:
 {
