@@ -4,6 +4,9 @@ import { buildKnowledgeGraph } from '@/lib/kg-builder';
 import { validateAcademicContent } from '@/lib/groq';
 import { MIN_WORD_COUNT, MAX_FILE_SIZE_MB } from '@/config/constants';
 
+export const maxDuration = 60;
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();

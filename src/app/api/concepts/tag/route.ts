@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runCypher } from '@/lib/neo4j';
-
+export const maxDuration = 60;
+export const runtime = 'nodejs';
 /**
  * GET /api/concepts/tag?userId=xxx
  *

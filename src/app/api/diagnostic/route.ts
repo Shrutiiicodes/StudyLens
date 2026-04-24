@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateQuestionsForMode } from '@/lib/question-generator';
 import { evaluateDiagnostic } from '@/lib/evaluation-engine';
 import { QuestionResult } from '@/types/mastery';
+export const maxDuration = 60;
+export const runtime = 'nodejs';
 
 /**
  * POST /api/diagnostic

@@ -38,37 +38,40 @@ import {
  */
 
 // ─── Get concept context from Neo4j ───
-
 export async function getConceptContext(conceptId: string): Promise<string> {
     try {
+        // Pull concepts + their outgoing relationships from the current KG schema.
+        // The Concept nodes are stored with `documentId` pointing to the Supabase
+        // concept record id (which is what we call conceptId in this codebase).
         const results = await runCypher(
             `MATCH (c:Concept {documentId: $docId})
-         OPTIONAL MATCH (c)-[:EXPLAINS]->(d:Definition)
-         OPTIONAL MATCH (c)-[:HAS_EXAMPLE]->(e:Example)
-         OPTIONAL MATCH (c)-[:PREREQUISITE]->(p:Concept)
-         OPTIONAL MATCH (c)-[:CAUSES_CONFUSION_WITH]->(m)
-         RETURN c.name as name, c.definition as definition,
-                collect(DISTINCT d.text) as definitions,
-                collect(DISTINCT e.text) as examples,
-                collect(DISTINCT p.name) as prerequisites,
-                collect(DISTINCT m.text) as misconceptions`,
+             OPTIONAL MATCH (c)-[r]->(related:Concept)
+             WITH c, collect(DISTINCT {
+                relation: type(r),
+                target: related.name,
+                targetDef: related.definition
+             }) AS relationships
+             RETURN c.name AS name,
+                    c.definition AS definition,
+                    [x IN relationships WHERE x.target IS NOT NULL] AS relationships`,
             { docId: conceptId }
         );
 
-        if (results.length === 0) return '';
+        if (results.length === 0) {
+            console.warn(`[QGen] No concepts found for documentId=${conceptId}`);
+            return '';
+        }
 
         const allContext = results.map((r) => {
             const rec = r as Record<string, unknown>;
             return {
                 name: rec.name,
                 definition: rec.definition,
-                definitions: rec.definitions,
-                examples: rec.examples,
-                prerequisites: rec.prerequisites,
-                misconceptions: rec.misconceptions,
+                relationships: rec.relationships,
             };
         });
 
+        console.log(`[QGen] Loaded ${allContext.length} concept(s) for context`);
         return JSON.stringify(allContext);
     } catch (error) {
         console.warn('[QGen] Neo4j unavailable, falling back to title-only context:', (error as Error).message);

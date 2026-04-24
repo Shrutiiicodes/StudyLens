@@ -3,7 +3,8 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { runCypher } from '@/lib/neo4j';
 import { chatCompletion, parseLLMJson } from '@/lib/groq';
 import { PROMPTS } from '@/config/prompts';
-
+export const maxDuration = 60;
+export const runtime = 'nodejs';
 /**
  * GET /api/learn?conceptId=xxx&userId=xxx&grade=10
  *
@@ -117,17 +118,17 @@ export async function GET(request: NextRequest) {
         const pastMisconceptions = await fetchPastMisconceptions(supabase, userId, conceptId);
 
         // ── 4a. KG path — return structured content ─────────────────────
-        if (kgSections) {
-            return NextResponse.json({
-                success: true,
-                content: {
-                    title: concept.title,
-                    kgSections,
-                    pastMisconceptions,
-                },
-                source: 'kg',
-            });
-        }
+        // if (kgSections) {
+        //     return NextResponse.json({
+        //         success: true,
+        //         content: {
+        //             title: concept.title,
+        //             kgSections,
+        //             pastMisconceptions,
+        //         },
+        //         source: 'kg',
+        //     });
+        // }
 
         // ── 4b. Cache lookup for prior LLM generation ───────────────────
         const cached = await lookupCachedLearnContent(supabase, conceptId, grade);
@@ -157,15 +158,32 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Failed to load content' }, { status: 500 });
         }
 
-        const text = await fileData.text();
-        const truncatedText = text.substring(0, 15000);
+        // Parse PDF/DOCX properly — can't just call .text() on binary files
+        const buffer = Buffer.from(await fileData.arrayBuffer());
+        let text = '';
+
+        if (concept.source_document.endsWith('.pdf')) {
+            const { PDFParse } = await import('pdf-parse');
+            const parser = new PDFParse({ data: buffer });
+            const pdfData = await parser.getText();
+            text = pdfData.text;
+            await parser.destroy();
+        } else if (concept.source_document.endsWith('.docx')) {
+            const mammoth = await import('mammoth');
+            const result = await mammoth.extractRawText({ buffer });
+            text = result.value;
+        } else {
+            text = buffer.toString('utf-8'); // plain text fallback
+        }
+
+        const truncatedText = text.substring(0, 6000);
 
         const response = await chatCompletion(
             [
                 { role: 'system', content: PROMPTS.LEARN_GUIDE.system(grade) },
                 { role: 'user', content: PROMPTS.LEARN_GUIDE.user(concept.title, truncatedText) },
             ],
-            { jsonMode: true }
+            { jsonMode: true, maxTokens: 1500 }
         );
 
         const learnContent = parseLLMJson(response) as Record<string, unknown>;
