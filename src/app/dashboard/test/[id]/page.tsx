@@ -304,7 +304,25 @@ export default function TestPage() {
 
             setLoading(true);
             setError('');
-            const title = searchParams.get('title') || '';
+            let title = searchParams.get('title') || '';
+
+            // Fallback: if title wasn't passed in the URL, look it up
+            if (!title) {
+                try {
+                    const stored = localStorage.getItem('study-lens-user');
+                    if (stored) {
+                        const user = JSON.parse(stored);
+                        const res = await fetch(`/api/concepts?userId=${user.id}`);
+                        const data = await res.json();
+                        if (data.success && data.concepts) {
+                            const found = data.concepts.find((c: { id: string; title: string }) => c.id === conceptId);
+                            if (found) title = found.title;
+                        }
+                    }
+                } catch (err) {
+                    console.error('Failed to resolve concept title:', err);
+                }
+            }
 
             try {
                 const stored = localStorage.getItem('study-lens-user');

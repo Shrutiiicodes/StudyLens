@@ -80,7 +80,7 @@ export interface HealthResult {
 async function backendFetch<T>(
     path: string,
     options: RequestInit = {},
-    timeoutMs = 60_000
+    timeoutMs = 3_000
 ): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);

@@ -516,7 +516,20 @@ export async function generateQuestionsForMode(
         void recordExposures(userId, exposures);
     }
 
-    return questions.sort(() => Math.random() - 0.5);
+    // Dedupe by normalized question text — catches near-identical questions
+    // that survive pool-ID dedup (LLM regenerates similar text on cache miss)
+    const seen = new Set<string>();
+    const deduped = questions.filter(q => {
+        const key = q.text.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+        if (seen.has(key)) {
+            console.log(`[QGen] Filtered duplicate: "${q.text.slice(0, 60)}..."`);
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
+
+    return deduped.sort(() => Math.random() - 0.5);
 }
 
 export async function generateAssessmentQuestions(

@@ -125,7 +125,8 @@ function WeakTopicsPanel({ topics, onNavigate }: {
                             border: '1px solid rgba(239,68,68,0.15)',
                         }}>
                             {/* Header row */}
-                            <button
+                            <div
+                                role="button"
                                 onClick={() => setExpanded(isOpen ? null : topic.concept_id)}
                                 style={{
                                     width: '100%', background: 'none', border: 'none',
@@ -166,7 +167,7 @@ function WeakTopicsPanel({ topics, onNavigate }: {
                                         : <ChevronDown size={15} color="var(--text-muted)" />
                                     }
                                 </div>
-                            </button>
+                            </div>
 
                             {/* Expanded: sample questions */}
                             {isOpen && topic.questions.length > 0 && (
@@ -306,73 +307,70 @@ export default function HistoryPage() {
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {sessions.map((session) => {
-                        const IconComponent = modeIcons[session.mode] ?? ClipboardList;
-                        const color = modeColors[session.mode] ?? 'var(--accent-primary)';
-                        const isExpanded = expandedSession === session.id;
-                        const hasBreakdown = session.breakdown && session.breakdown.total > 0;
+                    {Object.values(
+                        sessions.reduce((acc, s) => {
+                            if (!acc[s.concept_id]) {
+                                acc[s.concept_id] = { concept_id: s.concept_id, concept_title: s.concept_title, sessions: [] };
+                            }
+                            acc[s.concept_id].sessions.push(s);
+                            return acc;
+                        }, {} as Record<string, { concept_id: string; concept_title: string; sessions: SessionRecord[] }>)
+                    ).map((group) => {
+                        const totalTests = group.sessions.length;
+                        const bestScore = Math.max(...group.sessions.map(s => s.score));
+                        const passedCount = group.sessions.filter(s => s.passed).length;
+                        const latest = group.sessions[0];
+                        const isExpanded = expandedSession === group.concept_id;
+                        const scoreColor = bestScore >= 85 ? 'var(--accent-success)'
+                            : bestScore >= 60 ? 'var(--accent-warning)'
+                                : 'var(--accent-danger)';
 
                         return (
-                            <div key={session.id} className="glass-card" style={{ padding: '20px 24px' }}>
-                                {/* Main row */}
+                            <div key={group.concept_id} className="glass-card" style={{ padding: '20px 24px' }}>
                                 <div
-                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', flexWrap: 'wrap', gap: '12px' }}
-                                    onClick={() => hasBreakdown
-                                        ? setExpandedSession(isExpanded ? null : session.id)
-                                        : router.push(`/dashboard/concept/${session.concept_id}`)
-                                    }
+                                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', gap: '16px' }}
+                                    onClick={() => setExpandedSession(isExpanded ? null : group.concept_id)}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                        <div style={{
-                                            width: '44px', height: '44px', borderRadius: '12px',
-                                            background: `${color}18`, border: `1px solid ${color}30`,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            color, flexShrink: 0,
-                                        }}>
-                                            <IconComponent size={20} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '6px' }}>
+                                            {group.concept_title}
                                         </div>
-                                        <div>
-                                            <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '4px' }}>
-                                                {session.concept_title}
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                                <span style={{ fontSize: '0.8rem', color, fontWeight: 500 }}>
-                                                    {modeLabels[session.mode] ?? session.mode}
-                                                </span>
-                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    <Clock size={11} /> {formatDuration(session.created_at)}
-                                                </span>
-                                                <NLGIndicator nlg={session.nlg} />
-                                            </div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                            {totalTests} {totalTests === 1 ? 'test' : 'tests'} · {passedCount} passed · latest: {modeLabels[latest.mode] ?? latest.mode}
                                         </div>
                                     </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <div style={{ textAlign: 'right' }}>
-                                            <div style={{
-                                                fontSize: '1.4rem', fontWeight: 700,
-                                                color: session.score >= 85 ? 'var(--accent-success)'
-                                                    : session.score >= 60 ? 'var(--accent-primary)'
-                                                        : 'var(--accent-warning)',
-                                            }}>
-                                                {session.score}%
+                                            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: scoreColor }}>
+                                                {bestScore}%
                                             </div>
-                                            <div style={{ fontSize: '0.72rem', fontWeight: 600, color: session.passed ? 'var(--accent-success)' : 'var(--text-muted)' }}>
-                                                {session.passed ? '✓ Passed' : 'Not passed'}
-                                            </div>
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>best score</div>
                                         </div>
-                                        {hasBreakdown
-                                            ? isExpanded
-                                                ? <ChevronUp size={18} color="var(--text-muted)" />
-                                                : <ChevronDown size={18} color="var(--text-muted)" />
-                                            : <ChevronRight size={18} color="var(--text-muted)" />
-                                        }
+                                        <span style={{ fontSize: '1.1rem', color: 'var(--text-muted)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                                            ▾
+                                        </span>
                                     </div>
                                 </div>
 
-                                {/* Expandable breakdown */}
-                                {isExpanded && session.breakdown && (
-                                    <SessionBreakdownPanel breakdown={session.breakdown} />
+                                {isExpanded && (
+                                    <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        {group.sessions.map((s) => (
+                                            <div
+                                                key={s.id}
+                                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-secondary)', fontSize: '0.85rem' }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    <span style={{ fontWeight: 500 }}>{modeLabels[s.mode] ?? s.mode}</span>
+                                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                                                        {formatDuration(s.created_at)}
+                                                    </span>
+                                                </div>
+                                                <span style={{ fontWeight: 600, color: s.passed ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
+                                                    {s.score}% {s.passed ? '✓' : '✗'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         );
