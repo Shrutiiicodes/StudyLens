@@ -116,7 +116,7 @@ export default function ConceptDetailPage() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                         {conceptTitle}
                         {isComplete && (
                             <span style={{
@@ -150,16 +150,6 @@ export default function ConceptDetailPage() {
                         <BookOpen size={18} /> Learn It
                     </button>
                 </div>
-            </div>
-
-            {/* Mastery Card — now shows real data */}
-            <div style={{ maxWidth: '400px', marginBottom: '32px' }}>
-                <ProgressCard
-                    title={conceptTitle}
-                    mastery={mastery}
-                    status={cardStatus}
-                    lastUpdated={progress?.last_updated ?? concept?.created_at}
-                />
             </div>
 
             {/* Tab Navigation */}

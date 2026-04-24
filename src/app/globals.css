@@ -32,10 +32,10 @@
   --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
   --shadow-elevated: 0 16px 48px rgba(0, 0, 0, 0.4);
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   --radius-full: 9999px;
 }
 

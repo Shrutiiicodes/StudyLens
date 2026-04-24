@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import UploadZone from '@/components/UploadZone';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { XCircle, CheckCircle, AlertTriangle, Target, FileText } from 'lucide-react';
+import { XCircle, CheckCircle, AlertTriangle, Target, FileText, Trash2 } from 'lucide-react';
 import { ConceptRecord } from '@/types/concept';
 
 interface UploadResult {
@@ -22,7 +22,7 @@ export default function UploadPage() {
     const [result, setResult] = useState<UploadResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [concepts, setConcepts] = useState<ConceptRecord[]>([]);
-
+    const [deletingId, setDeletingId] = useState<string | null>(null);
     const fetchConcepts = async () => {
         try {
             const stored = localStorage.getItem('study-lens-user');
@@ -41,7 +41,31 @@ export default function UploadPage() {
     useEffect(() => {
         fetchConcepts();
     }, []);
+    async function handleDelete(concept: ConceptRecord) {
+        const confirmed = window.confirm(
+            `Delete "${concept.title}"?\n\nThis will permanently remove the concept, all test history, and mastery progress. This cannot be undone.`
+        );
+        if (!confirmed) return;
 
+        const stored = localStorage.getItem('study-lens-user');
+        if (!stored) return;
+        const user = JSON.parse(stored);
+
+        setDeletingId(concept.id);
+        try {
+            const res = await fetch(`/api/concepts/${concept.id}?userId=${user.id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                setConcepts(prev => prev.filter(c => c.id !== concept.id));
+            } else {
+                alert(`Failed to delete: ${data.error}`);
+            }
+        } catch {
+            alert('Network error. Please try again.');
+        } finally {
+            setDeletingId(null);
+        }
+    }
     const handleUpload = async (file: File) => {
         setUploading(true);
         setError(null);
@@ -84,7 +108,7 @@ export default function UploadPage() {
     };
 
     return (
-        <div className="animate-fade-in" style={{ maxWidth: '800px' }}>
+        <div className="animate-fade-in" style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{ marginBottom: '32px' }}>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
                     Upload Study Material
@@ -115,7 +139,7 @@ export default function UploadPage() {
             )}
 
             {/* Your Uploads */}
-            {!result?.success && concepts.length > 0 && (
+            {concepts.length > 0 && (
                 <div style={{ marginTop: '40px' }}>
                     <hr style={{ border: 'none', borderTop: '1px solid var(--border-subtle)', marginBottom: '32px' }} />
                     <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '16px' }}>
@@ -132,13 +156,34 @@ export default function UploadPage() {
                                         Uploaded {new Date(c.created_at).toLocaleDateString()}
                                     </div>
                                 </div>
-                                <Link
-                                    href={`/dashboard/concepts`}
-                                    className="btn-ghost"
-                                    style={{ fontSize: '0.85rem', textDecoration: 'none' }}
-                                >
-                                    View Progress →
-                                </Link>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                                    <Link
+                                        href={`/dashboard/concepts`}
+                                        className="btn-ghost"
+                                        style={{ fontSize: '0.85rem', textDecoration: 'none' }}
+                                    >
+                                        View Progress →
+                                    </Link>
+                                    <button
+                                        onClick={() => handleDelete(c)}
+                                        disabled={deletingId === c.id}
+                                        title="Delete document"
+                                        style={{
+                                            background: 'transparent',
+                                            border: '1px solid rgba(239,68,68,0.3)',
+                                            borderRadius: 'var(--radius-md)',
+                                            padding: '8px 10px',
+                                            cursor: deletingId === c.id ? 'not-allowed' : 'pointer',
+                                            color: deletingId === c.id ? 'var(--text-muted)' : '#ef4444',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            opacity: deletingId === c.id ? 0.5 : 1,
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>

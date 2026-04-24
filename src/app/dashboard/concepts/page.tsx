@@ -117,7 +117,7 @@ export default function ConceptsPage() {
     );
 
     return (
-        <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <div className="animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto' }}>
             <div style={{ marginBottom: '32px' }}>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
                     Your Concepts

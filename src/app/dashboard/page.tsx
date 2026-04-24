@@ -3,14 +3,16 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FileText, Target, BookOpen, Book, ClipboardList, Rocket, Brain, Clock } from 'lucide-react';
+import { FileText, Target, BookOpen, Book, ClipboardList, Rocket, Brain, Clock, Trash2, TrendingUp } from 'lucide-react';
 import { ConceptRecord } from '@/types/concept';
 
 export default function DashboardPage() {
     const [user, setUser] = useState<{ id: string; full_name: string; grade: number } | null>(null);
     const [concepts, setConcepts] = useState<ConceptRecord[]>([]);
     const [stats, setStats] = useState<{ testsTaken: number; } | null>(null);
+    const [avgNLG, setAvgNLG] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
     const [masteryMap, setMasteryMap] = useState<Array<{
         concept_id: string;
         concept_title: string;
@@ -30,11 +32,19 @@ export default function DashboardPage() {
             const fetchConcepts = fetch(`/api/concepts?userId=${parsed.id}`, { cache: 'no-store' }).then((res) => res.json());
             const fetchStats = fetch(`/api/user/stats?userId=${parsed.id}`, { cache: 'no-store' }).then((res) => res.json());
             const fetchMastery = fetch(`/api/mastery?userId=${parsed.id}`, { cache: 'no-store' }).then((res) => res.json());
-            Promise.all([fetchConcepts, fetchStats, fetchMastery])
-                .then(([conceptsData, statsData, masteryData]) => {
+            const fetchHistory = fetch(`/api/history?userId=${parsed.id}`, { cache: 'no-store' }).then((res) => res.json());
+            Promise.all([fetchConcepts, fetchStats, fetchMastery, fetchHistory])
+                .then(([conceptsData, statsData, masteryData, historyData]) => {
                     if (conceptsData.success && conceptsData.concepts) setConcepts(conceptsData.concepts);
                     if (statsData.success && statsData.stats) setStats(statsData.stats);
                     if (masteryData.success && masteryData.conceptMastery) setMasteryMap(masteryData.conceptMastery);
+                    if (historyData.success && historyData.sessions) {
+                        const nlgSessions = historyData.sessions.filter((s: { nlg: number | null }) => s.nlg !== null);
+                        if (nlgSessions.length > 0) {
+                            const avg = nlgSessions.reduce((sum: number, s: { nlg: number }) => sum + s.nlg, 0) / nlgSessions.length;
+                            setAvgNLG(Math.round(avg * 100));
+                        }
+                    }
                 })
                 .catch(console.error)
                 .finally(() => setLoading(false));
@@ -45,7 +55,30 @@ export default function DashboardPage() {
     const reviewDue = masteryMap
         .filter(m => m.needs_review && m.current_mastery > 0)
         .sort((a, b) => b.hours_since_update - a.hours_since_update); // most overdue first
+    async function handleDelete(concept: ConceptRecord, e: React.MouseEvent) {
+        e.stopPropagation();
+        const confirmed = window.confirm(
+            `Delete "${concept.title}"?\n\nThis will permanently remove the concept, all test history, and mastery progress. This cannot be undone.`
+        );
+        if (!confirmed) return;
 
+        if (!user) return;
+
+        setDeletingId(concept.id);
+        try {
+            const res = await fetch(`/api/concepts/${concept.id}?userId=${user.id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                setConcepts(prev => prev.filter(c => c.id !== concept.id));
+            } else {
+                alert(`Failed to delete: ${data.error}`);
+            }
+        } catch {
+            alert('Network error. Please try again.');
+        } finally {
+            setDeletingId(null);
+        }
+    }
     return (
         <div className="animate-fade-in">
             {/* Header */}
@@ -104,33 +137,31 @@ export default function DashboardPage() {
                     </div>
                 </div>
             )}
-            {/* Stats Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
-                {/* Documents */}
-                <div className="stat-card" style={{ position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'var(--gradient-primary)' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '8px' }}>Documents Uploaded</p>
-                            <p style={{ fontSize: '1.8rem', fontWeight: 700 }}>{concepts.length}</p>
-                        </div>
-                        <FileText size={24} />
+            {/* Stats Grid — history-style, calm palette */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+                {[
+                    { label: 'Documents Uploaded', value: concepts.length, icon: <FileText size={24} /> },
+                    { label: 'Tests Taken', value: stats?.testsTaken ?? 0, icon: <ClipboardList size={24} /> },
+                    { label: 'Avg Learning Gain', value: avgNLG !== null ? `${avgNLG >= 0 ? '+' : ''}${avgNLG}%` : '—', icon: <TrendingUp size={24} /> },
+                ].map((stat, idx) => (
+                    <div
+                        key={idx}
+                        className="stat-card"
+                        style={{
+                            textAlign: 'center',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '20px',
+                        }}
+                    >
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>{stat.icon}</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{stat.value}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>{stat.label}</div>
                     </div>
-                </div>
-
-                {/* Tests Taken */}
-                <div className="stat-card" style={{ position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: 'var(--gradient-warm)' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '8px' }}>Tests Taken</p>
-                            <p style={{ fontSize: '1.8rem', fontWeight: 700 }}>{stats?.testsTaken ?? '0'}</p>
-                        </div>
-                        <Target size={24} />
-                    </div>
-                </div>
+                ))}
             </div>
-
             {/* Concepts Section */}
             <div style={{ marginBottom: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -141,9 +172,9 @@ export default function DashboardPage() {
                 </div>
 
                 {loading ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {[1, 2, 3].map((i) => (
-                            <div key={i} className="glass-card skeleton" style={{ height: '120px' }} />
+                            <div key={i} className="glass-card skeleton" style={{ height: '72px' }} />
                         ))}
                     </div>
                 ) : concepts.length === 0 ? (
@@ -158,7 +189,7 @@ export default function DashboardPage() {
                         </Link>
                     </div>
                 ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {concepts.slice(0, 6).map((concept) => (
                             <div
                                 key={concept.id}
@@ -192,6 +223,26 @@ export default function DashboardPage() {
                                             onClick={e => e.stopPropagation()}>
                                             <ClipboardList size={14} /> Progress
                                         </Link>
+                                        <button
+                                            onClick={(e) => handleDelete(concept, e)}
+                                            disabled={deletingId === concept.id}
+                                            title="Delete document"
+                                            style={{
+                                                background: 'transparent',
+                                                border: '1px solid rgba(239,68,68,0.3)',
+                                                borderRadius: 'var(--radius-md)',
+                                                padding: '6px 10px',
+                                                cursor: deletingId === concept.id ? 'not-allowed' : 'pointer',
+                                                color: deletingId === concept.id ? 'var(--text-muted)' : '#ef4444',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                opacity: deletingId === concept.id ? 0.5 : 1,
+                                                transition: 'all 0.2s',
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
                                     </div>
                                 </div>
                             </div>

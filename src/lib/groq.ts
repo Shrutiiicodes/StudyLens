@@ -66,6 +66,11 @@ export async function validateAcademicContent(text: string): Promise<{
     reasoning: string;
     conceptDensity: number;
 }> {
+    // Sample from the middle of the document to skip cover pages, copyright
+    // notices, table of contents, etc. — all of which look non-academic to
+    // a validator even when the document itself is a real textbook.
+    const sample = buildValidationSample(text);
+
     const response = await chatCompletion(
         [
             {
@@ -77,11 +82,25 @@ Respond in JSON format: { "isAcademic": boolean, "reasoning": string, "conceptDe
             },
             {
                 role: 'user',
-                content: text.substring(0, 2000), // First 2000 chars for validation
+                content: sample,
             },
         ],
         { jsonMode: true }
     );
 
     return parseLLMJson(response);
+}
+
+/**
+ * Build a representative sample from the document for academic-content
+ * validation. Skips the first ~15% (cover, TOC, copyright) and samples
+ * from the middle, where actual educational content lives.
+ */
+function buildValidationSample(text: string): string {
+    if (text.length <= 2000) return text;
+
+    // Skip first 15% to bypass front matter
+    const startOffset = Math.floor(text.length * 0.15);
+    const midStart = Math.min(startOffset, text.length - 2000);
+    return text.substring(midStart, midStart + 2000);
 }

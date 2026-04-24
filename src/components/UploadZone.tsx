@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { FileText, Rocket, UploadCloud } from 'lucide-react';
 
 interface UploadZoneProps {
@@ -12,6 +12,19 @@ export default function UploadZone({ onUpload, uploading }: UploadZoneProps) {
     const [isDragOver, setIsDragOver] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [elapsedSec, setElapsedSec] = useState(0);
+
+    useEffect(() => {
+        if (!uploading) {
+            setElapsedSec(0);
+            return;
+        }
+        const started = Date.now();
+        const id = setInterval(() => {
+            setElapsedSec(Math.floor((Date.now() - started) / 1000));
+        }, 1000);
+        return () => clearInterval(id);
+    }, [uploading]);
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -120,19 +133,38 @@ export default function UploadZone({ onUpload, uploading }: UploadZoneProps) {
                 </div>
             )}
 
-            {uploading && (
-                <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                    <div className="progress-bar" style={{ maxWidth: '400px', margin: '0 auto 12px' }}>
-                        <div className="progress-bar-fill" style={{
-                            width: '70%',
-                            background: 'var(--gradient-primary)',
-                        }} />
+            {uploading && (() => {
+                const stage = elapsedSec < 10
+                    ? 'Extracting text from document...'
+                    : elapsedSec < 30
+                        ? 'Analyzing concepts & relationships...'
+                        : elapsedSec < 60
+                            ? 'Building knowledge graph...'
+                            : elapsedSec < 90
+                                ? 'Generating questions & finalizing...'
+                                : 'Almost there — large documents can take a bit longer...';
+
+                const mins = Math.floor(elapsedSec / 60);
+                const secs = elapsedSec % 60;
+                const timeLabel = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+
+                return (
+                    <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                        <div className="progress-bar" style={{ maxWidth: '400px', margin: '0 auto 12px' }}>
+                            <div className="progress-bar-fill" style={{
+                                width: '100%',
+                                background: 'var(--gradient-primary)',
+                            }} />
+                        </div>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '4px' }}>
+                            {stage}
+                        </p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                            {timeLabel} elapsed
+                        </p>
                     </div>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                        Analyzing document & building knowledge graph...
-                    </p>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 }
