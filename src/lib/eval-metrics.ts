@@ -224,19 +224,49 @@ export function computeSAI(
 // ─── Standard ITS Metrics ───
 
 /**
- * NLG — Normalized Learning Gain (Hake, 1998)
- * NLG = (post - pre) / (100 - pre)
+ * NLG — Normalized Learning Gain
  *
- * Range: −∞ to 1.0 (negative = regression, 1.0 = perfect gain from pre-score)
- * Citation: Hake, R.R. (1998). Interactive-engagement versus traditional methods.
- *           American Journal of Physics, 66(1), 64–74.
+ * Uses the BOUNDED form — Marx & Cummings (2007) "normalized change" c —
+ * which is the standard fix for the unbounded Hake (1998) gain when the
+ * pre-score is near the ceiling. Result is always in [-1, 1] (−100%..+100%):
  *
- * @param preMastery  - Mastery score BEFORE the session (0–100)
- * @param postMastery - Mastery score AFTER the session (0–100)
+ *   if post > pre:  (post - pre) / (100 - pre)   // gain side (classic Hake)
+ *   if post < pre:  (post - pre) / pre           // loss side (this is the fix)
+ *   if post = pre:  0
+ *
+ * The old unbounded form divided BOTH gains and losses by (100 - pre). When a
+ * student was already near mastery (pre ≈ 99) and dipped on a later test, that
+ * tiny denominator produced absurd values like −3807%. Normalizing losses by
+ * `pre` keeps the metric in a sane, reportable range.
+ *
+ * NOTE ON USAGE: NLG is a pre-instruction → post-instruction measure. `pre`
+ * should be the student's FIRST diagnostic on a concept and `post` their
+ * latest/best mastery on that same concept — NOT the current mastery before
+ * each repeat session. Feeding "current mastery" as `pre` on every session is
+ * what makes already-mastered concepts show large negative gains.
+ *
+ * Citations:
+ *   Hake, R.R. (1998). Interactive-engagement versus traditional methods.
+ *     American Journal of Physics, 66(1), 64–74.
+ *   Marx, J.D., & Cummings, K. (2007). Normalized change.
+ *     American Journal of Physics, 75(1), 87–91.
+ *
+ * @param preMastery  - Mastery score BEFORE instruction (0–100)
+ * @param postMastery - Mastery score AFTER instruction (0–100)
  */
 export function computeNLG(preMastery: number, postMastery: number): number {
-    if (preMastery >= 100) return 0; // Already at ceiling, no gain possible
-    return (postMastery - preMastery) / (100 - preMastery);
+    const pre = Math.max(0, Math.min(100, preMastery));
+    const post = Math.max(0, Math.min(100, postMastery));
+
+    if (pre === post) return 0;
+
+    if (post > pre) {
+        if (pre >= 100) return 0;            // already at ceiling, no headroom
+        return (post - pre) / (100 - pre);   // gain side
+    } else {
+        if (pre <= 0) return 0;              // already at floor
+        return (post - pre) / pre;            // loss side — bounds the result at -1
+    }
 }
 
 /**

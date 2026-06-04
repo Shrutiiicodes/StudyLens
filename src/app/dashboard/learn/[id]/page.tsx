@@ -81,6 +81,27 @@ function isKGContent(c: LearnContent): c is KGContent {
     return 'kgSections' in c;
 }
 
+// Dedupe past misconceptions by normalized question text so the same question
+// missed across multiple attempts is shown only once. Keeps the most recent
+// occurrence (latest created_at) so the explanation shown is the freshest.
+function dedupeMisconceptions(items: PastMisconception[]): PastMisconception[] {
+    const byKey = new Map<string, PastMisconception>();
+    for (const it of items) {
+        const key = (it.question_text ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+        if (!key) continue;
+        const existing = byKey.get(key);
+        if (!existing) {
+            byKey.set(key, it);
+        } else {
+            // Keep whichever has the later created_at
+            const a = new Date(existing.created_at).getTime() || 0;
+            const b = new Date(it.created_at).getTime() || 0;
+            if (b >= a) byKey.set(key, it);
+        }
+    }
+    return Array.from(byKey.values());
+}
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const sectionTypeStyles: Record<string, { accent: string; bg: string; iconBg: string }> = {
@@ -355,7 +376,10 @@ export default function LearnPage() {
         );
     }
 
-    const pastMisconceptions = content.pastMisconceptions ?? [];
+    // Dedupe so the same missed question isn't listed multiple times. This also
+    // corrects the "gaps to review" / "questions to review" counts, which both
+    // derive from this array length.
+    const pastMisconceptions = dedupeMisconceptions(content.pastMisconceptions ?? []);
     const placardsCount = isKGContent(content)
         ? Object.values(content.kgSections).filter(v => (Array.isArray(v) ? v.length > 0 : !!v)).length
         : (content as LLMContent).sections?.length ?? 0;

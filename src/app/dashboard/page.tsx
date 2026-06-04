@@ -39,9 +39,17 @@ export default function DashboardPage() {
                     if (statsData.success && statsData.stats) setStats(statsData.stats);
                     if (masteryData.success && masteryData.conceptMastery) setMasteryMap(masteryData.conceptMastery);
                     if (historyData.success && historyData.sessions) {
-                        const nlgSessions = historyData.sessions.filter((s: { nlg: number | null }) => s.nlg !== null);
+                        // A Normalized Learning Gain is a *normalized change* and must lie in
+                        // [-1, 1] by definition (Marx & Cummings, 2007). Older sessions were
+                        // persisted with an unbounded formula that could emit extreme values
+                        // (e.g. -38) when pre-mastery sat near the ceiling. Clamp every stored
+                        // value to its theoretical range before averaging so a single
+                        // out-of-range artifact cannot dominate the mean.
+                        const nlgSessions = historyData.sessions
+                            .filter((s: { nlg: number | null }) => s.nlg !== null && Number.isFinite(s.nlg))
+                            .map((s: { nlg: number }) => Math.max(-1, Math.min(1, s.nlg)));
                         if (nlgSessions.length > 0) {
-                            const avg = nlgSessions.reduce((sum: number, s: { nlg: number }) => sum + s.nlg, 0) / nlgSessions.length;
+                            const avg = nlgSessions.reduce((sum: number, v: number) => sum + v, 0) / nlgSessions.length;
                             setAvgNLG(Math.round(avg * 100));
                         }
                     }

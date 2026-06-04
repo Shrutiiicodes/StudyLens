@@ -24,13 +24,17 @@ const difficultyColors = { easy: '#22c55e', medium: '#f59e0b', hard: '#ef4444' }
 
 function NLGIndicator({ nlg }: { nlg: number | null }) {
     if (nlg === null) return null;
-    const pct = Math.round(nlg * 100);
-    if (nlg > 0.05) return (
+    // A normalized learning gain must lie in [-1, 1]; clamp defensively so any
+    // legacy out-of-range value (saved by the old unbounded formula) cannot
+    // render as an absurd percentage on an expanded session row.
+    const bounded = Math.max(-1, Math.min(1, nlg));
+    const pct = Math.round(bounded * 100);
+    if (bounded > 0.05) return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.75rem', color: '#22c55e', fontWeight: 600 }}>
             <TrendingUp size={12} /> +{pct}%
         </span>
     );
-    if (nlg < -0.05) return (
+    if (bounded < -0.05) return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
             <TrendingDown size={12} /> {pct}%
         </span>
@@ -117,6 +121,15 @@ function WeakTopicsPanel({ topics, onNavigate }: {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {topics.map((topic) => {
                     const isOpen = expanded === topic.concept_id;
+                    // Dedupe missed questions by normalized text so the same question
+                    // answered wrong across multiple attempts appears only once.
+                    const seen = new Set<string>();
+                    const uniqueQuestions = topic.questions.filter((q) => {
+                        const key = q.question_text.trim().toLowerCase().replace(/\s+/g, ' ');
+                        if (seen.has(key)) return false;
+                        seen.add(key);
+                        return true;
+                    });
                     return (
                         <div key={topic.concept_id} style={{
                             background: 'var(--bg-secondary)',
@@ -170,13 +183,13 @@ function WeakTopicsPanel({ topics, onNavigate }: {
                             </div>
 
                             {/* Expanded: sample questions */}
-                            {isOpen && topic.questions.length > 0 && (
+                            {isOpen && uniqueQuestions.length > 0 && (
                                 <div style={{ padding: '0 16px 14px', borderTop: '1px solid rgba(239,68,68,0.1)' }}>
                                     <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '10px 0 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                         Sample questions you missed
                                     </p>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        {topic.questions.map((q, i) => (
+                                        {uniqueQuestions.map((q, i) => (
                                             <div key={i} style={{
                                                 padding: '10px 12px',
                                                 background: 'var(--bg-elevated)',
@@ -243,9 +256,14 @@ export default function HistoryPage() {
         ? Math.round(sessions.reduce((s, h) => s + h.score, 0) / totalTests) : 0;
     const passRate = totalTests > 0
         ? Math.round((sessions.filter(s => s.passed).length / totalTests) * 100) : 0;
-    const nlgSessions = sessions.filter(s => s.nlg !== null);
+    // A Normalized Learning Gain is a normalized change bounded to [-1, 1]
+    // (Marx & Cummings, 2007). Legacy sessions were persisted with an unbounded
+    // formula that emitted extreme values when pre-mastery sat near the ceiling.
+    // Clamp each stored value to its theoretical range before averaging so a
+    // single artifact cannot distort the mean. Matches the dashboard exactly.
+    const nlgSessions = sessions.filter(s => s.nlg !== null && Number.isFinite(s.nlg));
     const avgNLG = nlgSessions.length > 0
-        ? Math.round(nlgSessions.reduce((s, h) => s + (h.nlg ?? 0), 0) / nlgSessions.length * 100) : null;
+        ? Math.round(nlgSessions.reduce((s, h) => s + Math.max(-1, Math.min(1, h.nlg ?? 0)), 0) / nlgSessions.length * 100) : null;
 
     if (loading) {
         return (
@@ -282,7 +300,7 @@ export default function HistoryPage() {
                     { label: 'Total Tests', value: totalTests, icon: <ClipboardList size={24} />, color: 'var(--accent-primary)' },
                     { label: 'Avg Score', value: `${avgScore}%`, icon: <BarChart size={24} />, color: 'var(--accent-tertiary)' },
                     { label: 'Pass Rate', value: `${passRate}%`, icon: <Target size={24} />, color: 'var(--accent-success)' },
-                    { label: 'Avg Learning Gain', value: avgNLG !== null ? `+${avgNLG}%` : '—', icon: <TrendingUp size={24} />, color: '#22c55e' },
+                    { label: 'Avg Learning Gain', value: avgNLG !== null ? `${avgNLG >= 0 ? '+' : ''}${avgNLG}%` : '—', icon: <TrendingUp size={24} />, color: avgNLG !== null && avgNLG < 0 ? 'var(--accent-danger)' : '#22c55e' },
                 ].map((stat, idx) => (
                     <div key={idx} className="stat-card" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
                         <div style={{ color: stat.color, marginBottom: '8px' }}>{stat.icon}</div>
