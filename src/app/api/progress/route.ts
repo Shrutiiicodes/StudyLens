@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { STAGE_KEYS, STAGE_KEYS_WITH_COMPLETE, type StageKeyWithComplete } from '@/config/constants';
+import { getAuthedUserId } from '@/lib/auth';
 
 /**
- * GET /api/progress?userId=xxx&conceptId=xxx
- * Get the current stage and mastery for a concept.
+ * GET /api/progress?conceptId=xxx
+ * Get the current stage and mastery for a concept (user from session).
  *
- * GET /api/progress?userId=xxx
- * Get all concept stages for a user.
+ * GET /api/progress
+ * Get all concept stages for the authenticated user.
  */
 export async function GET(request: NextRequest) {
     try {
-        const userId = request.nextUrl.searchParams.get('userId');
+        const userId = await getAuthedUserId();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const conceptId = request.nextUrl.searchParams.get('conceptId');
         const supabase = getServiceSupabase();
-
-        if (!userId) {
-            return NextResponse.json({ error: 'userId is required' }, { status: 400 });
-        }
 
         if (conceptId) {
             const { data: mastery } = await supabase

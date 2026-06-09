@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { DEFAULT_BKT_PARAMS, type BKTParams } from '@/lib/bkt';
+import { getAuthedUserId } from '@/lib/auth';
 
 /**
  * POST /api/irt/fit
- * Body: { conceptId: string, userId?: string }
+ * Body: { conceptId: string }
  *
- * Fits per-concept BKT parameters using Expectation-Maximisation (EM).
- * Replaces the default priors with empirically calibrated values once
- * sufficient response data has accumulated (minimum 30 attempts).
+ * Admin/research operation: fits per-concept BKT parameters via EM across
+ * ALL students for the concept. Requires a valid session to invoke (it runs
+ * an expensive grid search and writes shared model params). Identity is
+ * never taken from the request body.
  *
  * Algorithm: Brute-force grid search over (p_l0, p_t, p_s, p_g) space,
  * maximising the log-likelihood of the observed attempt sequences.
- * This is equivalent to the EM approach described in:
+ * Equivalent to the EM approach in:
  *
  *   Baker, R.S.J.d., Corbett, A.T., & Aleven, V. (2008).
  *   More accurate student modeling through contextual estimation of
@@ -28,29 +30,30 @@ import { DEFAULT_BKT_PARAMS, type BKTParams } from '@/lib/bkt';
  *   p_g < 0.40        — guess rate cap (higher = model breakdown)
  *   p_t > 0.01        — learning must be possible
  *
- * Fitted params are stored in a new `concept_bkt_params` table.
- * The evaluation engine reads from this table preferentially over defaults.
+ * Fitted params are stored in `concept_bkt_params`. The evaluation engine
+ * reads from this table preferentially over defaults.
  */
 export async function POST(request: NextRequest) {
     try {
+        const userId = await getAuthedUserId();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const supabase = getServiceSupabase();
         const body = await request.json();
-        const { conceptId, userId } = body;
+        const { conceptId } = body;
 
         if (!conceptId) {
             return NextResponse.json({ error: 'conceptId is required' }, { status: 400 });
         }
 
-        // ── 1. Fetch attempt sequences for this concept ───────────────────
-        let query = supabase
+        // ── 1. Fetch attempt sequences for this concept (ALL students) ────
+        const { data: attempts, error } = await supabase
             .from('attempts')
             .select('user_id, correct, created_at')
             .eq('concept_id', conceptId)
             .order('created_at', { ascending: true });
-
-        if (userId) query = query.eq('user_id', userId);
-
-        const { data: attempts, error } = await query;
 
         if (error) {
             return NextResponse.json({ error: 'Failed to fetch attempts' }, { status: 500 });

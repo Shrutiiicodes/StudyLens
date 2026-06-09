@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getAuthedUserId } from '@/lib/auth';
 import {
     computeMasteryImprovementRate,
     computeAvgTimeToMastery,
@@ -12,25 +13,26 @@ import {
 } from '@/lib/eval-metrics';
 
 /**
- * GET /api/metrics?userId=xxx
- * Returns all computed metrics for a student's dashboard.
- * Now surfaces NLG, Brier Score, ECE, and Log-Loss as primary ITS metrics.
+ * GET /api/metrics
+ * Returns all computed metrics for the authenticated student's dashboard.
+ * Surfaces NLG, Brier Score, ECE, and Log-Loss as primary ITS metrics.
  *
- * GET /api/metrics?userId=xxx&conceptId=xxx
- * Returns metrics scoped to a single concept.
+ * GET /api/metrics?conceptId=xxx
+ * Returns metrics scoped to a single concept (user from session).
  *
  * GET /api/metrics?system=true
  * Returns system-level aggregate metrics (admin only).
+ * TODO(step5): gate behind an admin role check — currently open.
  */
 export async function GET(request: NextRequest) {
     try {
         const supabase = getServiceSupabase();
         const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId');
         const conceptId = searchParams.get('conceptId');
         const systemLevel = searchParams.get('system') === 'true';
 
         // ── System-level metrics ──────────────────────────────────────────
+        // Aggregate across all students — no single-user identity needed.
         if (systemLevel) {
             const { data: allMastery } = await supabase
                 .from('mastery')
@@ -99,11 +101,11 @@ export async function GET(request: NextRequest) {
             });
         }
 
+        // ── Student-level metrics require a session ───────────────────────
+        const userId = await getAuthedUserId();
         if (!userId) {
-            return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-
-        // ── Student-level metrics ─────────────────────────────────────────
 
         let attemptsQuery = supabase
             .from('attempts')

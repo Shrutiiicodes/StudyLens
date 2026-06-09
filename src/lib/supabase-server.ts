@@ -31,8 +31,7 @@
  *
  * 4. The existing src/lib/supabase.ts (service-role client) is unchanged.
  */
-
-import { createBrowserClient as _createBrowserClient } from '@supabase/ssr';
+import 'server-only';
 import { createServerClient as _createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
@@ -40,14 +39,6 @@ import { NextRequest, NextResponse } from 'next/server';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// ── 1. Browser / Client Components ───────────────────────────
-/**
- * Use in 'use client' components.
- * Drop-in for createBrowserClient().
- */
-export function createBrowserClient() {
-    return _createBrowserClient(SUPABASE_URL, SUPABASE_ANON);
-}
 
 // ── 2. Server Components ─────────────────────────────────────
 /**

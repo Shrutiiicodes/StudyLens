@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getAuthedUserId } from '@/lib/auth';
 
 /**
- * GET /api/misconceptions?userId=xxx&conceptId=xxx
- * GET /api/misconceptions?userId=xxx&sessionId=xxx
+ * GET /api/misconceptions?conceptId=xxx
+ * GET /api/misconceptions?sessionId=xxx
  *
- * Fetch misconception records for a user, optionally filtered by concept or session.
+ * Fetch misconception records for the authenticated user,
+ * optionally filtered by concept or session.
  */
 export async function GET(request: NextRequest) {
     try {
-        const userId = request.nextUrl.searchParams.get('userId');
+        const userId = await getAuthedUserId();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const conceptId = request.nextUrl.searchParams.get('conceptId');
         const sessionId = request.nextUrl.searchParams.get('sessionId');
-
-        if (!userId) {
-            return NextResponse.json({ error: 'userId is required' }, { status: 400 });
-        }
 
         const supabase = getServiceSupabase();
 

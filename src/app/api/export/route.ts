@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getAuthedUserId } from '@/lib/auth';
 
 /**
- * GET /api/export?userId=xxx
- * Exports a research-grade CSV of all attempt-level data for a student.
- * Includes every field needed for ITS/knowledge-tracing paper analysis.
+ * GET /api/export
+ * Exports a research-grade CSV of all attempt-level data for the
+ * authenticated student. Includes every field needed for ITS/KT analysis.
  *
- * GET /api/export?userId=xxx&conceptId=xxx
- * Scoped to a single concept.
- *
- * GET /api/export?userId=xxx&format=json
- * Returns JSON instead of CSV (useful for programmatic analysis).
+ * GET /api/export?conceptId=xxx     → scoped to a single concept.
+ * GET /api/export?format=json       → JSON instead of CSV.
  *
  * Columns exported (matches standard KT dataset format):
  *   student_id, concept_id, question_id, attempt_index,
@@ -29,16 +27,16 @@ import { getServiceSupabase } from '@/lib/supabase';
  */
 export async function GET(request: NextRequest) {
     try {
+        const userId = await getAuthedUserId();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const supabase = getServiceSupabase();
         const { searchParams } = new URL(request.url);
 
-        const userId = searchParams.get('userId');
         const conceptId = searchParams.get('conceptId');
         const format = searchParams.get('format') ?? 'csv';
-
-        if (!userId) {
-            return NextResponse.json({ error: 'userId is required' }, { status: 400 });
-        }
 
         // ── 1. Fetch all attempts ─────────────────────────────────────────
         let attemptsQuery = supabase

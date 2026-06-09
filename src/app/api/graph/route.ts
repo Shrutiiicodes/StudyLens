@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runCypher } from '@/lib/neo4j';
+import { getAuthedUserId } from '@/lib/auth';
 
 /**
- * GET /api/graph?conceptId=xxx&userId=xxx
- * Get knowledge graph data for a concept from Neo4j.
+ * GET /api/graph?conceptId=xxx
+ * Get knowledge graph data for a concept from Neo4j (user from session).
  */
 export async function GET(request: NextRequest) {
     try {
-        const conceptId = request.nextUrl.searchParams.get('conceptId');
-        const userId = request.nextUrl.searchParams.get('userId');
-
+        const userId = await getAuthedUserId();
         if (!userId) {
-            return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
+        const conceptId = request.nextUrl.searchParams.get('conceptId');
 
         // Fetch all concept nodes and related nodes for this document
         const results = await runCypher(

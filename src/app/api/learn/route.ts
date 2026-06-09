@@ -3,12 +3,15 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { runCypher } from '@/lib/neo4j';
 import { chatCompletion, parseLLMJson } from '@/lib/groq';
 import { PROMPTS } from '@/config/prompts';
+import { getAuthedUserId } from '@/lib/auth';
+
 export const maxDuration = 60;
 export const runtime = 'nodejs';
 /**
- * GET /api/learn?conceptId=xxx&userId=xxx&grade=10
+ * GET /api/learn?conceptId=xxx&grade=10
  *
  * Learn-mode content for the study interface.
+ * Past-misconception enrichment is scoped to the session user (may be absent).
  *
  * Three-tier resolution (cheap → expensive):
  *   1. KG path — concept has structured graph content. Zero LLM calls.
@@ -34,8 +37,10 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const conceptId = searchParams.get('conceptId');
-        const userId = searchParams.get('userId');
         const grade = searchParams.get('grade') || '10';
+
+        // Optional enrichment identity — from the verified session, may be null.
+        const userId = await getAuthedUserId();
 
         if (!conceptId) {
             return NextResponse.json({ error: 'Missing conceptId' }, { status: 400 });

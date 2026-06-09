@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getAuthedUserId } from '@/lib/auth';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
     try {
-        const supabase = getServiceSupabase();
-        const userId = request.nextUrl.searchParams.get('userId');
-
+        const userId = await getAuthedUserId();
         if (!userId) {
-            return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
+        const supabase = getServiceSupabase();
 
         // Fetch sessions with concept title joined
         const { data: sessions, error } = await supabase

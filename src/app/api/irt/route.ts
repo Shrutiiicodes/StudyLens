@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { raschProbability, masteryToTheta, difficultyParamToLevel } from '@/lib/irt';
+import { getAuthedUserId } from '@/lib/auth';
 
 /**
  * GET /api/irt?questionId=xxx
@@ -9,9 +10,9 @@ import { raschProbability, masteryToTheta, difficultyParamToLevel } from '@/lib/
  * GET /api/irt?conceptId=xxx
  * Returns IRT calibration state for all questions belonging to a concept.
  *
- * GET /api/irt?conceptId=xxx&userId=xxx
- * Returns IRT state enriched with P(correct) for this student's current mastery,
- * useful for adaptive question selection.
+ * If the caller has a session, responses are enriched with P(correct) for
+ * THAT student's current mastery (used for adaptive question selection).
+ * Identity comes from the session — never a client-supplied userId.
  *
  * GET /api/irt?system=true
  * Returns system-wide IRT summary: distribution of difficulty params,
@@ -24,8 +25,10 @@ export async function GET(request: NextRequest) {
 
         const questionId = searchParams.get('questionId');
         const conceptId = searchParams.get('conceptId');
-        const userId = searchParams.get('userId');
         const systemMode = searchParams.get('system') === 'true';
+
+        // Optional enrichment identity — from the verified session, may be null.
+        const userId = await getAuthedUserId();
 
         // ── System-wide IRT summary ───────────────────────────────────────
         if (systemMode) {
@@ -109,7 +112,7 @@ export async function GET(request: NextRequest) {
                 );
             }
 
-            // If userId provided, compute P(correct) for this student
+            // If a session exists, compute P(correct) for this student
             let pCorrect: number | null = null;
             if (userId) {
                 const { data: mastery } = await supabase
@@ -171,7 +174,7 @@ export async function GET(request: NextRequest) {
 
             const rows = irtRows ?? [];
 
-            // If userId provided, fetch mastery to compute P(correct) per question
+            // If a session exists, fetch mastery to compute P(correct) per question
             let theta: number | null = null;
             if (userId) {
                 const { data: mastery } = await supabase

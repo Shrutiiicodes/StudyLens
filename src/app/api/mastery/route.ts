@@ -8,10 +8,11 @@ import {
     getReviewUrgency,
 } from '@/lib/forgetting-model';
 import { getDifficultyDistribution } from '@/lib/personalization-engine';
+import { getAuthedUserId } from '@/lib/auth';
 
 /**
- * GET /api/mastery?userId=xxx
- * Get mastery overview for dashboard.
+ * GET /api/mastery
+ * Get mastery overview for dashboard (user from session).
  *
  * CHANGE LOG (improvements batch):
  * - Added `review_by_date` (ISO string): absolute date by which the
@@ -23,12 +24,11 @@ import { getDifficultyDistribution } from '@/lib/personalization-engine';
  * - Fixed: mss and learnItPriority were hardcoded to 0 — now computed
  *   from attempt data.
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
     try {
-        const userId = request.nextUrl.searchParams.get('userId');
-
+        const userId = await getAuthedUserId();
         if (!userId) {
-            return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         // Get all mastery records

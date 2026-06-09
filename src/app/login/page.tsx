@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSupabase } from '@/lib/supabase';
 import { Microscope, Rocket } from 'lucide-react';
+import { createBrowserClient } from '@/lib/supabase-browser';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -26,13 +26,8 @@ export default function LoginPage() {
         const stored = localStorage.getItem('study-lens-user');
         if (stored) {
             const parsed = JSON.parse(stored);
-            // Demo users bypass Supabase session check
-            if (parsed.id === '00000000-0000-0000-0000-000000000001') {
-                router.push('/dashboard');
-                return;
-            }
             // Verify the Supabase session is still valid
-            const sb = getSupabase();
+            const sb = createBrowserClient();
             sb.auth.getSession().then(({ data: { session } }) => {
                 if (session) {
                     router.push('/dashboard');
@@ -62,7 +57,7 @@ export default function LoginPage() {
                 return;
             }
 
-            const sb = getSupabase();
+            const sb = createBrowserClient();
 
             if (isLogin) {
                 // Sign in with Supabase
@@ -312,15 +307,31 @@ export default function LoginPage() {
                     {/* Demo Bypass */}
                     <button
                         className="btn-secondary"
-                        onClick={() => {
-                            const demoUser = {
-                                id: 'bb3317b9-3b9c-4928-ab47-4376f5cd9112',
-                                email: 'demo@studylens.com',
-                                full_name: 'Demo Student',
-                                grade: 7,
-                            };
-                            localStorage.setItem('study-lens-user', JSON.stringify(demoUser));
-                            router.push('/dashboard');
+                        onClick={async () => {
+                            setLoading(true);
+                            setError('');
+                            try {
+                                const sb = createBrowserClient();
+                                const { data, error: authError } = await sb.auth.signInWithPassword({
+                                    email: 'demo@studylens.com',
+                                    password: 'DemoStudent123!',
+                                });
+                                if (authError || !data.user) {
+                                    setError('Demo login failed: ' + (authError?.message ?? 'unknown'));
+                                    setLoading(false);
+                                    return;
+                                }
+                                localStorage.setItem('study-lens-user', JSON.stringify({
+                                    id: data.user.id,
+                                    email: data.user.email,
+                                    full_name: data.user.user_metadata?.full_name || 'Demo Student',
+                                    grade: data.user.user_metadata?.grade || 7,
+                                }));
+                                router.push('/dashboard');
+                            } catch {
+                                setError('Demo login failed. Please try again.');
+                                setLoading(false);
+                            }
                         }}
                         style={{
                             width: '100%',

@@ -2,17 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateQuestionsForMode } from '@/lib/question-generator';
 import { evaluateDiagnostic } from '@/lib/evaluation-engine';
 import { QuestionResult } from '@/types/mastery';
+import { getAuthedUserId } from '@/lib/auth';
+
 export const maxDuration = 60;
 export const runtime = 'nodejs';
 
 /**
  * POST /api/diagnostic
  * Generate questions or evaluate results for any assessment mode.
+ * Identity is taken from the verified session — never the request body.
  */
 export async function POST(request: NextRequest) {
     try {
+        const userId = await getAuthedUserId();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const body = await request.json();
-        const { action, conceptId, conceptTitle, userId, results, mode } = body;
+        const { action, conceptId, conceptTitle, results, mode } = body;
 
         if (action === 'generate') {
             if (!conceptId || !conceptTitle) {
@@ -34,9 +42,9 @@ export async function POST(request: NextRequest) {
         }
 
         if (action === 'evaluate') {
-            if (!userId || !conceptId || !results) {
+            if (!conceptId || !results) {
                 return NextResponse.json(
-                    { error: 'userId, conceptId, and results are required' },
+                    { error: 'conceptId and results are required' },
                     { status: 400 }
                 );
             }
