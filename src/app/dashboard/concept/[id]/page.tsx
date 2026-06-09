@@ -7,6 +7,7 @@ import MasteryGraph from '@/components/MasteryGraph';
 import { ArrowLeft, Target, BookOpen, ClipboardList, BarChart2, Search, FileEdit, Trophy, CheckCircle, } from 'lucide-react';
 import { ConceptDetail, ConceptProgress, ConceptNode, ConceptRelation } from '@/types/concept';
 import { ConceptSessionSummary } from '@/types/session';
+import { useUser } from '@/lib/useUser';
 
 // Derive ProgressCard status from stage
 function stageToStatus(stage: string): 'locked' | 'unlocked' | 'mastered' {
@@ -19,6 +20,7 @@ export default function ConceptDetailPage() {
     const params = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { user } = useUser();
     const conceptId = params.id as string;
 
     const [concept, setConcept] = useState<ConceptDetail | null>(null);
@@ -33,17 +35,15 @@ export default function ConceptDetailPage() {
     const conceptTitle = concept?.title || titleFromUrl || 'Concept';
 
     useEffect(() => {
+        if (!user) return;
+
         async function fetchData() {
             try {
-                const stored = localStorage.getItem('study-lens-user');
-                if (!stored) return;
-                const user = JSON.parse(stored);
-
                 // Fetch concept details + progress in parallel
                 const [conceptsRes, progressRes, graphRes] = await Promise.all([
-                    fetch(`/api/concepts?userId=${user.id}`),
-                    fetch(`/api/progress?userId=${user.id}&conceptId=${conceptId}`),
-                    fetch(`/api/graph?conceptId=${conceptId}&userId=${user.id}`),
+                    fetch(`/api/concepts`),
+                    fetch(`/api/progress?conceptId=${conceptId}`),
+                    fetch(`/api/graph?conceptId=${conceptId}`),
                 ]);
 
                 const conceptsData = await conceptsRes.json();
@@ -78,7 +78,7 @@ export default function ConceptDetailPage() {
         }
 
         fetchData();
-    }, [conceptId, titleFromUrl]);
+    }, [user, conceptId, titleFromUrl]);
 
     const mastery = progress?.mastery_score ?? 0;
     const stage = progress?.current_stage ?? 'diagnostic';

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@/lib/useUser';
 import {
     Search, FileEdit, Trophy, Clock, ClipboardList, BarChart, Target, ChevronRight, TrendingUp, TrendingDown, Minus, AlertTriangle, ChevronDown, ChevronUp,
 } from 'lucide-react';
@@ -219,6 +220,7 @@ function WeakTopicsPanel({ topics, onNavigate }: {
 
 export default function HistoryPage() {
     const router = useRouter();
+    const { user } = useUser();
     const [sessions, setSessions] = useState<SessionRecord[]>([]);
     const [weakTopics, setWeakTopics] = useState<WeakTopic[]>([]);
     const [loading, setLoading] = useState(true);
@@ -226,13 +228,11 @@ export default function HistoryPage() {
     const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!user) return;
+
         async function fetchHistory() {
             try {
-                const stored = localStorage.getItem('study-lens-user');
-                if (!stored) { setLoading(false); return; }
-                const user = JSON.parse(stored);
-
-                const res = await fetch(`/api/history?userId=${user.id}`);
+                const res = await fetch(`/api/history`);
                 if (!res.ok) throw new Error('Failed to fetch history');
                 const data = await res.json();
 
@@ -248,7 +248,7 @@ export default function HistoryPage() {
             }
         }
         fetchHistory();
-    }, []);
+    }, [user]);
 
     // ── Computed stats ────────────────────────────────────────────────────
     const totalTests = sessions.length;

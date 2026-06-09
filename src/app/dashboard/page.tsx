@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FileText, Target, BookOpen, Book, ClipboardList, Rocket, Brain, Clock, Trash2, TrendingUp } from 'lucide-react';
 import { ConceptRecord } from '@/types/concept';
+import { useUser } from '@/lib/useUser';
 
 export default function DashboardPage() {
-    const [user, setUser] = useState<{ id: string; full_name: string; grade: number } | null>(null);
+    const { user } = useUser();
     const [concepts, setConcepts] = useState<ConceptRecord[]>([]);
     const [stats, setStats] = useState<{ testsTaken: number; } | null>(null);
     const [avgNLG, setAvgNLG] = useState<number | null>(null);
@@ -24,42 +25,36 @@ export default function DashboardPage() {
     const router = useRouter();
 
     useEffect(() => {
-        const stored = localStorage.getItem('study-lens-user');
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            setUser(parsed);
+        if (!user) return;
 
-            const fetchConcepts = fetch(`/api/concepts?userId=${parsed.id}`, { cache: 'no-store' }).then((res) => res.json());
-            const fetchStats = fetch(`/api/user/stats?userId=${parsed.id}`, { cache: 'no-store' }).then((res) => res.json());
-            const fetchMastery = fetch(`/api/mastery?userId=${parsed.id}`, { cache: 'no-store' }).then((res) => res.json());
-            const fetchHistory = fetch(`/api/history?userId=${parsed.id}`, { cache: 'no-store' }).then((res) => res.json());
-            Promise.all([fetchConcepts, fetchStats, fetchMastery, fetchHistory])
-                .then(([conceptsData, statsData, masteryData, historyData]) => {
-                    if (conceptsData.success && conceptsData.concepts) setConcepts(conceptsData.concepts);
-                    if (statsData.success && statsData.stats) setStats(statsData.stats);
-                    if (masteryData.success && masteryData.conceptMastery) setMasteryMap(masteryData.conceptMastery);
-                    if (historyData.success && historyData.sessions) {
-                        // A Normalized Learning Gain is a *normalized change* and must lie in
-                        // [-1, 1] by definition (Marx & Cummings, 2007). Older sessions were
-                        // persisted with an unbounded formula that could emit extreme values
-                        // (e.g. -38) when pre-mastery sat near the ceiling. Clamp every stored
-                        // value to its theoretical range before averaging so a single
-                        // out-of-range artifact cannot dominate the mean.
-                        const nlgSessions = historyData.sessions
-                            .filter((s: { nlg: number | null }) => s.nlg !== null && Number.isFinite(s.nlg))
-                            .map((s: { nlg: number }) => Math.max(-1, Math.min(1, s.nlg)));
-                        if (nlgSessions.length > 0) {
-                            const avg = nlgSessions.reduce((sum: number, v: number) => sum + v, 0) / nlgSessions.length;
-                            setAvgNLG(Math.round(avg * 100));
-                        }
+        const fetchConcepts = fetch(`/api/concepts`, { cache: 'no-store' }).then((res) => res.json());
+        const fetchStats = fetch(`/api/user/stats`, { cache: 'no-store' }).then((res) => res.json());
+        const fetchMastery = fetch(`/api/mastery`, { cache: 'no-store' }).then((res) => res.json());
+        const fetchHistory = fetch(`/api/history`, { cache: 'no-store' }).then((res) => res.json());
+        Promise.all([fetchConcepts, fetchStats, fetchMastery, fetchHistory])
+            .then(([conceptsData, statsData, masteryData, historyData]) => {
+                if (conceptsData.success && conceptsData.concepts) setConcepts(conceptsData.concepts);
+                if (statsData.success && statsData.stats) setStats(statsData.stats);
+                if (masteryData.success && masteryData.conceptMastery) setMasteryMap(masteryData.conceptMastery);
+                if (historyData.success && historyData.sessions) {
+                    // A Normalized Learning Gain is a *normalized change* and must lie in
+                    // [-1, 1] by definition (Marx & Cummings, 2007). Older sessions were
+                    // persisted with an unbounded formula that could emit extreme values
+                    // (e.g. -38) when pre-mastery sat near the ceiling. Clamp every stored
+                    // value to its theoretical range before averaging so a single
+                    // out-of-range artifact cannot dominate the mean.
+                    const nlgSessions = historyData.sessions
+                        .filter((s: { nlg: number | null }) => s.nlg !== null && Number.isFinite(s.nlg))
+                        .map((s: { nlg: number }) => Math.max(-1, Math.min(1, s.nlg)));
+                    if (nlgSessions.length > 0) {
+                        const avg = nlgSessions.reduce((sum: number, v: number) => sum + v, 0) / nlgSessions.length;
+                        setAvgNLG(Math.round(avg * 100));
                     }
-                })
-                .catch(console.error)
-                .finally(() => setLoading(false));
-        } else {
-            setLoading(false);
-        }
-    }, []);
+                }
+            })
+            .catch(console.error)
+            .finally(() => setLoading(false));
+    }, [user]);
     const reviewDue = masteryMap
         .filter(m => m.needs_review && m.current_mastery > 0)
         .sort((a, b) => b.hours_since_update - a.hours_since_update); // most overdue first
@@ -74,7 +69,7 @@ export default function DashboardPage() {
 
         setDeletingId(concept.id);
         try {
-            const res = await fetch(`/api/concepts/${concept.id}?userId=${user.id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/concepts/${concept.id}`, { method: 'DELETE' });
             const data = await res.json();
             if (data.success) {
                 setConcepts(prev => prev.filter(c => c.id !== concept.id));

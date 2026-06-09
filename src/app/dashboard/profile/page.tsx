@@ -2,20 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabase } from '@/lib/supabase';
+import { createBrowserClient } from '@/lib/supabase-browser';
+import { useUser } from '@/lib/useUser';
 import { CheckCircle, XCircle, LogOut } from 'lucide-react';
-
-interface UserData {
-    id: string;
-    email: string;
-    full_name: string;
-    grade: number;
-    phone?: string;
-}
 
 export default function ProfilePage() {
     const router = useRouter();
-    const [user, setUser] = useState<UserData | null>(null);
+    const { user, signOut } = useUser();
     const [name, setName] = useState('');
     const [grade, setGrade] = useState(6);
     const [contact, setContact] = useState('');
@@ -23,15 +16,11 @@ export default function ProfilePage() {
     const [message, setMessage] = useState({ text: '', type: '' });
 
     useEffect(() => {
-        const stored = localStorage.getItem('study-lens-user');
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            setUser(parsed);
-            setName(parsed.full_name || '');
-            setGrade(parsed.grade || 6);
-            setContact(parsed.email || '');
-        }
-    }, []);
+        if (!user) return;
+        setName(user.full_name || '');
+        setGrade(user.grade || 6);
+        setContact(user.email || '');
+    }, [user]);
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,32 +30,17 @@ export default function ProfilePage() {
         try {
             if (!user) return;
 
-            const updatedUser = {
-                ...user,
-                full_name: name,
-                grade: grade,
-            };
+            const sb = createBrowserClient();
+            const { error } = await sb.auth.updateUser({
+                data: {
+                    full_name: name,
+                    grade: grade,
+                }
+            });
 
-            // If not a demo user, update Supabase
-            if (user.id !== '00000000-0000-0000-0000-000000000001') {
-                const sb = getSupabase();
-                const { error } = await sb.auth.updateUser({
-                    data: {
-                        full_name: name,
-                        grade: grade,
-                    }
-                });
+            if (error) throw error;
 
-                if (error) throw error;
-            }
-
-            // Update localStorage
-            localStorage.setItem('study-lens-user', JSON.stringify(updatedUser));
-            setUser(updatedUser);
             setMessage({ text: 'Profile updated successfully!', type: 'success' });
-
-            // Trigger a layout re-render if needed (layout reads from localStorage)
-            window.dispatchEvent(new Event('storage'));
         } catch (err) {
             console.error('Update failed:', err);
             setMessage({ text: (err as any).message || 'Failed to update profile', type: 'error' });
@@ -76,9 +50,7 @@ export default function ProfilePage() {
     };
 
     const handleLogout = async () => {
-        const sb = getSupabase();
-        await sb.auth.signOut();
-        localStorage.removeItem('study-lens-user');
+        await signOut();
         router.push('/');
     };
 
@@ -201,18 +173,6 @@ export default function ProfilePage() {
                     </button>
                 </div>
             </div>
-
-            {user.id === '00000000-0000-0000-0000-000000000001' && (
-                <p style={{
-                    marginTop: '24px',
-                    color: 'var(--text-muted)',
-                    fontSize: '0.85rem',
-                    textAlign: 'center',
-                    fontStyle: 'italic'
-                }}>
-                    Note: You are in Demo Mode. Changes are saved locally to your browser.
-                </p>
-            )}
         </div>
     );
 }

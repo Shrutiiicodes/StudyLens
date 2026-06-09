@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useUser } from '@/lib/useUser';
 import {
     ArrowLeft,
     Rocket,
@@ -294,6 +295,7 @@ function PastMisconceptionsSection({ items }: { items: PastMisconception[] }) {
 export default function LearnPage() {
     const params = useParams();
     const router = useRouter();
+    const { user } = useUser();
     const conceptId = params.id as string;
 
     const [content, setContent] = useState<LearnContent | null>(null);
@@ -303,18 +305,15 @@ export default function LearnPage() {
     const [isComplete, setIsComplete] = useState(false);
 
     useEffect(() => {
+        if (!user) return;
+
         async function fetchLearn() {
             try {
-                const stored = localStorage.getItem('study-lens-user');
-                const user = stored ? JSON.parse(stored) : null;
                 const grade = user?.grade || 10;
-                const userId = user?.id || '';
 
                 const [learnRes, progressRes] = await Promise.all([
-                    fetch(`/api/learn?conceptId=${conceptId}&grade=${grade}&userId=${userId}`),
-                    user
-                        ? fetch(`/api/progress?userId=${user.id}&conceptId=${conceptId}`)
-                        : Promise.resolve(null),
+                    fetch(`/api/learn?conceptId=${conceptId}&grade=${grade}`),
+                    fetch(`/api/progress?conceptId=${conceptId}`),
                 ]);
 
                 const data = await learnRes.json();
@@ -324,12 +323,10 @@ export default function LearnPage() {
                     setError(data.error || 'Failed to load lesson content');
                 }
 
-                if (progressRes) {
-                    const progressData = await progressRes.json();
-                    if (progressData.success) {
-                        setCurrentStage(progressData.currentStage ?? 'diagnostic');
-                        setIsComplete(progressData.isComplete ?? false);
-                    }
+                const progressData = await progressRes.json();
+                if (progressData.success) {
+                    setCurrentStage(progressData.currentStage ?? 'diagnostic');
+                    setIsComplete(progressData.isComplete ?? false);
                 }
             } catch (err) {
                 setError('Network error. Please try again.');
@@ -338,7 +335,7 @@ export default function LearnPage() {
             }
         }
         fetchLearn();
-    }, [conceptId]);
+    }, [user, conceptId]);
 
     const showPractice = currentStage !== 'diagnostic' || isComplete;
     const showMastery = currentStage === 'mastery' || isComplete;

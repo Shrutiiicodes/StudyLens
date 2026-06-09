@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { STAGE_DEFS } from '@/config/constants';
 import { Search, FileEdit, Trophy, Clock, Pencil, FileText, CheckCircle, Book, Lock, Info, Trash2, } from 'lucide-react';
 import { ConceptRecord, ProgressData } from '@/types/concept';
+import { useUser } from '@/lib/useUser';
 // Icons for each stage — injected at render-time since JSX can't live in constants.ts.
 const STAGE_ICONS: Record<string, React.ReactNode> = {
     diagnostic: <Search size={14} />,
@@ -16,21 +17,20 @@ const STAGE_ICONS: Record<string, React.ReactNode> = {
 const STAGES = STAGE_DEFS.map(s => ({ ...s, icon: STAGE_ICONS[s.key] }));
 
 export default function ConceptsPage() {
+    const { user } = useUser();
     const [concepts, setConcepts] = useState<ConceptRecord[]>([]);
     const [progress, setProgress] = useState<Record<string, ProgressData>>({});
     const [loading, setLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!user) return;
+
         async function fetchData() {
             try {
-                const stored = localStorage.getItem('study-lens-user');
-                if (!stored) return;
-                const user = JSON.parse(stored);
-
                 const [conceptsRes, progressRes] = await Promise.all([
-                    fetch(`/api/concepts?userId=${user.id}`),
-                    fetch(`/api/progress?userId=${user.id}`),
+                    fetch(`/api/concepts`),
+                    fetch(`/api/progress`),
                 ]);
 
                 const conceptsData = await conceptsRes.json();
@@ -50,7 +50,7 @@ export default function ConceptsPage() {
         }
 
         fetchData();
-    }, []);
+    }, [user]);
 
     async function handleDelete(concept: ConceptRecord) {
         const confirmed = window.confirm(
@@ -58,13 +58,11 @@ export default function ConceptsPage() {
         );
         if (!confirmed) return;
 
-        const stored = localStorage.getItem('study-lens-user');
-        if (!stored) return;
-        const user = JSON.parse(stored);
+        if (!user) return;
 
         setDeletingId(concept.id);
         try {
-            const res = await fetch(`/api/concepts/${concept.id}?userId=${user.id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/concepts/${concept.id}`, { method: 'DELETE' });
             const data = await res.json();
             if (data.success) {
                 setConcepts(prev => prev.filter(c => c.id !== concept.id));

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { getSupabase } from '@/lib/supabase';
+import { UserProvider, useUser } from '@/lib/useUser';
 import {
     LayoutDashboard,
     FileText,
@@ -16,59 +16,21 @@ import {
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <UserProvider>
+            <DashboardShell>{children}</DashboardShell>
+        </UserProvider>
+    );
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
-    const [user, setUser] = useState<{ full_name: string; email: string; grade: number } | null>(null);
+    const { user, loading, signOut } = useUser();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    useEffect(() => {
-        const stored = localStorage.getItem('study-lens-user');
-        if (!stored) {
-            router.push('/login');
-            return;
-        }
-        const parsed = JSON.parse(stored);
-        setUser(parsed);
-
-        // Demo users don't need Supabase session management
-        if (parsed.id === '00000000-0000-0000-0000-000000000001') {
-            return;
-        }
-
-        // Listen for auth state changes to keep session alive
-        const sb = getSupabase();
-        const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_OUT' || !session) {
-                localStorage.removeItem('study-lens-user');
-                router.push('/login');
-            } else if (event === 'TOKEN_REFRESHED' && session) {
-                // Update localStorage with refreshed user data
-                const current = localStorage.getItem('study-lens-user');
-                if (current) {
-                    const p = JSON.parse(current);
-                    p.id = session.user.id;
-                    localStorage.setItem('study-lens-user', JSON.stringify(p));
-                }
-            }
-        });
-
-        // Listen for local profile updates
-        const handleSync = () => {
-            const current = localStorage.getItem('study-lens-user');
-            if (current) setUser(JSON.parse(current));
-        };
-        window.addEventListener('storage', handleSync);
-
-        return () => {
-            subscription.unsubscribe();
-            window.removeEventListener('storage', handleSync);
-        };
-    }, [router]);
-
     const handleLogout = async () => {
-        const sb = getSupabase();
-        await sb.auth.signOut();
-        localStorage.removeItem('study-lens-user');
+        await signOut();
         router.push('/');
     };
 
@@ -79,7 +41,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { href: '/dashboard/history', icon: <History size={20} />, label: 'History' },
     ];
 
-    if (!user) {
+    // Still resolving the session — show skeleton.
+    if (loading) {
         return (
             <div style={{
                 minHeight: '100vh',
@@ -91,6 +54,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div className="skeleton" style={{ width: '200px', height: '20px' }} />
             </div>
         );
+    }
+
+    // Resolved, but no session — bounce to login.
+    if (!user) {
+        router.push('/login');
+        return null;
     }
 
     return (

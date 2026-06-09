@@ -3,19 +3,24 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { buildKnowledgeGraph } from '@/lib/kg-builder';
 import { validateAcademicContent } from '@/lib/groq';
 import { MIN_WORD_COUNT, MAX_FILE_SIZE_MB } from '@/config/constants';
+import { getAuthedUserId } from '@/lib/auth';
 
 export const maxDuration = 60;
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
     try {
+        const userId = await getAuthedUserId();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const formData = await request.formData();
         const file = formData.get('file') as File | null;
-        const userId = formData.get('userId') as string | null;
 
-        if (!file || !userId) {
+        if (!file) {
             return NextResponse.json(
-                { error: 'Missing file or userId' },
+                { error: 'Missing file' },
                 { status: 400 }
             );
         }

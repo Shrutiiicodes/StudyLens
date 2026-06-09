@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getAuthedUserId } from '@/lib/auth';
 
 /**
- * DELETE /api/concepts/[id]?userId=xxx
- * Deletes a concept and all associated data for a user.
+ * DELETE /api/concepts/[id]
+ * Deletes a concept and all associated data for the authenticated user.
  */
 export async function DELETE(
-    request: NextRequest,
+    _request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const userId = await getAuthedUserId();
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const supabase = getServiceSupabase();
         const { id: conceptId } = await params;
-        const userId = request.nextUrl.searchParams.get('userId');
-
-        if (!userId) {
-            return NextResponse.json({ error: 'userId is required' }, { status: 400 });
-        }
 
         // Verify the concept belongs to this user before deleting
         const { data: concept, error: fetchError } = await supabase

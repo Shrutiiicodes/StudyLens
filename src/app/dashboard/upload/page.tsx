@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { XCircle, CheckCircle, AlertTriangle, Target, FileText, Trash2 } from 'lucide-react';
 import { ConceptRecord } from '@/types/concept';
+import { useUser } from '@/lib/useUser';
 
 interface UploadResult {
     success: boolean;
@@ -18,6 +19,7 @@ interface UploadResult {
 
 export default function UploadPage() {
     const router = useRouter();
+    const { user } = useUser();
     const [uploading, setUploading] = useState(false);
     const [result, setResult] = useState<UploadResult | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -25,10 +27,7 @@ export default function UploadPage() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const fetchConcepts = async () => {
         try {
-            const stored = localStorage.getItem('study-lens-user');
-            if (!stored) return;
-            const user = JSON.parse(stored);
-            const res = await fetch(`/api/concepts?userId=${user.id}`);
+            const res = await fetch(`/api/concepts`);
             const data = await res.json();
             if (data.success) {
                 setConcepts(data.concepts);
@@ -39,21 +38,20 @@ export default function UploadPage() {
     };
 
     useEffect(() => {
+        if (!user) return;
         fetchConcepts();
-    }, []);
+    }, [user]);
     async function handleDelete(concept: ConceptRecord) {
         const confirmed = window.confirm(
             `Delete "${concept.title}"?\n\nThis will permanently remove the concept, all test history, and mastery progress. This cannot be undone.`
         );
         if (!confirmed) return;
 
-        const stored = localStorage.getItem('study-lens-user');
-        if (!stored) return;
-        const user = JSON.parse(stored);
+        if (!user) return;
 
         setDeletingId(concept.id);
         try {
-            const res = await fetch(`/api/concepts/${concept.id}?userId=${user.id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/concepts/${concept.id}`, { method: 'DELETE' });
             const data = await res.json();
             if (data.success) {
                 setConcepts(prev => prev.filter(c => c.id !== concept.id));
@@ -72,9 +70,6 @@ export default function UploadPage() {
         setResult(null);
 
         try {
-            const stored = localStorage.getItem('study-lens-user');
-            const user = stored ? JSON.parse(stored) : null;
-
             if (!user) {
                 setError('Please sign in to upload documents.');
                 setUploading(false);
@@ -83,7 +78,6 @@ export default function UploadPage() {
 
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('userId', user.id);
 
             const response = await fetch('/api/upload', {
                 method: 'POST',
