@@ -92,10 +92,11 @@ export interface ConceptProgress {
 /**
  * Student progress summary used by the concepts list page.
  * Returned as a per-concept map by GET /api/progress (no conceptId).
+ * Mirrors the exact shape `progressMap` builds in src/app/api/progress/route.ts.
  */
 export interface ProgressData {
     score: number;
     stage: string;
+    isComplete: boolean;
     lastUpdated: string;
-    needsReview?: boolean;
 }

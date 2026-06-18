@@ -3,3 +3,7 @@ pymupdf
 pytesseract
 pillow
 neo4j
+fastapi
+uvicorn
+pydantic
+python-dotenv

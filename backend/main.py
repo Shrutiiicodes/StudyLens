@@ -15,12 +15,22 @@ POST /answer         — Single answer with misconception feedback
 POST /submit-all     — Batch answers with full misconception report
 GET  /summary/{doc_id}   — Aggregate misconception analytics
 GET  /triples/{doc_id}   — Scored KG triples
-GET  /health         — Health check
+GET  /health         — Health check (unauthenticated)
+
+Security model
+--------------
+This service is an INTERNAL microservice. It is only meant to be called
+server-to-server by the Study-Lens Next.js app, which has already verified
+the end user's identity. Every data endpoint therefore requires a shared
+secret (INTERNAL_API_TOKEN) sent in the `X-Internal-Token` header. Because
+only the trusted caller can reach these endpoints, the `user_id` they pass
+is trustworthy. `/health` is the only unauthenticated route.
 
 Run locally:
     cd backend && uvicorn main:app --reload --port 8000
 """
 
+import hmac
 import json
 import logging
 import os
@@ -47,7 +57,7 @@ try:
 except ImportError:
     pass
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -75,17 +85,51 @@ app = FastAPI(
     version="2.0.0",
 )
 
+# ── CORS ──────────────────────────────────────────────────────────────────
+# Origins are env-driven; no wildcard. For an internal server-to-server
+# service this mostly doesn't apply (CORS governs browsers), but we keep a
+# tight allowlist so a stray browser call can't reach it either. Set
+# ALLOWED_ORIGINS as a comma-separated list in the backend env for deploy.
+ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000",
+    ).split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-        "*",  # Remove in production
-    ],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-Internal-Token"],
 )
+
+# ── Internal auth ─────────────────────────────────────────────────────────
+# Shared secret between the Next.js app and this backend. The Next.js server
+# must send it as the `X-Internal-Token` header on every call. Set the SAME
+# value in both environments (e.g. INTERNAL_API_TOKEN in the backend env and
+# in the Next.js env that backend-client.ts reads).
+INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN", "")
+
+
+async def require_internal_token(x_internal_token: str = Header(default="")):
+    """Reject any request that doesn't carry the shared internal token.
+
+    Fails CLOSED: if INTERNAL_API_TOKEN is not configured, protected endpoints
+    return 503 rather than silently serving with auth disabled — so a deploy
+    that forgot to set the secret is loudly broken, not quietly open.
+    """
+    if not INTERNAL_API_TOKEN:
+        raise HTTPException(
+            status_code=503,
+            detail="Backend auth not configured: set INTERNAL_API_TOKEN.",
+        )
+    # Constant-time comparison to avoid a timing side channel.
+    if not hmac.compare_digest(x_internal_token or "", INTERNAL_API_TOKEN):
+        raise HTTPException(status_code=401, detail="Invalid or missing internal token.")
+
 
 # Shared Neo4j client — one connection pool for the app lifetime
 _neo4j_client: Neo4jClient = None
@@ -106,7 +150,8 @@ class IngestRequest(BaseModel):
     storage_path: str
     """Supabase storage path e.g. 'harappa.pdf' or 'user-id/chapter3.pdf'"""
     user_id: str = ""
-    """Supabase user UUID — used for user-scoped Neo4j nodes"""
+    """Supabase user UUID — used for user-scoped Neo4j nodes. Trusted because
+    only the internal caller (authenticated via X-Internal-Token) can set it."""
     document_id: str = ""
     """Supabase concept UUID — links backend doc to Study-Lens concept record"""
 
@@ -144,6 +189,12 @@ class AnswerResponse(BaseModel):
 @app.on_event("startup")
 async def startup():
     logger.info("Starting Study-Lens Backend ...")
+    if not INTERNAL_API_TOKEN:
+        logger.warning(
+            "INTERNAL_API_TOKEN is not set — all data endpoints will return 503 "
+            "until it is configured. Set it in the backend env and in the Next.js "
+            "env that backend-client.ts reads (same value)."
+        )
     try:
         get_client().verify_connectivity()
         logger.info("Neo4j connection verified.")
@@ -160,7 +211,8 @@ async def shutdown():
 
 # ── Endpoints ─────────────────────────────────────────────────────────────
 
-@app.post("/ingest", response_model=IngestResponse)
+@app.post("/ingest", response_model=IngestResponse,
+          dependencies=[Depends(require_internal_token)])
 async def ingest(request: IngestRequest):
     """
     Full ingestion pipeline for one PDF:
@@ -253,7 +305,8 @@ async def ingest(request: IngestRequest):
     )
 
 
-@app.get("/questions/{doc_id}")
+@app.get("/questions/{doc_id}",
+         dependencies=[Depends(require_internal_token)])
 async def get_questions(
     doc_id: str,
     difficulty: str = Query(None, pattern="^(easy|medium|hard)$"),
@@ -287,7 +340,8 @@ async def get_questions(
     }
 
 
-@app.post("/answer", response_model=AnswerResponse)
+@app.post("/answer", response_model=AnswerResponse,
+          dependencies=[Depends(require_internal_token)])
 async def submit_answer(request: AnswerRequest):
     """Submit a single student answer and get immediate feedback."""
     logger.info("POST /answer — question_id='%s'", request.question_id)
@@ -357,7 +411,8 @@ async def submit_answer(request: AnswerRequest):
     )
 
 
-@app.post("/submit-all")
+@app.post("/submit-all",
+          dependencies=[Depends(require_internal_token)])
 async def submit_all_answers(request: SubmitAllRequest):
     """
     Submit all student answers at once and receive a full misconception report.
@@ -492,7 +547,8 @@ async def submit_all_answers(request: SubmitAllRequest):
     }
 
 
-@app.get("/summary/{doc_id}")
+@app.get("/summary/{doc_id}",
+         dependencies=[Depends(require_internal_token)])
 async def get_summary(doc_id: str):
     """Aggregate analytics across all student sessions for a document."""
     logger.info("GET /summary/%s", doc_id)
@@ -513,7 +569,8 @@ async def get_summary(doc_id: str):
     }
 
 
-@app.get("/triples/{doc_id}")
+@app.get("/triples/{doc_id}",
+         dependencies=[Depends(require_internal_token)])
 async def get_scored_triples(
     doc_id: str,
     limit: int = Query(50, ge=1, le=500),
@@ -556,7 +613,7 @@ async def get_scored_triples(
 
 @app.get("/health")
 async def health():
-    """Quick health check — verifies Neo4j is reachable."""
+    """Quick health check — verifies Neo4j is reachable. Unauthenticated."""
     try:
         get_client().verify_connectivity()
         return {"status": "ok", "neo4j": "connected"}
