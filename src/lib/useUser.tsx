@@ -50,13 +50,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
         // getUser() validates against the server — the secure source of truth.
         sb.auth.getUser().then(({ data: { user: u } }) => {
             if (!mounted) return;
-            setUser(u ? mapUser(u) : null);
+            setUser((prev) => (prev?.id === u?.id ? prev : (u ? mapUser(u) : null)));
             setLoading(false);
         });
 
-        // Keep state in sync on sign-in / sign-out / token refresh.
+        // Keep state in sync on sign-in / sign-out / token refresh, but only
+        // swap the reference when the identity actually changes — prevents
+        // every token refresh from re-triggering all useEffect([user]) fetches.
         const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ? mapUser(session.user) : null);
+            const next = session?.user ?? null;
+            setUser((prev) => (prev?.id === next?.id ? prev : (next ? mapUser(next) : null)));
         });
 
         return () => {

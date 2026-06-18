@@ -21,22 +21,14 @@ export default function LoginPage() {
         setMounted(true);
     }, []);
 
-    // Auto-redirect if already logged in
+    // Auto-redirect if a valid session already exists.
     useEffect(() => {
-        const stored = localStorage.getItem('study-lens-user');
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            // Verify the Supabase session is still valid
-            const sb = createBrowserClient();
-            sb.auth.getSession().then(({ data: { session } }) => {
-                if (session) {
-                    router.push('/dashboard');
-                } else {
-                    // Session expired, clear stale localStorage
-                    localStorage.removeItem('study-lens-user');
-                }
-            });
-        }
+        const sb = createBrowserClient();
+        sb.auth.getUser().then(({ data: { user } }) => {
+            if (user) {
+                router.push('/dashboard');
+            }
+        });
     }, [router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -61,7 +53,7 @@ export default function LoginPage() {
 
             if (isLogin) {
                 // Sign in with Supabase
-                const { data, error: authError } = await sb.auth.signInWithPassword({
+                const { error: authError } = await sb.auth.signInWithPassword({
                     email,
                     password,
                 });
@@ -71,16 +63,6 @@ export default function LoginPage() {
                     setLoading(false);
                     return;
                 }
-
-                // Get user metadata or fallback
-                const userData = {
-                    id: data.user.id,
-                    email: data.user.email,
-                    full_name: data.user.user_metadata?.full_name || email.split('@')[0],
-                    grade: data.user.user_metadata?.grade || 6,
-                };
-
-                localStorage.setItem('study-lens-user', JSON.stringify(userData));
             } else {
                 // Sign up with Supabase
                 const { data, error: authError } = await sb.auth.signUp({
@@ -105,15 +87,6 @@ export default function LoginPage() {
                     setLoading(false);
                     return;
                 }
-
-                const userData = {
-                    id: data.user.id,
-                    email: data.user.email,
-                    full_name: name,
-                    grade,
-                };
-
-                localStorage.setItem('study-lens-user', JSON.stringify(userData));
             }
 
             router.push('/dashboard');
@@ -304,9 +277,10 @@ export default function LoginPage() {
                         <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
                     </div>
 
-                    {/* Demo Bypass */}
+                    {/* Demo Login */}
                     <button
                         className="btn-secondary"
+                        disabled={loading}
                         onClick={async () => {
                             setLoading(true);
                             setError('');
@@ -321,12 +295,6 @@ export default function LoginPage() {
                                     setLoading(false);
                                     return;
                                 }
-                                localStorage.setItem('study-lens-user', JSON.stringify({
-                                    id: data.user.id,
-                                    email: data.user.email,
-                                    full_name: data.user.user_metadata?.full_name || 'Demo Student',
-                                    grade: data.user.user_metadata?.grade || 7,
-                                }));
                                 router.push('/dashboard');
                             } catch {
                                 setError('Demo login failed. Please try again.');

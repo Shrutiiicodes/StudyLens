@@ -1,6 +1,5 @@
 'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { UserProvider, useUser } from '@/lib/useUser';
@@ -41,6 +40,14 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         { href: '/dashboard/history', icon: <History size={20} />, label: 'History' },
     ];
 
+    // Redirect to login once we know there's no session.
+    // Must run in an effect — calling router.push() during render is illegal.
+    useEffect(() => {
+        if (!loading && !user) {
+            router.push('/login');
+        }
+    }, [loading, user, router]);
+
     // Still resolving the session — show skeleton.
     if (loading) {
         return (
@@ -58,7 +65,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
     // Resolved, but no session — bounce to login.
     if (!user) {
-        router.push('/login');
         return null;
     }
 

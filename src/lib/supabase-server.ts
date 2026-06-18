@@ -1,36 +1,3 @@
-/**
- * src/lib/supabase-server.ts
- *
- * Replaces the deprecated @supabase/auth-helpers-nextjs with @supabase/ssr.
- *
- * MIGRATION STEPS
- * ───────────────
- * 1. Install the new package:
- *      npm install @supabase/ssr
- *      npm uninstall @supabase/auth-helpers-nextjs
- *
- * 2. Replace ALL imports of the old helper in your code:
- *
- *    OLD (deprecated):
- *      import { createBrowserClient } from '@/lib/supabase-server';
- *      import { createServerClient } from '@/lib/supabase-server';
- *      import { createRouteHandlerClient }     from '@supabase/auth-helpers-nextjs';
- *      import { createMiddlewareClient }       from '@supabase/auth-helpers-nextjs';
- *
- *    NEW — use the helpers exported from THIS file:
- *      import { createBrowserClient }           from '@/lib/supabase-server';
- *      import { createServerClient }            from '@/lib/supabase-server';
- *      import { createRouteHandlerClient }      from '@/lib/supabase-server';
- *      import { updateSession }                 from '@/lib/supabase-server'; // for middleware
- *
- * 3. In middleware.ts, replace the body with:
- *      import { updateSession } from '@/lib/supabase-server';
- *      export async function middleware(request: NextRequest) {
- *        return await updateSession(request);
- *      }
- *
- * 4. The existing src/lib/supabase.ts (service-role client) is unchanged.
- */
 import 'server-only';
 import { createServerClient as _createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -96,23 +63,7 @@ export async function createRouteHandlerClient() {
     });
 }
 
-// ── 4. Middleware ─────────────────────────────────────────────
-/**
- * Call this from src/middleware.ts to keep the session token refreshed.
- *
- * src/middleware.ts:
- * ─────────────────
- *   import { NextRequest } from 'next/server';
- *   import { updateSession } from '@/lib/supabase-server';
- *
- *   export async function middleware(request: NextRequest) {
- *     return await updateSession(request);
- *   }
- *
- *   export const config = {
- *     matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
- *   };
- */
+
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({ request });
 

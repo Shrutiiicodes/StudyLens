@@ -1,11 +1,11 @@
 'use client';
 import { PASS_THRESHOLD } from '@/config/constants';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useUser } from '@/lib/useUser';
 import QuestionCard from '@/components/QuestionCard';
 import { Question } from '@/types/question';
-import { useUser } from '@/lib/useUser';
 import { Search, FileEdit, Trophy, AlertTriangle, Target, Library, BookOpen, RefreshCw, LayoutDashboard, TrendingUp, Activity, Gauge, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 
 // Updated interface — standard ITS metrics added
@@ -275,6 +275,11 @@ export default function TestPage() {
     const conceptId = params.id as string;
     const mode = searchParams.get('mode') || 'diagnostic';
 
+    // Mirror of `results` that is always current synchronously — handleNext
+    // reads this instead of the async `results` state, so the final answer
+    // is never missing from the evaluation payload.
+    const resultsRef = useRef<Array<{ correct: boolean; timeTaken: number; confidence: number; selectedAnswer: string }>>([]);
+
     const [questions, setQuestions] = useState<Question[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -300,6 +305,7 @@ export default function TestPage() {
         async function fetchQuestions() {
             setTestComplete(false);
             setResults([]);
+            resultsRef.current = [];
             setCurrentIndex(0);
             setShowResult(false);
             setEvaluating(false);
@@ -353,10 +359,11 @@ export default function TestPage() {
     }, [user, conceptId, mode, searchParams]);
 
     const handleAnswer = (answer: string, timeTaken: number, confidence: number) => {
-        // QuestionCard passes the selected answer string; derive correctness here
         const currentQuestion = questions[currentIndex];
         const correct = answer === currentQuestion?.correct_answer;
-        setResults((prev) => [...prev, { correct, timeTaken, confidence, selectedAnswer: answer }]);
+        const record = { correct, timeTaken, confidence, selectedAnswer: answer };
+        resultsRef.current = [...resultsRef.current, record];
+        setResults((prev) => [...prev, record]);
         setShowResult(true);
     };
 
@@ -369,16 +376,19 @@ export default function TestPage() {
             setEvaluating(true);
 
             try {
+                // Read from the ref — guaranteed to include the final answer.
+                const finalResults = resultsRef.current;
+
                 const questionResults = questions.map((q, i) => ({
                     question_id: q.id,
-                    correct: results[i]?.correct ?? false,
+                    correct: finalResults[i]?.correct ?? false,
                     difficulty: q.difficulty,
                     cognitive_level: q.cognitive_level,
-                    time_taken: results[i]?.timeTaken ?? 0,
-                    confidence: results[i]?.confidence ?? 0.5,
+                    time_taken: finalResults[i]?.timeTaken ?? 0,
+                    confidence: finalResults[i]?.confidence ?? 0.5,
                     concept_id: q.concept_id,
                     question_text: q.text,
-                    selected_answer: results[i]?.selectedAnswer ?? '',
+                    selected_answer: finalResults[i]?.selectedAnswer ?? '',
                     correct_answer: q.correct_answer,
                     explanation: q.explanation,
                     is_spaced: q.is_spaced ?? false,
@@ -559,6 +569,7 @@ export default function TestPage() {
                             <button className="btn-primary" onClick={() => {
                                 setTestComplete(false);
                                 setResults([]);
+                                resultsRef.current = [];
                                 setCurrentIndex(0);
                                 setShowResult(false);
                                 setSessionMetrics(null);

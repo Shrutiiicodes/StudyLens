@@ -35,7 +35,7 @@ export default function DashboardPage() {
             .then(([conceptsData, statsData, masteryData, historyData]) => {
                 if (conceptsData.success && conceptsData.concepts) setConcepts(conceptsData.concepts);
                 if (statsData.success && statsData.stats) setStats(statsData.stats);
-                if (masteryData.success && masteryData.conceptMastery) setMasteryMap(masteryData.conceptMastery);
+                if (masteryData.success && masteryData.concepts) setMasteryMap(masteryData.concepts);
                 if (historyData.success && historyData.sessions) {
                     // A Normalized Learning Gain is a *normalized change* and must lie in
                     // [-1, 1] by definition (Marx & Cummings, 2007). Older sessions were

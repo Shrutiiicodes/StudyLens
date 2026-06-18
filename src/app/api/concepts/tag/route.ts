@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runCypher } from '@/lib/neo4j';
+import { getAuthedUserId } from '@/lib/auth';
+
 export const maxDuration = 60;
 export const runtime = 'nodejs';
 /**
- * GET /api/concepts/tag?userId=xxx
+ * GET /api/concepts/tag
  *
- * Backfills `subjectDomain` on every Concept node that doesn't already have
- * one, using keyword matching on name + definition.
+ * Backfills `subjectDomain` on every Concept node (for the authenticated
+ * user) that doesn't already have one, using keyword matching on
+ * name + definition.
  *
  * Safe to call multiple times (idempotent — skips nodes that already have
  * a subjectDomain).
  *
  * Also used by the upload pipeline — call after buildKnowledgeGraph():
- *   await fetch(`/api/concepts/tag?userId=${userId}`, { method: 'GET' });
+ *   await fetch(`/api/concepts/tag`, { method: 'GET' });
  *
  * Response:
  *   { success: true, tagged: N, already_tagged: M }
@@ -93,11 +96,11 @@ function inferDomain(name: string, definition: string): string {
     return bestDomain;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
     try {
-        const userId = request.nextUrl.searchParams.get('userId');
+        const userId = await getAuthedUserId();
         if (!userId) {
-            return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         // 1. Fetch concepts that don't yet have a subjectDomain

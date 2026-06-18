@@ -40,10 +40,11 @@ export default function ConceptDetailPage() {
         async function fetchData() {
             try {
                 // Fetch concept details + progress in parallel
-                const [conceptsRes, progressRes, graphRes] = await Promise.all([
+                const [conceptsRes, progressRes, graphRes, historyRes] = await Promise.all([
                     fetch(`/api/concepts`),
                     fetch(`/api/progress?conceptId=${conceptId}`),
                     fetch(`/api/graph?conceptId=${conceptId}`),
+                    fetch(`/api/history`),
                 ]);
 
                 const conceptsData = await conceptsRes.json();
@@ -69,6 +70,23 @@ export default function ConceptDetailPage() {
                 if (graphData.success) {
                     setGraphNodes(graphData.nodes || []);
                     setGraphEdges(graphData.edges || []);
+                }
+
+                // Sessions for this concept — filtered from the full history list,
+                // mapped to the compact ConceptSessionSummary shape the history tab uses.
+                const historyData = await historyRes.json();
+                if (historyData.success && Array.isArray(historyData.sessions)) {
+                    const conceptSessions: ConceptSessionSummary[] = historyData.sessions
+                        .filter((s: { concept_id: string }) => s.concept_id === conceptId)
+                        .map((s: { id: string; mode: string; score: number; passed: boolean; nlg: number | null; created_at: string }) => ({
+                            id: s.id,
+                            mode: s.mode,
+                            score: s.score,
+                            passed: s.passed,
+                            nlg: s.nlg,
+                            created_at: s.created_at,
+                        }));
+                    setSessions(conceptSessions);
                 }
             } catch (err) {
                 console.error('Failed to fetch concept data:', err);
