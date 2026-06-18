@@ -88,8 +88,19 @@ export async function evaluateDiagnostic(
         difficulty: r.difficulty,
     }));
 
+    // ── 5b. NLG baseline (fixed pre-instruction reference) ────────────────
+    // NLG must measure gain from the concept's FIRST diagnostic — a FIXED
+    // pre-instruction baseline — to current mastery, NOT the session-to-session
+    // mastery delta. Fetch the baseline BEFORE this session's row is inserted
+    // (step 7) so the session being evaluated can't become its own baseline.
+    //
+    // No prior baseline → THIS session establishes it, so there is no gain to
+    // report yet (pre = post → NLG = 0). Otherwise measure against the baseline.
+    const baselineScore = await getBaselineDiagnosticScore(userId, conceptId);
+    const nlgBaseline = baselineScore ?? postMastery;
+
     // ── 6. Compute all metrics ────────────────────────────────────────────
-    const sessionMetrics = computeAllSessionMetrics(attemptResults, score, preMastery, postMastery);
+    const sessionMetrics = computeAllSessionMetrics(attemptResults, score, nlgBaseline, postMastery);
 
     // ── 7. Create session record ──────────────────────────────────────────
     const { data: sessionData, error: sessionError } = await supabase
@@ -299,6 +310,52 @@ async function getCurrentMastery(userId: string, conceptId: string): Promise<num
     const hoursElapsed =
         (Date.now() - new Date(data.last_updated).getTime()) / (1000 * 60 * 60);
     return calculateDecayedMastery(data.mastery_score, hoursElapsed);
+}
+
+/**
+ * The student's pre-instruction baseline for a concept = the score of their
+ * FIRST diagnostic session on it. This is the FIXED `pre` for NLG, so the
+ * metric measures gain from the initial knowledge check to current mastery —
+ * not session-to-session drift.
+ *
+ * Returns the raw diagnostic score (0–100), or null if no prior session
+ * exists (i.e. the session being evaluated now is the student's first on
+ * this concept, so it establishes the baseline and there is no gain yet).
+ *
+ * Prefers the earliest 'diagnostic' session; falls back to the earliest
+ * session of any mode if no diagnostic row exists (defensive — covers
+ * legacy data where the first row wasn't tagged 'diagnostic').
+ */
+async function getBaselineDiagnosticScore(
+    userId: string,
+    conceptId: string
+): Promise<number | null> {
+    const { data: diag } = await supabase
+        .from('sessions')
+        .select('score')
+        .eq('user_id', userId)
+        .eq('concept_id', conceptId)
+        .eq('mode', 'diagnostic')
+        .order('created_at', { ascending: true })
+        .limit(1);
+
+    if (diag && diag.length > 0 && diag[0].score != null) {
+        return diag[0].score as number;
+    }
+
+    const { data: earliest } = await supabase
+        .from('sessions')
+        .select('score')
+        .eq('user_id', userId)
+        .eq('concept_id', conceptId)
+        .order('created_at', { ascending: true })
+        .limit(1);
+
+    if (earliest && earliest.length > 0 && earliest[0].score != null) {
+        return earliest[0].score as number;
+    }
+
+    return null;
 }
 
 async function saveMasteryWithStage(

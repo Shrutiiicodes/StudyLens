@@ -178,7 +178,7 @@ Open `http://localhost:3000`. Sign in, upload a PDF, and work through the flow.
 | `/api/export` | GET | Research CSV export (ASSISTments-compatible) |
 | `/api/user/stats` | GET | Compact stats for dashboard widgets |
 
-All data routes accept `userId` as a query parameter and use the service-role Supabase client on the server.
+All data routes resolve the user from the verified Supabase session cookie on the server (via `getAuthedUserId()`), never from a client-supplied `userId`. The service-role Supabase client is used for data access only after identity is established.
 
 ## Architecture notes
 
@@ -209,7 +209,7 @@ Every concept has three stages: `diagnostic` → `practice` → `mastery`. Each 
 - **Groq free tier rate limits.** Knowledge graph extraction on large documents (>2000 words) can hit the 6000 TPM limit on qwen3-32b. The verifier has been tuned down to llama-3.1-8b-instant, but the primary extraction still uses the larger model. Either use smaller documents, wait for the 41-second rate window, or upgrade to Groq Dev Tier.
 - **Open RLS policies.** All tables have RLS enabled but policies are `USING (true)` — any authenticated user can technically read any data. This is acceptable for a prototype with non-sensitive test data, not for production. See `supabase/schema.sql` for the TODO block with the ownership-based pattern.
 - **Misconceptions table.** Schema exists; `storeAttempt` writes inline to the `attempts` table instead of a separate `misconceptions` row. Future work.
-- **Demo user.** The layout uses a hardcoded demo UUID to short-circuit auth for testing. Remove before a real deployment.
+- **Demo user.** A seeded Supabase Auth account (`demo@studylens.com`) is reachable via the "Continue as Demo Student" button on the login page. It is a real authenticated session, not an auth bypass. Rotate or remove its credentials before a public deployment.
 
 ## Citations
 

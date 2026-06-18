@@ -42,11 +42,12 @@ const VERIFY_BATCH_SIZE = 10;
 const VERIFIER_MODEL = 'llama-3.1-8b-instant';
 
 // Secondary verifier — different model family, used as cross-examination.
-// We accept a triple only if BOTH models accept it independently. This is
-// the no-HiL substitute for Tsaneva et al. (2025) workflow 5's
-// "human-on-disagreement" pattern: instead of asking a person to break
-// the tie, we drop the triple. Trades recall for precision — viable here
-// because our baseline recall (94.7%) leaves room.
+// The cross-examination idea (one model judging another's output to catch
+// factual errors) follows Cohen et al. (2023), "LM vs LM". We accept a
+// triple only if BOTH models accept it independently. This occupies the
+// workflow position where Tsaneva et al. (2025) route disagreements to a
+// human ("human-on-disagreement") — instead of a person breaking the tie,
+// we drop the triple. Trades recall for precision.
 const SECONDARY_VERIFIER_MODEL = 'qwen/qwen3-32b';
 
 // Toggles — flip to false if Groq rate limits bite. The system degrades
@@ -320,10 +321,12 @@ async function extractKnowledgeFromChunk(
  *   - either rejects → rejected
  *   - either fails → null (caller drops)
  *
- * This is the fully-automated stand-in for the Tsaneva et al. (2025)
- * "human-on-disagreement" pattern. Where the paper sends contested
- * triples to a human, we silently drop them. Costs ~2x LLM calls on
- * cache miss; the cache amortises this across re-uploads.
+ * The cross-examination pattern — a separate model judging the generator's
+ * output to detect factual errors — follows Cohen et al. (2023), "LM vs LM".
+ * We apply it in the workflow position where Tsaneva et al. (2025) route
+ * contested triples to a human ("human-on-disagreement"); here, instead of
+ * a human breaking the tie, we silently drop the triple. Costs ~2x LLM
+ * calls on cache miss; the cache amortises this across re-uploads.
  *
  * Falls back to single-model verification when ENABLE_DUAL_VERIFICATION
  * is false, so this is a safe default change.

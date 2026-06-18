@@ -32,7 +32,7 @@ export interface SessionMetrics {
     calibration_error: number;// Average |correct - confidence|
 
     // ── Standard ITS metrics (citable, benchmarkable) ──
-    nlg: number;              // Normalized Learning Gain (Hake, 1998)
+    nlg: number;              // Bounded normalized change c (Marx & Cummings, 2007)
     brier_score: number;      // Brier Score — probabilistic penalty for confident-wrong answers
     ece: number;              // Expected Calibration Error (Guo et al., 2017)
     log_loss: number;         // Log-Loss — proxy for AUC-ROC on next-answer prediction
@@ -224,14 +224,14 @@ export function computeSAI(
 // ─── Standard ITS Metrics ───
 
 /**
- * NLG — Normalized Learning Gain
+ * NLG — Normalized Learning Gain (reported as bounded "normalized change" c)
  *
  * Uses the BOUNDED form — Marx & Cummings (2007) "normalized change" c —
  * which is the standard fix for the unbounded Hake (1998) gain when the
  * pre-score is near the ceiling. Result is always in [-1, 1] (−100%..+100%):
  *
  *   if post > pre:  (post - pre) / (100 - pre)   // gain side (classic Hake)
- *   if post < pre:  (post - pre) / pre           // loss side (this is the fix)
+ *   if post < pre:  (post - pre) / pre           // loss side (the bounding fix)
  *   if post = pre:  0
  *
  * The old unbounded form divided BOTH gains and losses by (100 - pre). When a
@@ -239,11 +239,15 @@ export function computeSAI(
  * tiny denominator produced absurd values like −3807%. Normalizing losses by
  * `pre` keeps the metric in a sane, reportable range.
  *
- * NOTE ON USAGE: NLG is a pre-instruction → post-instruction measure. `pre`
- * should be the student's FIRST diagnostic on a concept and `post` their
- * latest/best mastery on that same concept — NOT the current mastery before
- * each repeat session. Feeding "current mastery" as `pre` on every session is
- * what makes already-mastered concepts show large negative gains.
+ * IMPORTANT — what `pre` and `post` must be:
+ *   `pre`  = the student's pre-instruction baseline on a concept. In this
+ *            system that is their FIRST diagnostic score on the concept — a
+ *            FIXED reference that does not change session to session.
+ *   `post` = the student's current / latest mastery on that same concept.
+ *
+ *   Do NOT pass the per-session "current mastery before this session" as `pre`.
+ *   Doing so turns NLG into a session-to-session delta, which makes an
+ *   already-mastered concept report large negative gains on any small dip.
  *
  * Citations:
  *   Hake, R.R. (1998). Interactive-engagement versus traditional methods.
@@ -251,8 +255,8 @@ export function computeSAI(
  *   Marx, J.D., & Cummings, K. (2007). Normalized change.
  *     American Journal of Physics, 75(1), 87–91.
  *
- * @param preMastery  - Mastery score BEFORE instruction (0–100)
- * @param postMastery - Mastery score AFTER instruction (0–100)
+ * @param preMastery  - Pre-instruction baseline (0–100): the FIRST diagnostic score.
+ * @param postMastery - Current / post mastery on the concept (0–100).
  */
 export function computeNLG(preMastery: number, postMastery: number): number {
     const pre = Math.max(0, Math.min(100, preMastery));
@@ -398,15 +402,21 @@ export function computeCCMSImprovement(
  * computeAllSessionMetrics
  * Returns all Group 3 + standard ITS metrics for a session.
  *
- * @param results       - Per-attempt data
- * @param sessionScore  - Raw session score 0–100
- * @param preMastery    - Mastery BEFORE session (0–100) — used for NLG. Pass currentMastery.
- * @param postMastery   - Mastery AFTER session (0–100) — used for NLG. Pass masteryUpdate.new_score.
+ * @param results          - Per-attempt data
+ * @param sessionScore     - Raw session score 0–100
+ * @param baselineMastery  - The concept's FIXED pre-instruction baseline (0–100):
+ *                           the student's FIRST diagnostic score on this concept.
+ *                           This is the `pre` for NLG. Do NOT pass the per-session
+ *                           current mastery — doing so turns NLG into a
+ *                           session-to-session delta and makes already-mastered
+ *                           concepts report spurious negative gains.
+ * @param postMastery      - Current / post mastery on the concept (0–100) — the
+ *                           `post` for NLG. Pass masteryUpdate.new_score.
  */
 export function computeAllSessionMetrics(
     results: AttemptResult[],
     sessionScore: number,
-    preMastery: number = 0,
+    baselineMastery: number = 0,
     postMastery: number = 0,
 ): SessionMetrics {
     const fas = computeFAS(results);
@@ -418,7 +428,7 @@ export function computeAllSessionMetrics(
     const calibration_error = computeCalibrationError(results);
 
     // Standard ITS metrics
-    const nlg = computeNLG(preMastery, postMastery);
+    const nlg = computeNLG(baselineMastery, postMastery);
     const brier_score = computeBrierScore(results);
     const ece = computeECE(results);
     const log_loss = computeLogLoss(results);

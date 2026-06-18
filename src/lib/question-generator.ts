@@ -4,7 +4,7 @@ import { Question, QuestionType, DifficultyLevel, QuestionGenerationRequest } fr
 import { AssessmentMode } from '@/types/student';
 import { COGNITIVE_LEVEL_MAP, QUESTION_LIMITS } from '@/config/constants';
 import { v4 as uuid } from 'uuid';
-import { supabase } from './supabase';
+import { getServiceSupabase } from './supabase';
 import { needsSpacedReinforcement } from './forgetting-model';
 import { PROMPTS } from '@/config/prompts';
 import {
@@ -239,10 +239,29 @@ interface GenerateOrSampleOptions {
     exposures: Array<{ poolQuestionId: string; conceptId: string }>;
 }
 
+/** Convert a sampled pool row into a Question, recording its exposure. */
+function takePoolQuestion(
+    sampled: PoolQuestion,
+    conceptId: string,
+    opts: GenerateOrSampleOptions
+): Question {
+    opts.dealtPoolIds.add(sampled.pool_id!);
+    opts.exposures.push({ poolQuestionId: sampled.pool_id!, conceptId });
+    // Strip the internal pool_id field before returning to the caller
+    const { pool_id: _pool_id, ...q } = sampled as PoolQuestion;
+    void _pool_id;
+    return q as Question;
+}
+
 /**
  * Pool-first question generation.
  *   1. If skipPool is false, try to sample from the pool.
  *   2. Otherwise (or on miss) generate via LLM and persist.
+ *
+ * Resilience: if LLM generation fails (e.g. Groq rate limit / transient
+ * error after retries), fall back to a pool sample even on the skipPool
+ * path, so the session gets a real graph-grounded question instead of a
+ * gap. Only rethrows if no pool row is available to fall back to.
  *
  * Either way, the returned Question has all the same fields as
  * generateQuestion() produces — callers don't care whether it came from
@@ -262,23 +281,34 @@ async function generateOrSampleQuestion(
     if (!opts.skipPool) {
         const sampled = await samplePoolQuestion(poolKey, request.user_id, opts.dealtPoolIds);
         if (sampled) {
-            opts.dealtPoolIds.add(sampled.pool_id!);
-            opts.exposures.push({
-                poolQuestionId: sampled.pool_id!,
-                conceptId: request.concept_id,
-            });
             console.log(
                 `[QGen] Pool hit: ${request.type}/${request.difficulty} for concept ${request.concept_id.slice(0, 8)}`
             );
-            // Strip the internal pool_id field before returning to the caller
-            const { pool_id: _pool_id, ...q } = sampled as PoolQuestion;
-            void _pool_id;
-            return q as Question;
+            return takePoolQuestion(sampled, request.concept_id, opts);
         }
     }
 
-    // ── 2. LLM generation ───────────────────────────────────────────────
-    const generated = await generateQuestion(request);
+    // ── 2. LLM generation (with pool fallback on failure) ────────────────
+    let generated: Question;
+    try {
+        generated = await generateQuestion(request);
+    } catch (err) {
+        // Resilience net: LLM generation failed after retries. Try a pool
+        // sample even on the skipPool path so the session still gets a real
+        // question instead of a gap.
+        console.warn(
+            `[QGen] LLM generation failed (${(err as Error).message}); attempting pool fallback`
+        );
+        const fallback = await samplePoolQuestion(poolKey, request.user_id, opts.dealtPoolIds);
+        if (fallback) {
+            console.log(
+                `[QGen] Pool fallback used after LLM failure: ${request.type}/${request.difficulty}`
+            );
+            return takePoolQuestion(fallback, request.concept_id, opts);
+        }
+        // Nothing to fall back to — let the caller log + drop this slot.
+        throw err;
+    }
 
     // ── 3. Persist to pool if this was a cacheable generation ───────────
     //     When we persist, we also rewrite the question's id to the stable
@@ -387,6 +417,13 @@ export async function generateQuestionsForMode(
     let context = await getConceptContext(conceptId);
     let count = getQuestionCount(context, mode);
     const questions: Question[] = [];
+
+    // Server-only module: use the service-role client for the internal
+    // bookkeeping reads below (spaced-review candidates, weak-spot history).
+    // These read user-owned tables and run under RLS; the anon client has no
+    // session here (auth.uid() is null), so it would be blocked once
+    // ownership policies are enabled. Reads are still scoped by userId.
+    const supabase = getServiceSupabase();
 
     // Per-session bookkeeping for the pool:
     //  - dealtPoolIds: prevents dealing the same pool row twice this session

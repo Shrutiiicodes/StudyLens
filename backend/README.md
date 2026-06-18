@@ -126,9 +126,15 @@ study-system/
 
 ## API Endpoints
 
-- `POST /api/documents/upload` - Upload PDF
-- `GET /api/documents/{doc_id}/questions` - Get generated questions
-- `POST /api/documents/{doc_id}/evaluate` - Evaluate question quality
+This service is an **ingestion / OCR microservice** for the Study-Lens Next.js app — not a standalone question API. The Next.js app calls it for OCR-heavy PDF ingestion and KG-grounded analysis, and works fully without it (falling back to pdf-parse). These endpoints match `backend/main.py`:
+
+- `POST /ingest`             - Full ingestion pipeline for one PDF (download → extract → chunk → KG → questions)
+- `GET  /questions/{doc_id}` - Return generated questions for a document
+- `POST /answer`             - Single answer with misconception feedback
+- `POST /submit-all`         - Batch answers with full misconception report
+- `GET  /summary/{doc_id}`   - Aggregate misconception analytics
+- `GET  /triples/{doc_id}`   - Scored KG triples
+- `GET  /health`             - Health check
 
 ## Environment Variables
 

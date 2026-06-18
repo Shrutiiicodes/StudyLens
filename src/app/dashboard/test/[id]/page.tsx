@@ -28,12 +28,30 @@ interface SessionMetrics {
 // ─── NLG Badge ───────────────────────────────────────────────────────────────
 
 function NLGBadge({ nlg }: { nlg: number }) {
-    // Hake (1998) classification: <0.3 low, 0.3–0.7 medium, >0.7 high gain
+    // Bounded normalized change c (Marx & Cummings, 2007), reported in [-100%, +100%].
+    // On the gain side c is identical to Hake's (1998) g, so Hake's interpretive
+    // bands apply there (<0.3 low, 0.3–0.7 medium, >0.7 high). c == 0 means the
+    // session matched the first-diagnostic baseline (no change yet). Negative = regression.
     const pct = Math.round(nlg * 100);
     const isNegative = nlg < 0;
-    const label = nlg >= 0.7 ? 'High Gain' : nlg >= 0.3 ? 'Medium Gain' : nlg >= 0 ? 'Low Gain' : 'Regression';
-    const color = nlg >= 0.7 ? '#22c55e' : nlg >= 0.3 ? '#06b6d4' : nlg >= 0 ? '#f59e0b' : '#ef4444';
-    const bg = nlg >= 0.7 ? 'rgba(34,197,94,0.1)' : nlg >= 0.3 ? 'rgba(6,182,212,0.1)' : nlg >= 0 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)';
+    const label =
+        nlg >= 0.7 ? 'High Gain'
+            : nlg >= 0.3 ? 'Medium Gain'
+                : nlg > 0 ? 'Low Gain'
+                    : nlg === 0 ? 'Baseline'
+                        : 'Regression';
+    const color =
+        nlg >= 0.7 ? '#22c55e'
+            : nlg >= 0.3 ? '#06b6d4'
+                : nlg > 0 ? '#f59e0b'
+                    : nlg === 0 ? '#64748b'
+                        : '#ef4444';
+    const bg =
+        nlg >= 0.7 ? 'rgba(34,197,94,0.1)'
+            : nlg >= 0.3 ? 'rgba(6,182,212,0.1)'
+                : nlg > 0 ? 'rgba(245,158,11,0.1)'
+                    : nlg === 0 ? 'rgba(100,116,139,0.1)'
+                        : 'rgba(239,68,68,0.1)';
 
     return (
         <div style={{
@@ -49,7 +67,7 @@ function NLGBadge({ nlg }: { nlg: number }) {
             color,
         }}>
             <TrendingUp size={13} />
-            {isNegative ? `−${Math.abs(pct)}%` : `+${pct}%`} NLG · {label}
+            {nlg === 0 ? 'Baseline' : `${isNegative ? `−${Math.abs(pct)}%` : `+${pct}%`} NLG · ${label}`}
         </div>
     );
 }
@@ -61,13 +79,13 @@ function PrimaryMetricsPanel({ metrics }: { metrics: SessionMetrics }) {
         {
             icon: <TrendingUp size={20} />,
             label: 'Learning Gain',
-            sublabel: 'NLG — Hake (1998)',
+            sublabel: 'NLG — Marx & Cummings (2007)',
             value: (() => {
                 const pct = Math.round(metrics.nlg * 100);
                 return metrics.nlg >= 0 ? `+${pct}%` : `${pct}%`;
             })(),
             rawValue: metrics.nlg,
-            tooltip: 'Normalized Learning Gain: (post − pre) / (100 − pre). Measures how much you actually improved relative to your headroom. Standard metric in STEM education research.',
+            tooltip: 'Normalized change (Marx & Cummings, 2007) — the bounded form of the Hake gain. Gains: (post − pre)/(100 − pre); losses: (post − pre)/pre. "pre" is your first diagnostic score on this concept, "post" your current mastery. Bounded to [−100%, +100%].',
             color: metrics.nlg >= 0.3 ? '#22c55e' : metrics.nlg >= 0 ? '#f59e0b' : '#ef4444',
             barPct: Math.max(0, Math.min(100, Math.round(metrics.nlg * 100))),
             higherIsBetter: true,
