@@ -410,7 +410,8 @@ export default function TestPage() {
                     correct_answer: q.correct_answer,
                     explanation: q.explanation,
                     is_spaced: q.is_spaced ?? false,
-                    question_type: q.type
+                    question_type: q.type,
+                    distractor_distances: q.distractor_distances,
                 }));
 
                 const evalRes = await fetch('/api/diagnostic', {

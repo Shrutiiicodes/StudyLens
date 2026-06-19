@@ -86,10 +86,10 @@ Drop in a table from the script output:
 
 ```
               actual=y  actual=n
-pred=accept       TP        FP
-pred=reject       FN        TN
+pred=accept       63        31
+pred=reject        7        17
 
-Precision: __%   Recall: __%   F1: __%   Accuracy: __%
+Precision: 67.0%   Recall: 90.0%   F1: 76.8%   Accuracy: 67.8%
 ```
 
 If the threshold sweep shows F1 peaking somewhere other than 0.65, name

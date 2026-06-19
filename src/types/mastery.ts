@@ -50,6 +50,7 @@ export interface QuestionResult {
     correct_answer?: string;
     explanation?: string;
     is_spaced?: boolean;
+    distractor_distances?: Record<string, number>;
 }
 
 export interface DifficultyDistribution {

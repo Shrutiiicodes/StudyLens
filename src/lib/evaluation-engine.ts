@@ -166,12 +166,75 @@ export async function evaluateDiagnostic(
         console.warn('[BKT] Auto-fit skipped:', e.message)
     );
 
-    // ── 11. Persist each attempt ──────────────────────────────────────────
+    // ── 11. Persist each attempt (+ KG-grounded misconception on wrong ones) ─
+    // Fetch the parent concept's title once for misconception explanation text.
+    const { data: parentConcept } = await supabase
+        .from('concepts')
+        .select('title')
+        .eq('id', conceptId)
+        .single();
+    const parentTitle = parentConcept?.title ?? '';
+
     for (const result of results) {
+        const attemptConceptId = result.concept_id || conceptId;
+        let misconceptionId: string | null = null;
+
+        // For wrong answers, run KG-grounded misconception analysis and persist
+        // a misconceptions row, then link it from the attempt. This is the path
+        // that populates the misconceptions table the /api/misconceptions route
+        // reads. Fully non-fatal: any failure here must never block the attempt
+        // write or the student's result. analyzeAnswer is template-first (the
+        // LLM only fires on escalation and is rate-limited + cached).
+        if (!result.correct && result.selected_answer && result.correct_answer) {
+            try {
+                const analysis = await analyzeAnswer({
+                    questionText: result.question_text ?? '',
+                    correctAnswer: result.correct_answer,
+                    studentAnswer: result.selected_answer,
+                    // Title is cosmetic in the template; only accurate for the
+                    // parent concept (spaced reviews target other concepts).
+                    concept: attemptConceptId === conceptId ? parentTitle : '',
+                    distanceMap: result.distractor_distances ?? {},
+                    userId,
+                    // In this codebase a Neo4j Concept.documentId == the Supabase
+                    // concept id, so conceptId doubles as the KG documentId.
+                    documentId: attemptConceptId,
+                    conceptId: attemptConceptId,
+                    sourceText: '',
+                });
+
+                const { data: mc } = await supabase
+                    .from('misconceptions')
+                    .insert({
+                        user_id: userId,
+                        concept_id: attemptConceptId,
+                        session_id: sessionId,
+                        question_text: result.question_text,
+                        student_answer: result.selected_answer,
+                        correct_answer: result.correct_answer,
+                        is_correct: false,
+                        score: round4(analysis.score),
+                        severity: analysis.severity,
+                        misconception_label: analysis.misconceptionLabel,
+                        gap_description: analysis.gapDescription,
+                        correct_explanation: analysis.correctExplanation,
+                        kg_path: analysis.kgPath,
+                        distractor_distance: analysis.distractorDistance,
+                    })
+                    .select('id')
+                    .single();
+
+                misconceptionId = mc?.id ?? null;
+            } catch (e) {
+                console.warn('[Eval] Misconception analysis/persist failed (non-fatal):', (e as Error).message);
+            }
+        }
+
         await supabase.from('attempts').insert({
             user_id: userId,
-            concept_id: result.concept_id || conceptId,
+            concept_id: attemptConceptId,
             question_id: result.question_id,
+            misconception_id: misconceptionId,
             correct: result.correct,
             difficulty: result.difficulty,
             cognitive_level: result.cognitive_level,
