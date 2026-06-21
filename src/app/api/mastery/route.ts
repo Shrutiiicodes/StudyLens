@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import { calculateStudentSAI } from '@/lib/evaluation-engine';
 import {
     getForgettingState,
@@ -10,26 +10,13 @@ import {
 import { getDifficultyDistribution } from '@/lib/personalization-engine';
 import { getAuthedUserId } from '@/lib/auth';
 
-/**
- * GET /api/mastery
- * Get mastery overview for dashboard (user from session).
- *
- * CHANGE LOG (improvements batch):
- * - Added `review_by_date` (ISO string): absolute date by which the
- *   student should review the concept before mastery decays below 70.
- *   Already calculable via calculateOptimalReviewTime() — just wasn't wired.
- * - Added `review_urgency` (0–1): how urgently the review is needed.
- * - Added `review_days_remaining` (number): human-readable days left.
- * - Added `optimal_review_time_days` (number): raw days from model.
- * - Fixed: mss and learnItPriority were hardcoded to 0 — now computed
- *   from attempt data.
- */
 export async function GET(_request: NextRequest) {
     try {
         const userId = await getAuthedUserId();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+        const supabase = getServiceSupabase();
 
         // Get all mastery records
         const { data: masteryRecords, error: masteryError } = await supabase

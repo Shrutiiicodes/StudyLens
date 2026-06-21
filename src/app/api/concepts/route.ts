@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import { calculateDecayedMastery } from '@/lib/forgetting-model';
 import { getAuthedUserId } from '@/lib/auth';
 
@@ -13,6 +13,7 @@ export async function GET(_request: NextRequest) {
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+        const supabase = getServiceSupabase();
 
         // Fetch concepts
         const { data: concepts, error } = await supabase
