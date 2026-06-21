@@ -67,7 +67,7 @@ export async function createRouteHandlerClient() {
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({ request });
 
-    _createServerClient(SUPABASE_URL, SUPABASE_ANON, {
+    const supabase = _createServerClient(SUPABASE_URL, SUPABASE_ANON, {
         cookies: {
             getAll() {
                 return request.cookies.getAll();
@@ -83,6 +83,14 @@ export async function updateSession(request: NextRequest) {
             },
         },
     });
+
+    // Refresh the session token if it's expired. This call is what triggers
+    // the setAll() above, writing the refreshed cookies onto the response.
+    // Without it, tokens never refresh in middleware and users get silently
+    // logged out when the access token expires.
+    // IMPORTANT: do not run any code between createServerClient() and
+    // getUser() — doing so can cause random, hard-to-debug logouts.
+    await supabase.auth.getUser();
 
     return supabaseResponse;
 }
