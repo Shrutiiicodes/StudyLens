@@ -191,49 +191,70 @@ export default function ConceptDetailPage() {
 
             {/* Overview Tab */}
             {activeTab === 'overview' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-                    {/* Assessment Options */}
-                    <div className="glass-card" style={{ padding: '24px' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '20px' }}>Assessment Modes</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {[
-                                { mode: 'diagnostic', label: 'Easy 5', desc: '5 questions to gauge understanding', icon: <Search size={18} color="var(--accent-primary)" />, alwaysEnabled: true },
-                                { mode: 'practice', label: 'Practice Test', desc: 'Adaptive difficulty, instant feedback', icon: <FileEdit size={18} color="var(--accent-tertiary)" />, alwaysEnabled: stage !== 'diagnostic' || isComplete },
-                                { mode: 'mastery', label: 'Mastery Test', desc: 'Prove complete understanding', icon: <Trophy size={18} color="var(--accent-success)" />, alwaysEnabled: stage === 'mastery' || isComplete },
-                            ].map(({ mode, label, desc, icon, alwaysEnabled }) => (
-                                <button
-                                    key={mode}
-                                    className="btn-secondary"
-                                    onClick={() => router.push(`/dashboard/test/${conceptId}?mode=${mode}&title=${encodeURIComponent(conceptTitle)}`)}
-                                    disabled={!alwaysEnabled}
-                                    style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px', opacity: alwaysEnabled ? 1 : 0.45 }}
-                                >
-                                    {icon}
-                                    <div>
-                                        <div style={{ fontWeight: 600 }}>{label}</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{desc}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {/* Progress summary */}
+                    <ProgressCard
+                        title={conceptTitle}
+                        mastery={mastery}
+                        status={cardStatus}
+                        lastUpdated={progress?.last_updated}
+                    />
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                        {/* Assessment Options */}
+                        <div className="glass-card" style={{ padding: '24px' }}>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '20px' }}>Assessment Modes</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {[
+                                    { mode: 'diagnostic', label: 'Easy 5', desc: '5 questions to gauge understanding', icon: <Search size={18} color="var(--accent-primary)" />, alwaysEnabled: true },
+                                    { mode: 'practice', label: 'Practice Test', desc: 'Adaptive difficulty, instant feedback', icon: <FileEdit size={18} color="var(--accent-tertiary)" />, alwaysEnabled: stage !== 'diagnostic' || isComplete },
+                                    { mode: 'mastery', label: 'Mastery Test', desc: 'Prove complete understanding', icon: <Trophy size={18} color="var(--accent-success)" />, alwaysEnabled: stage === 'mastery' || isComplete },
+                                ].map(({ mode, label, desc, icon, alwaysEnabled }) => (
+                                    <button
+                                        key={mode}
+                                        className="btn-secondary"
+                                        onClick={() => router.push(`/dashboard/test/${conceptId}?mode=${mode}&title=${encodeURIComponent(conceptTitle)}`)}
+                                        disabled={!alwaysEnabled}
+                                        style={{ justifyContent: 'flex-start', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px', opacity: alwaysEnabled ? 1 : 0.45 }}
+                                    >
+                                        {icon}
+                                        <div>
+                                            <div style={{ fontWeight: 600 }}>{label}</div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{desc}</div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Concept Info */}
+                        <div className="glass-card" style={{ padding: '24px' }}>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '20px' }}>Concept Info</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                {[
+                                    { label: 'Current Stage', value: isComplete ? 'Complete ✓' : stage.charAt(0).toUpperCase() + stage.slice(1), color: isComplete ? 'var(--accent-success)' : 'var(--accent-primary)' },
+                                    { label: 'Mastery Score', value: `${Math.round(mastery)}%`, color: mastery >= 80 ? 'var(--accent-success)' : mastery >= 50 ? 'var(--accent-primary)' : 'var(--accent-warning)' },
+                                    { label: 'Created', value: concept?.created_at ? new Date(concept.created_at).toLocaleDateString() : 'N/A', color: 'var(--text-primary)' },
+                                ].map(({ label, value, color }) => (
+                                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{label}</span>
+                                        <span style={{ fontWeight: 600, fontSize: '0.9rem', color, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</span>
                                     </div>
-                                </button>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Concept Info */}
-                    <div className="glass-card" style={{ padding: '24px' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '20px' }}>Concept Info</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            {[
-                                { label: 'Current Stage', value: isComplete ? 'Complete ✓' : stage.charAt(0).toUpperCase() + stage.slice(1), color: isComplete ? 'var(--accent-success)' : 'var(--accent-primary)' },
-                                { label: 'Mastery Score', value: `${Math.round(mastery)}%`, color: mastery >= 80 ? 'var(--accent-success)' : mastery >= 50 ? 'var(--accent-primary)' : 'var(--accent-warning)' },
-                                { label: 'Created', value: concept?.created_at ? new Date(concept.created_at).toLocaleDateString() : 'N/A', color: 'var(--text-primary)' },
-                            ].map(({ label, value, color }) => (
-                                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{label}</span>
-                                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    {/* Mastery timeline (real session data) */}
+                    {sessions.length >= 2 && (
+                        <MasteryGraph
+                            type="timeline"
+                            title="Mastery Over Time"
+                            data={[...sessions]
+                                .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                                .map((s) => ({ date: s.created_at, score: s.score }))}
+                        />
+                    )}
                 </div>
             )}
 

@@ -7,30 +7,8 @@ import { getAuthedUserId } from '@/lib/auth';
 
 export const maxDuration = 60;
 export const runtime = 'nodejs';
-/**
- * GET /api/learn?conceptId=xxx&grade=10
- *
- * Learn-mode content for the study interface.
- * Past-misconception enrichment is scoped to the session user (may be absent).
- *
- * Three-tier resolution (cheap → expensive):
- *   1. KG path — concept has structured graph content. Zero LLM calls.
- *      Cached implicitly: the graph doesn't change between requests.
- *   2. Learn-content cache — prior LLM-generated content for this
- *      (concept, grade), within TTL. Zero LLM calls.
- *   3. LLM fallback — generate fresh and store in the cache.
- *
- * Past misconceptions are always fetched fresh (they're per-user and
- * change with every new wrong answer the student logs).
- */
 
-// How long a cached LLM generation stays valid.
-// The source document is immutable, so 30 days is conservative — the
-// main reason to expire is to let prompt improvements roll over.
 const LEARN_CACHE_TTL_DAYS = 30;
-
-// LLM model used for generation — recorded in cache for audits and lets us
-// invalidate selectively if we switch models later.
 const LEARN_GENERATION_MODEL = 'llama-3.1-8b-instant';
 
 export async function GET(request: NextRequest) {
@@ -39,7 +17,6 @@ export async function GET(request: NextRequest) {
         const conceptId = searchParams.get('conceptId');
         const grade = searchParams.get('grade') || '10';
 
-        // Optional enrichment identity — from the verified session, may be null.
         const userId = await getAuthedUserId();
 
         if (!conceptId) {
